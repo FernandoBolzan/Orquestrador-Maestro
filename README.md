@@ -1,6 +1,6 @@
 # Orquestrador Maestro
 
-Kit público e sanitizado para instalar uma hierarquia de orquestração de IAs no Windows, com regras globais, Codex skills, hooks, roteamento de skills, perfis de ferramentas e memória operacional de projetos em `DEV/`.
+Kit público e sanitizado para instalar uma hierarquia de orquestração de IAs multiplataforma (Windows, Linux e macOS), com regras globais, Codex skills, hooks, roteamento de skills, perfis de ferramentas e memória operacional de projetos em `DEV/`.
 
 Repositório: [github.com/FernandoBolzan/Orquestrador-Maestro](https://github.com/FernandoBolzan/Orquestrador-Maestro)
 
@@ -16,7 +16,7 @@ A proposta do projeto é compartilhar uma base prática e instalável para que m
 
 ## Visão Geral
 
-O Orquestrador Maestro é uma camada portátil de instruções para fazer várias IAs trabalharem com o mesmo contrato operacional no computador do usuário. Ele não é uma IA nova, nem substitui Codex, Claude Code, OpenCode, Cursor, Gemini CLI ou Windsurf. Ele instala arquivos que essas ferramentas conseguem ler para padronizar:
+O Orquestrador Maestro é uma camada portátil de instruções para fazer várias IAs trabalharem com o mesmo contrato operacional no computador do usuário (Windows, Linux ou macOS). Ele não é uma IA nova, nem substitui Codex, Claude Code, OpenCode, Cursor, Gemini CLI ou Windsurf. Ele instala arquivos que essas ferramentas conseguem ler para padronizar:
 
 - onde a IA busca regras;
 - como ela identifica o papel do usuário como Maestro;
@@ -25,7 +25,7 @@ O Orquestrador Maestro é uma camada portátil de instruções para fazer vária
 - onde registra memória curta do projeto para economizar tokens;
 - quais arquivos nunca devem ser publicados.
 
-A ideia prática é simples: a pessoa baixa este repositório, executa o instalador e recebe a mesma estrutura base no próprio `%USERPROFILE%`, com placeholders trocados para o usuário dela. O pacote foi preparado para publicação, então não deve conter tokens, logs, caches, memórias locais, backups ou caminhos reais da máquina fonte.
+A ideia prática é simples: a pessoa baixa este repositório, executa o instalador e recebe a mesma estrutura base no próprio home do usuário (`%USERPROFILE%` no Windows ou `$HOME` no Linux/macOS), com placeholders trocados para o usuário dela. O pacote foi preparado para publicação, então não deve conter tokens, logs, caches, memórias locais, backups ou caminhos reais da máquina fonte.
 
 ## Para Quem Serve
 
@@ -35,26 +35,21 @@ Este repositório é útil para quem quer:
 - compartilhar uma base de skills e hooks sem expor dados pessoais;
 - usar Codex, Claude Code, OpenCode, Cursor, Gemini CLI e Windsurf com a mesma hierarquia;
 - fazer agentes lerem a pasta `DEV/` dos projetos antes de gastar tokens em exploração longa;
-- manter um padrão repetível de instalação em qualquer usuário do Windows;
+- manter um padrão repetível de instalação em qualquer usuário Windows, Linux ou macOS;
 - evoluir skills localmente e depois publicar um snapshot sanitizado.
 
 ## Download
 
 Clone com Git:
 
-```powershell
+```bash
 git clone https://github.com/FernandoBolzan/Orquestrador-Maestro.git
 cd Orquestrador-Maestro
 ```
 
-Download em ZIP:
-
-[Baixar ZIP da branch main](https://github.com/FernandoBolzan/Orquestrador-Maestro/archive/refs/heads/main.zip)
-
-Se baixar como ZIP, extraia a pasta antes de executar os comandos abaixo.
-
 ## Instalação Rápida
 
+### Windows (PowerShell)
 Abra o PowerShell dentro da pasta do repositório e rode:
 
 ```powershell
@@ -67,16 +62,39 @@ Depois verifique:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-install.ps1
 ```
 
+### Linux / macOS (Bash)
+Abra o terminal dentro da pasta do repositório e rode:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+Depois verifique:
+
+```bash
+./scripts/verify-install.sh
+```
+
 Se a verificação passar, as ferramentas instaladas já passam a ter pontos de entrada globais apontando para o Orquestrador Maestro.
 
 ## Instalação Guiada Por IA
 
 Você também pode pedir para uma IA instalar o pacote. Use um pedido assim:
 
+**Para Windows:**
 ```text
 Baixe ou clone https://github.com/FernandoBolzan/Orquestrador-Maestro,
 execute install.ps1 no PowerShell, rode scripts/verify-install.ps1
 e confirme que o Orquestrador Maestro foi instalado no meu %USERPROFILE%.
+Não exponha tokens, logs, caches, arquivos privados ou caminhos de outra máquina.
+```
+
+**Para Linux/macOS:**
+```text
+Baixe ou clone https://github.com/FernandoBolzan/Orquestrador-Maestro,
+execute install.sh no terminal, rode scripts/verify-install.sh
+e confirme que o Orquestrador Maestro foi instalado no meu $HOME.
 Não exponha tokens, logs, caches, arquivos privados ou caminhos de outra máquina.
 ```
 
@@ -86,22 +104,22 @@ A IA deve usar o usuário atual da máquina dela. Ela não deve copiar caminhos 
 
 Por padrão, o instalador copia o núcleo, skills, agentes, prompts e perfis de ferramentas para o home do usuário atual.
 
-| Destino | Função |
-|---|---|
-| `%USERPROFILE%\.orquestrador` | Núcleo canônico com regras, Maestro, hooks, roteadores, índices, scripts e skills principais. |
-| `%USERPROFILE%\AGENTS.md` | Contrato global que Codex e outros agentes devem ler como regra de usuário. |
-| `%USERPROFILE%\.codex\skills` | Skills do Codex/OMX e skills canônicas espelhadas. |
-| `%USERPROFILE%\.codex\agents` | Perfis de subagentes Codex. |
-| `%USERPROFILE%\.codex\prompts` | Prompts de papéis usados por agentes. |
-| `%USERPROFILE%\.agents\skills` | Raiz legada de skills para compatibilidade com outras ferramentas. |
-| `%USERPROFILE%\.claude\skills` | Espelho de skills para Claude Code. |
-| `%USERPROFILE%\.opencode\skills` | Espelho de skills para OpenCode. |
-| `%USERPROFILE%\.cursor\skills` | Espelho de skills para Cursor. |
-| `%USERPROFILE%\.gemini\skills` | Espelho de skills para Gemini CLI. |
-| `%USERPROFILE%\.windsurf\skills` | Espelho de skills para Windsurf. |
-| `%USERPROFILE%\.antigravity-skills\skills` | Espelho de skills para ambientes compatíveis. |
-| `%USERPROFILE%\.ai-standards` | Standards portáteis usados pelo Antigravity. |
-| `%USERPROFILE%\.orquestrador-public-backups` | Backups criados quando o instalador substitui arquivos existentes. |
+| Destino (Win) | Destino (Unix) | Função |
+|---|---|---|
+| `%USERPROFILE%\.orquestrador` | `$HOME/.orquestrador` | Núcleo canônico com regras, Maestro, hooks, roteadores, índices, scripts e skills principais. |
+| `%USERPROFILE%\AGENTS.md` | `$HOME/AGENTS.md` | Contrato global que Codex e outros agentes devem ler como regra de usuário. |
+| `%USERPROFILE%\.codex\skills` | `$HOME/.codex/skills` | Skills do Codex/OMX e skills canônicas espelhadas. |
+| `%USERPROFILE%\.codex\agents` | `$HOME/.codex/agents` | Perfis de subagentes Codex. |
+| `%USERPROFILE%\.codex\prompts` | `$HOME/.codex/prompts` | Prompts de papéis usados por agentes. |
+| `%USERPROFILE%\.agents\skills` | `$HOME/.agents/skills` | Raiz legada de skills para compatibilidade com outras ferramentas. |
+| `%USERPROFILE%\.claude\skills` | `$HOME/.claude/skills` | Espelho de skills para Claude Code. |
+| `%USERPROFILE%\.opencode\skills` | `$HOME/.opencode/skills` | Espelho de skills para OpenCode. |
+| `%USERPROFILE%\.cursor\skills` | `$HOME/.cursor/skills` | Espelho de skills para Cursor. |
+| `%USERPROFILE%\.gemini\skills` | `$HOME/.gemini/skills` | Espelho de skills para Gemini CLI. |
+| `%USERPROFILE%\.windsurf\skills` | `$HOME/.windsurf/skills` | Espelho de skills para Windsurf. |
+| `%USERPROFILE%\.antigravity-skills\skills` | `$HOME/.antigravity-skills/skills` | Espelho de skills para ambientes compatíveis. |
+| `%USERPROFILE%\.ai-standards` | `$HOME/.ai-standards` | Standards portáteis usados pelo Antigravity. |
+| `%USERPROFILE%\.orquestrador-public-backups` | `$HOME/.orquestrador-public-backups` | Backups criados quando o instalador substitui arquivos existentes. |
 
 O instalador também cria perfis textuais e entrypoints para ferramentas. Eles são os arquivos que fazem o Orquestrador ser chamado por padrão.
 
