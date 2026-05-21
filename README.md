@@ -47,6 +47,12 @@ git clone https://github.com/FernandoBolzan/Orquestrador-Maestro.git
 cd Orquestrador-Maestro
 ```
 
+Download em ZIP:
+
+[Baixar ZIP da branch main](https://github.com/FernandoBolzan/Orquestrador-Maestro/archive/refs/heads/main.zip)
+
+Se baixar como ZIP, extraia a pasta antes de executar os comandos abaixo.
+
 ## Instalação Rápida
 
 ### Windows (PowerShell)
