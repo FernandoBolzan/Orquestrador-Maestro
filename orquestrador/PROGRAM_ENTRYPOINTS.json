@@ -12,6 +12,7 @@
   "canonical": {
     "rules": "{{USER_HOME}}/.orquestrador/rules.md",
     "maestro": "{{USER_HOME}}/.orquestrador/maestro.md",
+    "persistence": "{{USER_HOME}}/.orquestrador/PERSISTENCE.md",
     "hooks": "{{USER_HOME}}/.orquestrador/hooks.md",
     "skillsIndex": "{{USER_HOME}}/.orquestrador/SKILLS_INDEX.md",
     "skillsRouter": "{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json",
@@ -99,7 +100,7 @@
         "commandRewrite": "not installed by default; future compact command wrappers must be opt-in",
         "statusline": false,
         "settingsMerge": "file copy with backup",
-        "verify": "Claude global memory includes DEV/WORKLOG.md guidance"
+        "verify": "Claude global memory includes PERSISTENCE.md and DEV/WORKLOG.md guidance"
       },
       "primary": [
         "{{USER_HOME}}/.claude/CLAUDE.md",
@@ -117,7 +118,7 @@
         "commandRewrite": false,
         "statusline": false,
         "settingsMerge": "file copy with backup",
-        "verify": "Cursor AGENTS/rule files include DEV/WORKLOG.md guidance"
+        "verify": "Cursor AGENTS/rule files include PERSISTENCE.md and DEV/WORKLOG.md guidance"
       },
       "primary": [
         "{{USER_HOME}}/.cursor/AGENTS.md",
@@ -136,7 +137,7 @@
         "commandRewrite": false,
         "statusline": false,
         "settingsMerge": "file copy with backup",
-        "verify": "Gemini global context includes DEV/WORKLOG.md guidance"
+        "verify": "Gemini global context includes PERSISTENCE.md and DEV/WORKLOG.md guidance"
       },
       "primary": [
         "{{USER_HOME}}/.gemini/GEMINI.md",
@@ -153,7 +154,7 @@
         "commandRewrite": false,
         "statusline": false,
         "settingsMerge": "file copy with backup",
-        "verify": "Windsurf global rules include DEV/WORKLOG.md guidance"
+        "verify": "Windsurf global rules include PERSISTENCE.md and DEV/WORKLOG.md guidance"
       },
       "primary": [
         "{{USER_HOME}}/.codeium/windsurf/memories/global_rules.md",

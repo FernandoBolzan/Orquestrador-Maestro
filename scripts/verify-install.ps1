@@ -94,6 +94,7 @@ $codex = Join-Path $HomePath ".codex"
 
 Assert-Path -Path (Join-Path $orquestrador "rules.md") -Label "Orquestrador rules"
 Assert-Path -Path (Join-Path $orquestrador "maestro.md") -Label "Orquestrador maestro"
+Assert-Path -Path (Join-Path $orquestrador "PERSISTENCE.md") -Label "Orquestrador persistence contract"
 Assert-Path -Path (Join-Path $orquestrador "PROJECT_DEV_HIERARCHY.md") -Label "Project DEV hierarchy"
 Assert-Path -Path (Join-Path $orquestrador "bin\init-project-dev.ps1") -Label "Project DEV initializer"
 Assert-Path -Path (Join-Path $orquestrador "bin\compact-worklog.ps1") -Label "Project DEV worklog compactor"
@@ -107,6 +108,7 @@ Assert-Path -Path (Join-Path $HomePath "AGENTS.md") -Label "Global AGENTS.md"
 Assert-FileContains -Path (Join-Path $HomePath "AGENTS.md") -Pattern "DEV/" -Label "Global AGENTS.md"
 Assert-FileContains -Path (Join-Path $HomePath "AGENTS.md") -Pattern "DEV/WORKLOG\.md" -Label "Global AGENTS.md"
 Assert-FileContains -Path (Join-Path $orquestrador "rules.md") -Pattern "DEV/WORKLOG\.md" -Label "Orquestrador rules"
+Assert-FileContains -Path (Join-Path $orquestrador "maestro.md") -Pattern "PERSISTENCE\.md" -Label "Orquestrador maestro"
 Assert-FileContains -Path (Join-Path $orquestrador "PROJECT_DEV_HIERARCHY.md") -Pattern "DEV/WORKLOG\.md" -Label "Project DEV hierarchy"
 
 $installPolicy = Get-InstallPolicy -Path (Join-Path $orquestrador "SKILL_INSTALL_POLICY.json")
@@ -156,16 +158,23 @@ if ((-not $CoreOnly) -and (-not $SkipToolProfiles)) {
   Assert-Path -Path (Join-Path $HomePath ".ai-standards\core\workflow.md") -Label "Antigravity AI standards workflow"
 
   Assert-FileContains -Path (Join-Path $HomePath ".codex\AGENTS.md") -Pattern "DEV/WORKLOG\.md" -Label "Codex AGENTS profile"
+  Assert-FileContains -Path (Join-Path $HomePath ".codex\AGENTS.md") -Pattern "PERSISTENCE\.md" -Label "Codex AGENTS profile"
   Assert-FileContains -Path (Join-Path $HomePath ".config\opencode\AGENTS.md") -Pattern "DEV/WORKLOG\.md" -Label "OpenCode global AGENTS profile"
+  Assert-FileContains -Path (Join-Path $HomePath ".config\opencode\AGENTS.md") -Pattern "PERSISTENCE\.md" -Label "OpenCode global AGENTS profile"
   Assert-FileContains -Path (Join-Path $HomePath ".claude\CLAUDE.md") -Pattern "DEV/WORKLOG\.md" -Label "Claude global memory"
+  Assert-FileContains -Path (Join-Path $HomePath ".claude\CLAUDE.md") -Pattern "PERSISTENCE\.md" -Label "Claude global memory"
   Assert-FileContains -Path (Join-Path $HomePath ".cursor\AGENTS.md") -Pattern "DEV/WORKLOG\.md" -Label "Cursor AGENTS profile"
+  Assert-FileContains -Path (Join-Path $HomePath ".cursor\AGENTS.md") -Pattern "PERSISTENCE\.md" -Label "Cursor AGENTS profile"
   Assert-FileContains -Path (Join-Path $HomePath ".cursor\rules\orquestrador-maestro.mdc") -Pattern "DEV/WORKLOG\.md" -Label "Cursor Orquestrador rule"
   Assert-FileContains -Path (Join-Path $HomePath ".cursor\commands\maestro.md") -Pattern "DEV/HANDOFF\.md" -Label "Cursor Maestro command"
   Assert-FileContains -Path (Join-Path $HomePath ".gemini\GEMINI.md") -Pattern "DEV/WORKLOG\.md" -Label "Gemini global context"
+  Assert-FileContains -Path (Join-Path $HomePath ".gemini\GEMINI.md") -Pattern "PERSISTENCE\.md" -Label "Gemini global context"
   Assert-FileContains -Path (Join-Path $HomePath ".codeium\windsurf\memories\global_rules.md") -Pattern "DEV/WORKLOG\.md" -Label "Windsurf global rules"
+  Assert-FileContains -Path (Join-Path $HomePath ".codeium\windsurf\memories\global_rules.md") -Pattern "PERSISTENCE\.md" -Label "Windsurf global rules"
   Assert-FileContains -Path (Join-Path $HomePath "antigravity-rules.json") -Pattern "\.ai-standards" -Label "Antigravity global rules"
   Assert-FileContains -Path (Join-Path $HomePath ".antigravity\antigravity.json") -Pattern "\.orquestrador" -Label "Antigravity integration config"
   Assert-FileContains -Path (Join-Path $HomePath ".ai-standards\core\rules.md") -Pattern "DEV/WORKLOG\.md" -Label "Antigravity AI standards rules"
+  Assert-FileContains -Path (Join-Path $HomePath "antigravity-rules.json") -Pattern "PERSISTENCE\.md" -Label "Antigravity global rules"
 
   $hookChecks = @(
     @{ Path = (Join-Path $HomePath ".orquestrador\hooks.md"); MaxLines = 80; Label = "Orquestrador hooks profile" },

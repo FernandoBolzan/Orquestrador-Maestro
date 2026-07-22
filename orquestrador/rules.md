@@ -17,10 +17,11 @@ This is the compact global contract for agents on this machine.
 
 1. `{{USER_HOME}}/.orquestrador\rules.md`
 2. `{{USER_HOME}}/.orquestrador\maestro.md`
-3. `{{USER_HOME}}/AGENTS.md`
-4. nearest project `AGENTS.md`
-5. current project `DEV/` documentation, when present
-6. selected task skill
+3. `{{USER_HOME}}/.orquestrador\PERSISTENCE.md`
+4. `{{USER_HOME}}/AGENTS.md`
+5. nearest project `AGENTS.md`
+6. current project `DEV/` documentation, when present
+7. selected task skill
 
 ## Project DEV Documentation
 

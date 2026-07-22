@@ -185,6 +185,8 @@ Use o Orquestrador Maestro, escolha a skill correta e resolva a tarefa com verif
 
 Quando o projeto tiver `DEV/`, essa pasta é tratada como documentação operacional local. A IA deve começar pelos arquivos curtos de controle: `DEV/README.md` ou `DEV/INDEX.md`, depois `DEV/HANDOFF.md`, `DEV/CONTEXT.md` e `DEV/SPECS/ACTIVE.md`. Só depois ela deve abrir os documentos específicos da tarefa.
 
+Essa recuperação é regida pelo contrato compartilhado em `%USERPROFILE%\.orquestrador\PERSISTENCE.md` (ou `$HOME/.orquestrador/PERSISTENCE.md`). O histórico da conversa e memórias específicas de uma ferramenta são apenas auxiliares: ao encerrar uma sessão, trocar de software ou entregar o trabalho, a IA deve registrar o estado em `DEV/WORKLOG.md`, `DEV/VERIFY.md` e `DEV/HANDOFF.md`.
+
 Para criar a estrutura `DEV/` em um projeto:
 
 ```bash

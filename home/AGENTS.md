@@ -3,6 +3,7 @@
 - Always operate with this command order:
   1. `{{USER_HOME}}/.orquestrador/rules.md` -> constitution
   2. `{{USER_HOME}}/.orquestrador/maestro.md` -> thinking process
+  3. `{{USER_HOME}}/.orquestrador/PERSISTENCE.md` -> durable cross-tool memory
   3. `{{USER_HOME}}/AGENTS.md` -> global user contract
   4. Local project `AGENTS.md` -> project-specific commands
   5. Local project `DEV/` -> project documentation and compact memory

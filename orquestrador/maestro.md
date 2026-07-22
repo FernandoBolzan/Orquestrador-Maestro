@@ -15,6 +15,8 @@ The user is the maestro. Codex and other agents act as the orquestrador.
 
 When a project has a `DEV/` directory, use it as local project memory after reading the nearest project `AGENTS.md` and before selecting global skills. Start with `DEV/AGENTS.md`, `DEV/README.md`, `DEV/INDEX.md`, `DEV/HANDOFF.md`, `DEV/CONTEXT.md`, and `DEV/SPECS/ACTIVE.md`, then open only the files relevant to the task.
 
+Follow `{{USER_HOME}}/.orquestrador/PERSISTENCE.md` as the mandatory cross-tool persistence contract. Chat history and tool-specific memory are not durable context.
+
 Create and update durable project documentation under `DEV/` by default. After substantive work, update `DEV/WORKLOG.md`, `DEV/VERIFY.md`, and `DEV/HANDOFF.md`. Update `DEV/INDEX.md` and `DEV/CONTEXT.md` when the documentation map or project state changes, and update `DEV/SPECS/ACTIVE.md` when scope, acceptance, or status changes.
 
 If the user or the project points to a private reference library outside the repo, read that pack's index first and only then open specific files. Do not treat a whole Drive export or PDF folder as automatic context.
