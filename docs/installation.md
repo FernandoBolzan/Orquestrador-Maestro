@@ -75,6 +75,7 @@ Em uma máquina de exemplo, se o usuário for `maria`, os destinos ficam abaixo 
 | `%USERPROFILE%\.config\opencode` | `AGENTS.md` e `opencode.json` globais para OpenCode |
 | `%USERPROFILE%\.claude\CLAUDE.md` | Memória global do Claude Code apontando para o Orquestrador |
 | `%USERPROFILE%\.cursor\rules\orquestrador-maestro.mdc` | Regra local do Cursor para ativar o Orquestrador |
+| `%USERPROFILE%\.cursor\commands\maestro.md` | Comando `/maestro` para reidratar o contexto ativo |
 | `%USERPROFILE%\.gemini\GEMINI.md` | Contexto global do Gemini CLI |
 | `%USERPROFILE%\.codeium\windsurf\memories\global_rules.md` | Regras globais do Windsurf/Cascade |
 | `%USERPROFILE%\antigravity-rules.json` | Regras globais do Antigravity apontando para Orquestrador e AI standards |
@@ -229,7 +230,7 @@ O instalador também grava pontos globais de entrada para ferramentas que suport
 - OpenCode: `%USERPROFILE%\.config\opencode\AGENTS.md` e `%USERPROFILE%\.config\opencode\opencode.json`.
 - Claude Code: `%USERPROFILE%\.claude\CLAUDE.md`.
 - Gemini CLI: `%USERPROFILE%\.gemini\GEMINI.md`.
-- Cursor: `%USERPROFILE%\.cursor\rules\orquestrador-maestro.mdc` e `%USERPROFILE%\.cursor\AGENTS.md`.
+- Cursor: `%USERPROFILE%\.cursor\rules\orquestrador-maestro.mdc`, `%USERPROFILE%\.cursor\AGENTS.md` e `%USERPROFILE%\.cursor\commands\maestro.md` (`/maestro`).
 - Windsurf/Cascade: `%USERPROFILE%\.codeium\windsurf\memories\global_rules.md`.
 - Antigravity: `%USERPROFILE%\antigravity-rules.json`, `%USERPROFILE%\.antigravity\antigravity.json`, `%USERPROFILE%\.antigravity\settings.json` e `%USERPROFILE%\.ai-standards`.
 

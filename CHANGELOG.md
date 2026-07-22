@@ -6,6 +6,7 @@ Todas as mudanças relevantes do Orquestrador Maestro estão documentadas aqui.
 
 ### Contribuição comunitária
 - Adicionada a skill `improve-codebase-architecture`, de Eduardo Queiroz, para análises arquiteturais com relatório HTML decisório, diagramas, comparação de impactos técnicos e de produto e referências em português.
+- Kiver Teixeira (`kivervinicius`) relatou a perda de contexto entre sessões no Cursor e ajudou a direcionar a criação do comando `/maestro` para reidratação do contexto do Orquestrador.
 ## 0.1.11 - 2026-07-20
 
 ### Corrigido

@@ -122,6 +122,8 @@ Caso você esteja utilizando uma versão muito antiga de algum SO que não supor
 
 O projeto evolui com contribuições da comunidade Grupo IAPro e de colaboradores externos. Os créditos, PRs, forks, referências e impactos técnicos estão organizados no [CHANGELOG.md](CHANGELOG.md).
 
+Kiver Teixeira (`kivervinicius`) contribuiu relatando a perda de contexto entre sessões no Cursor, o que direcionou a criação do comando `/maestro` para reidratação do contexto.
+
 Para contribuir, consulte o [CONTRIBUTING.md](CONTRIBUTING.md). Ao concluir uma contribuição, registre também o crédito e a mudança correspondente no CHANGELOG.
 
 ## Capacidades Atuais
