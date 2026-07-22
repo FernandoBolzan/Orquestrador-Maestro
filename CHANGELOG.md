@@ -7,6 +7,17 @@ Todas as mudanças relevantes do Orquestrador Maestro estão documentadas aqui.
 ### Contribuição comunitária
 - Adicionada a skill `improve-codebase-architecture`, de Eduardo Queiroz, para análises arquiteturais com relatório HTML decisório, diagramas, comparação de impactos técnicos e de produto e referências em português.
 - Kiver Teixeira (`kivervinicius`) relatou a perda de contexto entre sessões no Cursor e ajudou a direcionar a criação do comando `/maestro` para reidratação do contexto do Orquestrador.
+
+## 0.1.12 - 2026-07-22
+
+### Corrigido
+
+- O Cursor agora instala o comando `/maestro` em `.cursor/commands/maestro.md` para reidratar o contrato global e o contexto ativo de `DEV/` quando uma sessão perde continuidade.
+- A instalação e os verificadores PowerShell/Bash agora validam a presença do comando de recuperação de contexto.
+
+### Contribuição comunitária
+
+- Kiver Teixeira (`kivervinicius`) foi reconhecido pelo relato que direcionou essa correção de continuidade entre sessões.
 ## 0.1.11 - 2026-07-20
 
 ### Corrigido
