@@ -11,6 +11,7 @@
     "timeout": 120000,
     "rules_path": "{{USER_HOME}}/.orquestrador/rules.md",
     "maestro_path": "{{USER_HOME}}/.orquestrador/maestro.md",
+    "persistence_path": "{{USER_HOME}}/.orquestrador/PERSISTENCE.md",
     "skills_router_path": "{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json"
   },
   "maestro": {

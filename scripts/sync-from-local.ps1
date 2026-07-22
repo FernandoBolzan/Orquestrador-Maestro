@@ -399,6 +399,8 @@ Append-GeneratedBlockIfMissing -Path (Join-Path $orchestratorDest "maestro.md") 
 ## Project DEV Context
 
 When a project has `DEV/`, use it as local project memory after reading the nearest project `AGENTS.md` and before selecting global skills. Create durable project documentation under `DEV/` by default. After substantive work, update `DEV/WORKLOG.md`.
+
+Follow `{{USER_HOME}}/.orquestrador/PERSISTENCE.md` as the mandatory cross-tool persistence contract.
 '@
 
 $codexSkillFiles = 0
@@ -480,13 +482,14 @@ Always apply the Orquestrador Maestro contract:
 1. Read `{{USER_HOME}}/AGENTS.md`.
 2. Read `{{USER_HOME}}/.orquestrador/rules.md`.
 3. Read `{{USER_HOME}}/.orquestrador/maestro.md`.
-4. In projects with `DEV/`, read the project DEV overview after the nearest project `AGENTS.md`.
-5. Use `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json` before loading task skills.
-6. Load only the task-relevant `SKILL.md` files and task-relevant `DEV/` docs.
-7. Keep durable project docs in `DEV/` by default and update `DEV/WORKLOG.md` after substantive work.
-8. Treat the IA as `orquestrador` and the user as `maestro`.
-9. Verify before claiming completion.
-10. Do not commit or push unless the user explicitly asks.
+4. Read `{{USER_HOME}}/.orquestrador/PERSISTENCE.md`.
+5. In projects with `DEV/`, read the project DEV overview after the nearest project `AGENTS.md`.
+6. Use `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json` before loading task skills.
+7. Load only the task-relevant `SKILL.md` files and task-relevant `DEV/` docs.
+8. Keep durable project docs in `DEV/` by default and update `DEV/WORKLOG.md` after substantive work.
+9. Treat the IA as `orquestrador` and the user as `maestro`.
+10. Verify before claiming completion.
+11. Do not commit or push unless the user explicitly asks.
 
 Default skill: `orquestrador-maestro`.
 '@
@@ -517,6 +520,7 @@ Primary files:
 - `{{USER_HOME}}/AGENTS.md`
 - `{{USER_HOME}}/.orquestrador/rules.md`
 - `{{USER_HOME}}/.orquestrador/maestro.md`
+- `{{USER_HOME}}/.orquestrador/PERSISTENCE.md`
 - `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json`
 - `{{USER_HOME}}/.orquestrador/SKILLS_INDEX.md`
 
@@ -524,6 +528,7 @@ Operating rules:
 
 - The assistant acts as the `orquestrador`; the user is the `maestro`.
 - Before broad work, read the global contract, rules, and maestro files.
+- Rehydrate and persist project context according to `PERSISTENCE.md`; never rely on chat history alone.
 - In projects with `DEV/`, read the project DEV overview after the nearest project `AGENTS.md` and before task skills.
 - Keep durable project docs in `DEV/` by default and update `DEV/WORKLOG.md` after substantive work.
 - Before inventing a workflow, inspect the skills index and router.
@@ -544,6 +549,7 @@ Read and follow:
 - `{{USER_HOME}}/AGENTS.md`
 - `{{USER_HOME}}/.orquestrador/rules.md`
 - `{{USER_HOME}}/.orquestrador/maestro.md`
+- `{{USER_HOME}}/.orquestrador/PERSISTENCE.md`
 - `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json`
 
 The assistant acts as `orquestrador`; the user is the `maestro`.
@@ -568,6 +574,7 @@ Read and follow:
 - `{{USER_HOME}}/AGENTS.md`
 - `{{USER_HOME}}/.orquestrador/rules.md`
 - `{{USER_HOME}}/.orquestrador/maestro.md`
+- `{{USER_HOME}}/.orquestrador/PERSISTENCE.md`
 - `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json`
 
 Rules:
@@ -591,9 +598,10 @@ Leia nesta ordem, sem abrir catálogos inteiros:
 1. `{{USER_HOME}}/AGENTS.md`
 2. `{{USER_HOME}}/.orquestrador/rules.md`
 3. `{{USER_HOME}}/.orquestrador/maestro.md`
-4. O `AGENTS.md` mais próximo do projeto atual
-5. Se existir `DEV/`, leia `DEV/README.md` ou `DEV/INDEX.md`, `DEV/HANDOFF.md`, `DEV/CONTEXT.md` e `DEV/SPECS/ACTIVE.md`
-6. Consulte `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json` somente para escolher a skill necessária
+4. `{{USER_HOME}}/.orquestrador/PERSISTENCE.md`
+5. O `AGENTS.md` mais próximo do projeto atual
+6. Se existir `DEV/`, leia `DEV/README.md` ou `DEV/INDEX.md`, `DEV/HANDOFF.md`, `DEV/CONTEXT.md` e `DEV/SPECS/ACTIVE.md`
+7. Consulte `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json` somente para escolher a skill necessária
 
 Depois de ler:
 
@@ -618,6 +626,7 @@ Read and follow:
 - `{{USER_HOME}}/AGENTS.md`
 - `{{USER_HOME}}/.orquestrador/rules.md`
 - `{{USER_HOME}}/.orquestrador/maestro.md`
+- `{{USER_HOME}}/.orquestrador/PERSISTENCE.md`
 - `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json`
 - `{{USER_HOME}}/.orquestrador/SKILLS_INDEX.md`
 
@@ -639,6 +648,7 @@ Read and follow these files when starting substantive work:
 - `{{USER_HOME}}/AGENTS.md`
 - `{{USER_HOME}}/.orquestrador/rules.md`
 - `{{USER_HOME}}/.orquestrador/maestro.md`
+- `{{USER_HOME}}/.orquestrador/PERSISTENCE.md`
 - `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json`
 - `{{USER_HOME}}/.orquestrador/SKILLS_INDEX.md`
 

@@ -8,6 +8,11 @@ Todas as mudanças relevantes do Orquestrador Maestro estão documentadas aqui.
 - Adicionada a skill `improve-codebase-architecture`, de Eduardo Queiroz, para análises arquiteturais com relatório HTML decisório, diagramas, comparação de impactos técnicos e de produto e referências em português.
 - Kiver Teixeira (`kivervinicius`) relatou a perda de contexto entre sessões no Cursor e ajudou a direcionar a criação do comando `/maestro` para reidratação do contexto do Orquestrador.
 
+### Persistência
+- Criado o contrato canônico `orquestrador/PERSISTENCE.md`, aplicado aos entrypoints do Codex, OpenCode, Claude, Cursor, Gemini, Windsurf e Antigravity.
+- Os verificadores agora exigem o contrato de persistência e confirmam que os perfis globais apontam para ele.
+- Fernando Bolzan conduziu esta atualização para tornar a persistência do Orquestrador Maestro explícita e compartilhada entre os softwares.
+
 ## 0.1.12 - 2026-07-22
 
 ### Corrigido
