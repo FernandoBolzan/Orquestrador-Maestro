@@ -90,7 +90,7 @@ O pacote instala arquivos nos locais que as ferramentas costumam ler como regra,
 | OpenCode | `%USERPROFILE%\.config\opencode\AGENTS.md` e `%USERPROFILE%\.config\opencode\opencode.json` |
 | Claude Code | `%USERPROFILE%\.claude\CLAUDE.md` |
 | Gemini CLI | `%USERPROFILE%\.gemini\GEMINI.md` |
-| Cursor | `%USERPROFILE%\.cursor\rules\orquestrador-maestro.mdc` e `%USERPROFILE%\.cursor\AGENTS.md` |
+| Cursor | `%USERPROFILE%\.cursor\rules\orquestrador-maestro.mdc`, `%USERPROFILE%\.cursor\AGENTS.md` e `%USERPROFILE%\.cursor\commands\maestro.md` |
 | Windsurf/Cascade | `%USERPROFILE%\.codeium\windsurf\memories\global_rules.md` |
 | Antigravity | `%USERPROFILE%\antigravity-rules.json`, `%USERPROFILE%\.antigravity\antigravity.json`, `%USERPROFILE%\.antigravity\settings.json` e `%USERPROFILE%\.ai-standards` |
 | VS Code + GitHub Copilot | projeto aberto: `.github\copilot-instructions.md` e `.vscode\extensions.json` |
@@ -117,7 +117,7 @@ A fonte estruturada da matriz é `orquestrador/PROGRAM_ENTRYPOINTS.json`. A tabe
 | Codex | `codex` | Sim | `AGENTS.md`, skills, agentes e prompts | Não |
 | OpenCode | `opencode` | Sim | `AGENTS.md`, `opencode.json`, hooks e skills | Não |
 | Claude Code | `claude` | Sim | `CLAUDE.md`, `SYSTEM_PROMPT.md`, hooks e skills | Não por padrão |
-| Cursor | `cursor` | Sim | `AGENTS.md`, regra MDC, hooks e skills | Não |
+| Cursor | `cursor` | Sim | `AGENTS.md`, regra MDC, hooks, comando `/maestro` e skills | Não |
 | Gemini CLI | `gemini` | Sim | `GEMINI.md`, hooks e skills | Não |
 | Windsurf | `windsurf` | Sim | `global_rules.md`, hooks e skills | Não |
 | Antigravity | `antigravity` | Sim | `antigravity-rules.json`, `.antigravity`, `.ai-standards` e skills | Não |

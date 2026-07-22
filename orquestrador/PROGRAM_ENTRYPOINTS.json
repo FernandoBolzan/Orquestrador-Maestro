@@ -113,7 +113,7 @@
       "component": "cursor",
       "capabilities": {
         "autoActivates": true,
-        "hookSupport": "AGENTS.md, MDC rule, hooks.md, skills",
+        "hookSupport": "AGENTS.md, MDC rule, hooks.md, skills, slash command",
         "commandRewrite": false,
         "statusline": false,
         "settingsMerge": "file copy with backup",
@@ -122,10 +122,11 @@
       "primary": [
         "{{USER_HOME}}/.cursor/AGENTS.md",
         "{{USER_HOME}}/.cursor/rules/orquestrador-maestro.mdc",
-        "{{USER_HOME}}/.cursor/hooks.md"
+        "{{USER_HOME}}/.cursor/hooks.md",
+        "{{USER_HOME}}/.cursor/commands/maestro.md"
       ],
       "skillsRoot": "{{USER_HOME}}/.cursor/skills",
-      "notes": "Cursor supports AGENTS.md and rule files; the installer writes both as portable local entrypoints."
+      "notes": "Cursor supports AGENTS.md, rule files and commands; /maestro rehydrates the active handoff before continuing."
     },
     "gemini": {
       "component": "gemini",
