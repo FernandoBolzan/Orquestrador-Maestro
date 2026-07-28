@@ -988,6 +988,8 @@ O validador público verifica:
 - [docs/orquestrador.md](docs/orquestrador.md): download, instalação, verificação, uso e atualização.
 - [docs/orquestrador-reference.md](docs/orquestrador-reference.md): lógica interna, roteamento, hooks, perfis, agentes, sync e verificação.
 - [docs/context-economy.md](docs/context-economy.md): economia de contexto inspirada em RTK/Caveman, leitura em camadas e roadmap de wrappers compactos.
+- [docs/rfcs/](docs/rfcs/README.md): fluxo de RFCs para propostas que afetam arquitetura, memória, privacidade ou compatibilidade.
+- [docs/ai-memory-integration.md](docs/ai-memory-integration.md): integração opcional com `ai-memory` para memória longa entre agentes.
 - [docs/research/repo-radar-2026-05.md](docs/research/repo-radar-2026-05.md): radar de repositórios recentes e padrões extraíveis para próximas melhorias.
 - [docs/research/repo-radar-2026-06.md](docs/research/repo-radar-2026-06.md): radar de junho de 2026 com UX/UI, changelog canônico, doctor/changelog no CLI, uso seguro de bibliotecas externas, gate de implementação mínima, gate React e compressão opt-in de contexto.
 - [docs/npm-package.md](docs/npm-package.md): pacote `@iapro/orquestrador-maestro-cli`, comandos npm, update e publicação.

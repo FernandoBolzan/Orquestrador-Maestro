@@ -2,7 +2,13 @@
 
 Todas as mudanças relevantes do Orquestrador Maestro estão documentadas aqui.
 
-## Unreleased - 2026-07-20
+## Unreleased - 2026-07-28
+
+### RFCs e memória opcional
+
+- Adicionada a convenção pública de RFCs em `docs/rfcs/`, separando proposta, decisão, implementação e verificação.
+- Adicionadas RFCs iniciais para contrato de memória entre agentes, provider opcional e captura com privacidade.
+- Adicionado o guia de integração opt-in com `ai-memory`, mantendo `DEV/` como fonte de verdade e sem dependência obrigatória no pacote.
 
 ### Contribuição comunitária
 - Adicionada a skill `improve-codebase-architecture`, de Eduardo Queiroz, para análises arquiteturais com relatório HTML decisório, diagramas, comparação de impactos técnicos e de produto e referências em português.

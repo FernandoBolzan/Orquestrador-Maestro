@@ -47,11 +47,12 @@ Use placeholders como `%USERPROFILE%`, `$HOME`, `{{USER_HOME}}`, `{{USER_NAME}}`
 ## Fluxo Recomendado
 
 1. Abra uma issue ou descreva claramente o problema no PR.
-2. Faça a menor mudança que resolve o caso.
-3. Atualize README ou docs quando o comportamento público mudar.
-4. Atualize `CHANGELOG.md` e o resumo do changelog no README quando a mudança for relevante para usuários.
-5. Rode validação.
-6. Explique no PR: o que mudou, por que mudou, como foi verificado e risco restante.
+2. Para mudanças que afetem arquitetura, memória, privacidade, compatibilidade ou mais de uma ferramenta, abra uma RFC em [`docs/rfcs/`](docs/rfcs/README.md).
+3. Faça a menor mudança que resolve o caso.
+4. Atualize README ou docs quando o comportamento público mudar.
+5. Atualize `CHANGELOG.md` e o resumo do changelog no README quando a mudança for relevante para usuários.
+6. Rode validação.
+7. Explique no PR: o que mudou, por que mudou, como foi verificado e risco restante.
 
 ## Contribuições De Skills
 
