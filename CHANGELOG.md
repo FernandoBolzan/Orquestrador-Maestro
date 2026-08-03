@@ -2,6 +2,14 @@
 
 Todas as mudanças relevantes do Orquestrador Maestro estão documentadas aqui.
 
+## 0.1.13 - 2026-08-03
+
+### Segurança
+
+- Adicionada esteira defensiva com Gitleaks, Semgrep, OSV-Scanner, Trivy e Strix opt-in.
+- Adicionados scripts PowerShell/Bash, documentação e workflow de verificação em Pull Request.
+- Mantidos testes dinâmicos e pentest agentivo fora da execução automática, exigindo alvo e autorização explícitos.
+
 ## Unreleased - 2026-07-28
 
 ### RFCs e memória opcional
