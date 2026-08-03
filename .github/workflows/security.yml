@@ -1,0 +1,31 @@
+name: Security checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  repository-scan:
+    name: Repository security scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run local security checks
+        shell: bash
+        run: bash scripts/security-scan.sh --repo .
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: security-reports/
+          if-no-files-found: ignore
+
+# Strix/DAST fica fora deste workflow: exige staging e aprovação explícita.

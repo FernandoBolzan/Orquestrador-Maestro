@@ -287,6 +287,8 @@ Valide com grok inspect.
 
 ## Documentação
 
+- [Testes de segurança](docs/security-testing.md)
+
 - [Instalação detalhada](docs/installation.md)
 - [Opções do instalador](docs/installer-options.md)
 - [Solução de problemas](docs/installation-troubleshooting.md)
