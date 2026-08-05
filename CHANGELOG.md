@@ -2,6 +2,10 @@
 
 Todas as mudanças relevantes do Orquestrador Maestro estão documentadas aqui.
 
+## Correção pós-release - 2026-08-05
+
+- Os bootstraps públicos agora instalam a CLI `0.1.13`, alinhada à versão atual do pacote, em vez de fixarem a versão antiga `0.1.11`.
+
 ## 0.1.13 - 2026-08-03
 
 ### Segurança
