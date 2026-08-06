@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.17 - 2026-08-06
+
+### Corrigido
+
+- Corrigida a descoberta de skills no OpenCode: `orquestrador-maestro` agora possui metadados válidos, é sincronizada para todos os clientes roteados e não é mais marcada como diretório extra. Correção identificada a partir da dica de Felinto e Hector Noya (Mentorados).
+
 ## 0.1.16 - 2026-08-06
 
 ### Corrigido
