@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.15 - 2026-08-06
+
+### APIs e skills
+
+- Atualizadas oito skills de integração com APIs: AbacatePay, Stripe, Google Workspace, Evolution API, ElevenLabs, provedores de IA, Resend e Meta Ads/WhatsApp.
+- AbacatePay v2 passou a ser a orientação padrão para novos projetos; rotas v1 e eventos `billing.*` ficaram explicitamente delimitados como legado.
+- Adicionados limites de versionamento, endpoints atuais, eventos, requisitos de segurança, idempotência, licenciamento e links para documentação oficial.
+- A skill de Meta Ads deixou de tratar um objetivo de campanha como universalmente superior e passou a exigir validação do fluxo atual da conta.
+- Corrigido o detector de mojibake do catálogo para aceitar UTF-8 legítimo em português sem perder a detecção de texto quebrado.
+
+### Verificação
+
+- `scripts/validate-public.ps1`
+- `scripts/validate-skills.ps1`
+- `scripts/check-dev-gates.ps1`
+- `git diff --check`
+
 ## 0.1.14 - 2026-08-05
 
 - Adicionado briefing de contexto econômico para carregar apenas o contrato e a memória operacional necessários à intenção do Maestro.

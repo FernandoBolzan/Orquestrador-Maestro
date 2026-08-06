@@ -4,6 +4,7 @@ description: Integrate Stripe Checkout, Billing, subscriptions, Customer Portal,
 category: payments
 risk: medium
 source: official-docs-plus-local-saas-patterns
+last_verified: 2026-08-06
 ---
 
 # skill-stripe-integration
@@ -28,6 +29,12 @@ source: official-docs-plus-local-saas-patterns
 6. Keep plan and entitlement rules in local product tables; Stripe prices/products are billing evidence, not the whole access model.
 7. Never log secret keys, webhook secrets, complete card/payment details, or unnecessary PII.
 
+## API Versioning
+
+- Pin the Stripe API version in the server SDK/client or endpoint configuration instead of relying silently on the account default.
+- The current Stripe API version at verification time is `2026-02-25.clover`; treat this as a maintenance reference, not a reason to upgrade production automatically.
+- Review the Stripe changelog and run a test-mode webhook migration before adopting a new breaking release. Monthly releases within a major release are designed to be backward-compatible, but twice-yearly major releases can require code changes.
+
 ## Typical SaaS Events
 
 - `checkout.session.completed`: first checkout completion and customer/subscription linking.
@@ -50,4 +57,10 @@ source: official-docs-plus-local-saas-patterns
 - Confirm live mode uses live price IDs, live keys, and live webhook endpoint secret.
 - Check dashboard event deliveries before assuming frontend checkout failed.
 - Verify duplicate events do not duplicate payments, extend access twice, or create duplicate audit rows.
+- Verify the webhook endpoint's configured API version matches the SDK's event types and deserialization expectations.
 
+## Official References
+
+- https://docs.stripe.com/api/versioning
+- https://docs.stripe.com/webhooks/versioning
+- https://docs.stripe.com/webhooks/signature

@@ -182,7 +182,7 @@ function validate() {
     if (/\b(TODO|FIXME|stub|placeholder)\b/i.test(text)) {
       issues.push(`skills/${name}/SKILL.md: contains TODO/FIXME/stub/placeholder text`);
     }
-    if (/[ÃÂâ][\s\S]{0,2}/.test(text)) {
+    if (/(?:Ã.|Â.|â(?:€|‚|„|™|œ|–|—|…))/.test(text)) {
       issues.push(`skills/${name}/SKILL.md: possible mojibake`);
     }
     if (!routerSkills[name]) issues.push(`router:${name}: missing router entry`);

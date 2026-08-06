@@ -4,6 +4,7 @@ description: Integrate AbacatePay PIX/card billing, customers, QRCode PIX, billi
 category: payments
 risk: medium
 source: official-docs-plus-local-saas-patterns
+last_verified: 2026-08-06
 ---
 
 # skill-abacatepay-integration
@@ -18,20 +19,25 @@ source: official-docs-plus-local-saas-patterns
 6. Process webhooks idempotently, update entitlements from trusted backend evidence, and audit every access transition.
 7. Verify with local webhook tooling or provider test events plus project build/typecheck.
 
-## Current API Shape
+## Current API Shape (v2)
 
-Use the current billing API shape, not older `/charge` examples:
-- create billing: `POST https://api.abacatepay.com/v1/billing/create`
-- list billings: `GET https://api.abacatepay.com/v1/billing/list`
+Use API v2 for new work. API v1 remains only for legacy integrations:
+- base URL: `https://api.abacatepay.com/v2`
+- hosted checkout: `POST /checkouts/create`
+- subscriptions: `POST /subscriptions/create`
+- transparent PIX/card/boleto checkout: `POST /transparents/create`
+- webhook management: `POST /webhooks/create`
 - auth header: `Authorization: Bearer <abacatepay-api-key>`
-- common methods: `PIX`, `CARD`
-- common event: `billing.paid`
+- current checkout events: `checkout.completed`, `checkout.refunded`, `checkout.disputed`
+- current subscription events: `subscription.completed`, `subscription.renewed`, `subscription.cancelled`
+
+The old v1 routes such as `/v1/billing/create` and events such as `billing.paid` are legacy-compatible references. Do not copy them into new integrations; if maintaining v1, isolate an adapter and plan migration to v2.
 
 ## Guardrails
 
 1. Keep `ABACATEPAY_API_KEY` and webhook secrets server-side.
 2. Treat checkout redirect as advisory. Grant access only after trusted backend/webhook confirmation.
-3. Deduplicate webhook processing by event ID and billing ID.
+3. Deduplicate webhook processing by the v2 event ID and the provider checkout/subscription ID.
 4. Do not log API keys, webhook secrets, full CPF/CNPJ, full phone numbers, or unnecessary PII.
 5. Keep plan and entitlement rules in local product tables, not encoded only in AbacatePay objects.
 6. Support retries and out-of-order delivery by re-reading local payment state before mutation.
@@ -48,6 +54,14 @@ Read `{{USER_HOME}}/Documents\Code\Nina\src\lib\abacatepay.ts` only when impleme
 - Simulate or replay `billing.paid` and confirm idempotent entitlement update.
 - Check invalid CPF/CNPJ, invalid cellphone, duplicate webhook, expired billing, and failed provider response paths.
 - Run the project build/typecheck/lint when available.
+- Confirm the integration uses the v2 payload shape (`apiVersion: 2`) and does not assume the legacy `billing.*` event names.
+
+## Official References
+
+- https://docs.abacatepay.com/pages/reference/introduction
+- https://docs.abacatepay.com/pages/payment/create
+- https://docs.abacatepay.com/pages/webhooks
+- https://docs.abacatepay.com/pages/changelog
 
 ## Related Skills
 
@@ -55,4 +69,3 @@ Read `{{USER_HOME}}/Documents\Code\Nina\src\lib\abacatepay.ts` only when impleme
 - `skill-saas-core-limits`
 - `skill-supabase-rls`
 - `skill-security-hooks`
-
