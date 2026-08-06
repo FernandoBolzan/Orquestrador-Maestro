@@ -1,3 +1,11 @@
+---
+name: orquestrador-maestro
+description: Aplica o contrato compartilhado do Orquestrador Maestro ao trabalho de código e projeto.
+category: engineering
+risk: medium
+source: orquestrador-native
+---
+
 # Orquestrador Maestro
 
 Use this skill for coding and project work on `{{USER_HOME}}` so Codex follows the same operating model already used in the rest of the environment.

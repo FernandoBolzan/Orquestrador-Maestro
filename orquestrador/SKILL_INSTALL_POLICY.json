@@ -32,37 +32,37 @@
     "opencode": {
       "path": ".opencode/skills",
       "maxDirectories": 48,
-      "allowDirectories": []
+      "allowDirectories": ["orquestrador-maestro"]
     },
     "agents": {
       "path": ".agents/skills",
       "maxDirectories": 48,
-      "allowDirectories": []
+      "allowDirectories": ["orquestrador-maestro"]
     },
     "claude": {
       "path": ".claude/skills",
       "maxDirectories": 48,
-      "allowDirectories": []
+      "allowDirectories": ["orquestrador-maestro"]
     },
     "cursor": {
       "path": ".cursor/skills",
       "maxDirectories": 48,
-      "allowDirectories": []
+      "allowDirectories": ["orquestrador-maestro"]
     },
     "gemini": {
       "path": ".gemini/skills",
       "maxDirectories": 48,
-      "allowDirectories": []
+      "allowDirectories": ["orquestrador-maestro"]
     },
     "windsurf": {
       "path": ".windsurf/skills",
       "maxDirectories": 48,
-      "allowDirectories": []
+      "allowDirectories": ["orquestrador-maestro"]
     },
     "antigravity": {
       "path": ".antigravity-skills/skills",
       "maxDirectories": 48,
-      "allowDirectories": []
+      "allowDirectories": ["orquestrador-maestro"]
     }
   }
 }

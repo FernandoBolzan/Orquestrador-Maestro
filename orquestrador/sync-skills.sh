@@ -168,6 +168,9 @@ else
   )
 fi
 
+# Keep the shared default skill available to every routed client.
+MUST_HAVE=("orquestrador-maestro" "${MUST_HAVE[@]}")
+
 get_skill_source() {
   local name="$1"
   local root candidate

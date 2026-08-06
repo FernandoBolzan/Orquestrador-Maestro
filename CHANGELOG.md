@@ -4,6 +4,8 @@
 
 ### Corrigido
 
+- Corrigida a descoberta de skills no OpenCode: `orquestrador-maestro` agora possui metadados válidos, é sincronizada para todos os clientes roteados e não é mais marcada como diretório extra. Correção identificada a partir da dica de Felinto e Hector Noya (Mentorados).
+
 - O bootstrap do Windows agora usa um prefixo npm estável no perfil do usuário, evitando que `fnm` direcione os binários para um diretório temporário de sessão durante atualizações.
 - O fluxo de instalação e atualização preserva os launchers globais dos clientes, incluindo o OpenCode, após a troca de versão do Node.js.
 - Os bootstraps Windows e Unix agora apontam para a mesma versão publicada da CLI (`0.1.16`).

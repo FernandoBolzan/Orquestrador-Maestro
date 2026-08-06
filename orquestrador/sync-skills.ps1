@@ -250,6 +250,11 @@ if (Test-Path -LiteralPath $manifestPath) {
   )
 }
 
+# OpenCode, Claude and the other routed clients also load the shared default
+# skill from their global instruction files. Keep it in every mirror even
+# though it is maintained with the Codex-native skill sources.
+$mustHave = @("orquestrador-maestro") + @($mustHave | Where-Object { $_ -ne "orquestrador-maestro" })
+
 $report = New-Object System.Collections.Generic.List[object]
 $offloadStamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
