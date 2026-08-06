@@ -112,6 +112,18 @@ A economia de contexto tambem depende de reduzir trabalho inutil antes dele exis
 
 Esses gates nao substituem a verificacao do projeto. Eles evitam que a IA gaste tokens resolvendo o problema errado, com contexto demais ou com solucao maior que o necessario.
 
+## Briefing Conversacional
+
+O comando `context brief` é uma capacidade interna para o Orquestrador montar um pacote curto de reidratação. O Maestro continua conversando normalmente; o comando existe para que a ferramenta carregue o contexto certo sem repetir a árvore inteira do projeto.
+
+```bash
+orquestrador-maestro context brief --task "objetivo da sessão" --max-chars 16000
+```
+
+O briefing prioriza `AGENTS.md`, os arquivos compactos de `DEV/` e, quando existe uma intenção explícita, documentos com nomes relacionados. Ele exclui `WORKLOG.md`, logs, caches, backups, `.env`, `tmp/` e `.omx/` por padrão. O limite é determinístico em caracteres para funcionar de forma igual em clientes diferentes.
+
+O resultado é um pacote de leitura, não uma nova fonte de verdade: regras, decisões, handoffs e verificações continuam nos arquivos originais.
+
 ## DEV Implementado
 
 O modelo recomendado deixou de ser "futuro desejado" e passou a ser a estrutura publicada pelo inicializador:

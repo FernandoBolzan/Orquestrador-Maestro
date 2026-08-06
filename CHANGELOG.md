@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.14 - 2026-08-05
+
+- Adicionado briefing de contexto econômico para carregar apenas o contrato e a memória operacional necessários à intenção do Maestro.
+- Mantida a experiência conversacional; o briefing é uma capacidade interna e os comandos existentes continuam compatíveis.
+- Adicionados testes automatizados para orçamento, priorização e exclusão de histórico sensível.
+
 Todas as mudanças relevantes do Orquestrador Maestro estão documentadas aqui.
 
 ## Correção pós-release - 2026-08-05

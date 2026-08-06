@@ -11,6 +11,7 @@ const path = require("node:path");
 
 const rootDir = path.resolve(__dirname, "..");
 const packageJson = require(path.join(rootDir, "package.json"));
+const contextBrief = require(path.join(rootDir, "orquestrador", "bin", "context-brief.js"));
 const telemetryTimeoutMs = 1200;
 const telemetryConsentVersion = 1;
 
@@ -51,6 +52,7 @@ Uso:
   orquestrador-maestro init-dev [--project-path PATH]
   orquestrador-maestro compact-worklog [--project-path PATH] [--keep N]
   orquestrador-maestro check-dev-gates [--project-path PATH] [--max-entries N] [--strict]
+  orquestrador-maestro context brief [--project-path PATH] [--task TEXT] [--max-chars N] [--json]
   orquestrador-maestro changelog [--full]
   orquestrador-maestro uninstall [opcoes]
   orquestrador-maestro list-targets [opcoes]
@@ -704,6 +706,10 @@ async function dispatch(command, args) {
 
   if (command === "check-dev-gates") {
     return runDevContextHelper("check-dev-gates", args);
+  }
+
+  if (command === "context") {
+    return contextBrief.main(args);
   }
 
   if (command === "changelog") {

@@ -1,5 +1,7 @@
 # Reidratar o Orquestrador Maestro
 
+Se o contexto for amplo, use internamente `orquestrador-maestro context brief --task "<intenção atual>"` antes de abrir documentos adicionais. O Maestro continua usando apenas a conversa.
+
 Reidrata o contexto operacional antes de continuar a tarefa atual.
 
 Leia nesta ordem, sem abrir catálogos inteiros:

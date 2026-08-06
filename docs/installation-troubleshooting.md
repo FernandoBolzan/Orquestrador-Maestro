@@ -33,7 +33,7 @@ rm -rf -- "$HOME/.orquestrador-public-backups"
 df -h "$HOME"
 
 # 3. Instale a CLI corrigida, use o desinstalador seguro e remova a CLI.
-npm install -g @iapro/orquestrador-maestro-cli@0.1.13 --force --prefer-online
+npm install -g @iapro/orquestrador-maestro-cli@0.1.14 --force --prefer-online
 orquestrador-maestro uninstall
 npm uninstall -g @iapro/orquestrador-maestro-cli
 

@@ -2,6 +2,8 @@
 
 The user is the maestro. Codex and other agents act as the orquestrador.
 
+When the task is broad or a session is being resumed, the orquestrador may use `orquestrador-maestro context brief --task "<intent>"` to assemble a bounded conversational briefing. This is an internal optimization; the maestro should not need to manage context commands.
+
 ## Execution Loop
 
 1. Observe: read the relevant entrypoints, project instructions, and `DEV/` overview docs when the project has them.
