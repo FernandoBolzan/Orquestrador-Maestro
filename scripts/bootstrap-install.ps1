@@ -3,8 +3,8 @@ param()
 
 $ErrorActionPreference = "Stop"
 $package = "@iapro/orquestrador-maestro-cli"
-$packageVersion = "0.1.14"
-$bootstrapVersion = "2026.08.05.1"
+$packageVersion = "0.1.16"
+$bootstrapVersion = "2026.08.06.1"
 Write-Host "Orquestrador Maestro bootstrap $bootstrapVersion"
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue) -or -not (Get-Command npm -ErrorAction SilentlyContinue)) {
@@ -22,7 +22,12 @@ if ($nodeMajor -lt 18) {
   throw "Node.js 18 ou superior é necessário. Versão atual: $(& node --version)."
 }
 
-$prefix = (& npm config get prefix 2>$null).Trim()
+$prefix = if ($env:ORQUESTRADOR_NPM_PREFIX) {
+  $env:ORQUESTRADOR_NPM_PREFIX
+} else {
+  Join-Path $env:APPDATA "npm"
+}
+$currentPrefix = (& npm config get prefix 2>$null).Trim()
 $bin = $prefix
 $globalRoot = (& npm root -g 2>$null).Trim()
 $writable = $true
@@ -41,11 +46,13 @@ foreach ($directory in @($bin, $globalRoot)) {
   }
 }
 
-if (-not $writable) {
+if (-not $writable -and -not $env:ORQUESTRADOR_NPM_PREFIX) {
   $prefix = Join-Path $env:LOCALAPPDATA "npm"
   New-Item -ItemType Directory -Path $prefix -Force | Out-Null
   & npm config set prefix $prefix
   $bin = $prefix
+} elseif ($prefix -ne $currentPrefix) {
+  & npm config set prefix $prefix
 }
 
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
