@@ -36,35 +36,53 @@ Opções:
 function parseArgs(argv) {
   const options = { projectPath: process.cwd(), task: "", maxChars: DEFAULT_MAX_CHARS, json: false };
   const args = [...argv];
-  if (args[0] === "brief") args.shift();
+  if (args[0] === "brief") {
+    args.shift();
+  }
+
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === "--help" || arg === "-h") { options.help = true; continue; }
-    if (arg === "--json") { options.json = true; continue; }
+    if (arg === "--help" || arg === "-h") {
+      options.help = true;
+      continue;
+    }
+    if (arg === "--json") {
+      options.json = true;
+      continue;
+    }
+
     const next = args[index + 1];
-    if (!next || next.startsWith("--")) throw new Error(`A opção ${arg} exige um valor.`);
-    if (arg === "--project-path") options.projectPath = next;
-    else if (arg === "--task") options.task = next;
-    else if (arg === "--max-chars") {
+    if (!next || next.startsWith("--")) {
+      throw new Error(`A opção ${arg} exige um valor.`);
+    }
+
+    if (arg === "--project-path") {
+      options.projectPath = next;
+    } else if (arg === "--task") {
+      options.task = next;
+    } else if (arg === "--max-chars") {
       const parsed = Number.parseInt(next, 10);
       if (!Number.isInteger(parsed) || parsed < 1000 || parsed > MAX_MAX_CHARS) {
         throw new Error(`--max-chars deve ser um inteiro entre 1000 e ${MAX_MAX_CHARS}.`);
       }
       options.maxChars = parsed;
-    } else throw new Error(`Parâmetro desconhecido: ${arg}`);
+    } else {
+      throw new Error(`Parâmetro desconhecido: ${arg}`);
+    }
     index += 1;
   }
-  return options;
-}
 
-function readUtf8(filePath) {
-  return sanitizeContent(fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n").trim());
+  return options;
 }
 
 function sanitizeContent(content) {
   return content
     .replace(/(api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password)\s*[:=]\s*[^\s`"']+/giu, "$1=[redigido]")
     .replace(/(?:[A-Za-z]:[\\/]|\/Users\/|\/home\/|\/root\/)[^\s`"']+/gu, "[caminho local redigido]");
+}
+
+function readUtf8(filePath) {
+  return sanitizeContent(fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n").trim());
 }
 
 function isSafeRegularFile(filePath) {
@@ -82,8 +100,12 @@ function findNearestFile(projectRoot, fileName) {
 }
 
 function tokenize(value) {
-  return String(value || "").toLocaleLowerCase("pt-BR").normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9]+/u).filter((token) => token.length >= 3);
+  return String(value || "")
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9]+/u)
+    .filter((token) => token.length >= 3);
 }
 
 function relativePath(projectRoot, filePath) {
@@ -96,7 +118,10 @@ function isExcluded(relative) {
 }
 
 function collectMarkdownFiles(root) {
-  if (!fs.existsSync(root) || fs.lstatSync(root).isSymbolicLink()) return [];
+  if (!fs.existsSync(root) || fs.lstatSync(root).isSymbolicLink()) {
+    return [];
+  }
+
   const result = [];
   const pending = [root];
   while (pending.length > 0) {
@@ -104,11 +129,17 @@ function collectMarkdownFiles(root) {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const fullPath = path.join(current, entry.name);
       const relative = path.relative(root, fullPath).replace(/\\/g, "/");
-      if (isExcluded(relative)) continue;
-      if (entry.isDirectory()) pending.push(fullPath);
-      else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) result.push(fullPath);
+      if (isExcluded(relative)) {
+        continue;
+      }
+      if (entry.isDirectory()) {
+        pending.push(fullPath);
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+        result.push(fullPath);
+      }
     }
   }
+
   return result.sort();
 }
 
@@ -126,36 +157,174 @@ function scoreFile(relative, taskTokens) {
 }
 
 function truncate(content, maxChars) {
-  if (content.length <= maxChars) return content;
+  if (content.length <= maxChars) {
+    return content;
+  }
   const marker = "\n\n[conteúdo reduzido para preservar o orçamento de contexto]";
   return `${content.slice(0, Math.max(0, maxChars - marker.length))}${marker}`;
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractSection(content, heading) {
+  const pattern = new RegExp(`^##\\s+${escapeRegex(heading)}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, "m");
+  const match = content.match(pattern);
+  return match ? match[1].trim() : "";
+}
+
+function meaningfulSectionLines(content, heading) {
+  const section = extractSection(content, heading);
+  if (!section) {
+    return [];
+  }
+
+  return section.split("\n")
+    .map((line) => line.trim().replace(/^-\s*/, "").trim())
+    .filter((line) => {
+      if (!line || line === "-" || line.startsWith("```")) {
+        return false;
+      }
+      return !/^[A-Za-z][A-Za-z /-]*:\s*$/.test(line);
+    });
+}
+
+function extractBullet(source, labels) {
+  const candidates = Array.isArray(labels) ? labels : [labels];
+  for (const label of candidates) {
+    const pattern = new RegExp(`^-\\s*${escapeRegex(label)}:\\s*(.+)$`, "im");
+    const match = source.match(pattern);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  return "";
+}
+
+function summarizeText(value, maxChars = 220) {
+  const sanitized = sanitizeContent(String(value || "").replace(/\s+/g, " ").trim());
+  if (!sanitized) {
+    return "";
+  }
+  return sanitized.length <= maxChars ? sanitized : `${sanitized.slice(0, maxChars - 1)}…`;
+}
+
+function summarizeLines(lines, maxChars = 220) {
+  return summarizeText(lines.filter(Boolean).join(" | "), maxChars);
+}
+
+function parsePhaseState(specContent) {
+  const statusSection = extractSection(specContent, "Status");
+  const phase = extractBullet(statusSection, ["Phase", "phase"]);
+  const status = extractBullet(statusSection, ["Status", "status"]);
+  const nextGate = extractBullet(statusSection, ["Next gate", "NextGate", "nextGate"]);
+  const startedAt = extractBullet(statusSection, ["Started at", "StartedAt", "startedAt"]);
+
+  return {
+    mode: phase || status || nextGate || startedAt ? "structured" : "legacy",
+    phase: summarizeText(phase, 80),
+    status: summarizeText(status, 140),
+    nextGate: summarizeText(nextGate, 160),
+    startedAt: summarizeText(startedAt, 80),
+    legacyStatus: summarizeLines(meaningfulSectionLines(specContent, "Status"), 160)
+  };
 }
 
 function buildCandidates(projectRoot, task) {
   const candidates = [];
   const seen = new Set();
   const add = (filePath, priority, reason) => {
-    if (!filePath || seen.has(filePath) || !isSafeRegularFile(filePath)) return;
+    if (!filePath || seen.has(filePath) || !isSafeRegularFile(filePath)) {
+      return;
+    }
     seen.add(filePath);
     candidates.push({ filePath, priority, reason });
   };
+
   add(findNearestFile(projectRoot, "AGENTS.md"), 100, "contrato do projeto");
-  for (const relative of COMPACT_FILES) add(path.join(projectRoot, relative), 80, "memória operacional compacta");
+  for (const relative of COMPACT_FILES) {
+    add(path.join(projectRoot, relative), 80, "memória operacional compacta");
+  }
+
   const taskTokens = tokenize(task);
   if (taskTokens.length > 0) {
     for (const filePath of collectTaskDetailFiles(projectRoot)) {
       const relative = relativePath(projectRoot, filePath);
       const score = scoreFile(relative, taskTokens);
-      if (score > 0) add(filePath, 20 + score, "documento relacionado à intenção");
+      if (score > 0) {
+        add(filePath, 20 + score, "documento relacionado à intenção");
+      }
     }
   }
+
   return candidates.sort((left, right) => right.priority - left.priority || left.filePath.localeCompare(right.filePath));
+}
+
+function buildDevState(projectRoot) {
+  const specPath = path.join(projectRoot, "DEV", "SPECS", "ACTIVE.md");
+  const handoffPath = path.join(projectRoot, "DEV", "HANDOFF.md");
+  const contextPath = path.join(projectRoot, "DEV", "CONTEXT.md");
+  const verifyPath = path.join(projectRoot, "DEV", "VERIFY.md");
+
+  const specContent = isSafeRegularFile(specPath) ? readUtf8(specPath) : "";
+  const handoffContent = isSafeRegularFile(handoffPath) ? readUtf8(handoffPath) : "";
+  const contextContent = isSafeRegularFile(contextPath) ? readUtf8(contextPath) : "";
+  const verifyContent = isSafeRegularFile(verifyPath) ? readUtf8(verifyPath) : "";
+
+  const phaseState = parsePhaseState(specContent);
+  const risks = summarizeLines(
+    meaningfulSectionLines(contextContent, "Constraints And Risks").slice(0, 2),
+    220
+  ) || summarizeLines(meaningfulSectionLines(verifyContent, "Remaining Risk").slice(0, 2), 220);
+
+  const nextAction = summarizeText(
+    extractBullet(handoffContent, "Next context")
+      || summarizeLines(meaningfulSectionLines(handoffContent, "Next Action").slice(0, 2), 180)
+      || summarizeLines(meaningfulSectionLines(contextContent, "Next Context").slice(0, 2), 180),
+    180
+  );
+
+  const nextGate = phaseState.nextGate
+    || summarizeLines(meaningfulSectionLines(specContent, "Verification Plan").slice(0, 2), 180);
+
+  const status = phaseState.status || phaseState.legacyStatus;
+  const phase = phaseState.phase || "legacy (não declarada)";
+
+  return {
+    mode: phaseState.mode,
+    phase,
+    status: status || "não declarado",
+    nextGate: nextGate || "não declarado",
+    startedAt: phaseState.startedAt || "",
+    risks: risks || "não declarados",
+    nextAction: nextAction || "não declarada"
+  };
+}
+
+function buildStateSection(state) {
+  const lines = [
+    "## DEV State",
+    "",
+    `- Phase: ${state.phase}`,
+    `- Status: ${state.status}`,
+    `- Next gate: ${state.nextGate}`,
+    state.startedAt ? `- Started at: ${state.startedAt}` : "",
+    `- Risks: ${state.risks}`,
+    `- Next action: ${state.nextAction}`
+  ].filter(Boolean);
+
+  return lines.join("\n");
 }
 
 function buildBrief(options) {
   const projectRoot = path.resolve(options.projectPath);
-  if (!fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) throw new Error(`Projeto não encontrado: ${projectRoot}`);
+  if (!fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) {
+    throw new Error(`Projeto não encontrado: ${projectRoot}`);
+  }
+
   const candidates = buildCandidates(projectRoot, options.task);
+  const state = buildDevState(projectRoot);
   const sections = [];
   const included = [];
   const header = [
@@ -164,37 +333,71 @@ function buildBrief(options) {
     options.task ? `Intenção do Maestro: ${options.task}` : "Intenção do Maestro: não informada",
     `Orçamento: ${options.maxChars} caracteres; usado: ${options.maxChars}`
   ].join("\n");
+
   let remaining = Math.max(0, options.maxChars - header.length - 2);
-  for (const candidate of candidates) {
-    if (remaining <= 0) break;
-    const content = readUtf8(candidate.filePath);
-    if (!content) continue;
-    const heading = relativePath(projectRoot, candidate.filePath);
-    const section = `## ${heading}\n\n${truncate(content, remaining)}`;
+  const pushSection = (sectionContent, sectionPath, reason) => {
+    if (!sectionContent || remaining <= 0) {
+      return;
+    }
     const separator = sections.length > 0 ? "\n\n" : "";
     const available = remaining - separator.length;
-    if (available <= 0) break;
-    const output = truncate(section, available);
+    if (available <= 0) {
+      return;
+    }
+    const output = truncate(sectionContent, available);
     sections.push(output);
-    included.push({ path: heading, reason: candidate.reason, chars: output.length });
+    included.push({ path: sectionPath, reason, chars: output.length });
     remaining -= separator.length + output.length;
+  };
+
+  pushSection(buildStateSection(state), "DEV state summary", "estado DEV atual");
+
+  for (const candidate of candidates) {
+    if (remaining <= 0) {
+      break;
+    }
+    const content = readUtf8(candidate.filePath);
+    if (!content) {
+      continue;
+    }
+    const heading = relativePath(projectRoot, candidate.filePath);
+    pushSection(`## ${heading}\n\n${truncate(content, remaining)}`, heading, candidate.reason);
   }
+
   const used = options.maxChars - remaining;
   const finalHeader = header.replace(`usado: ${options.maxChars}`, `usado: ${used}`);
-  const content = `${finalHeader}\n\n${sections.join("\n\n")}`.trim();
-  return { projectRoot: "[redigido]", task: options.task, budget: options.maxChars, used: content.length, files: included, omitted: candidates.length - included.length, content };
+  const content = truncate(`${finalHeader}\n\n${sections.join("\n\n")}`.trim(), options.maxChars);
+
+  return {
+    projectRoot: "[redigido]",
+    task: options.task,
+    budget: options.maxChars,
+    used: content.length,
+    state,
+    files: included,
+    omitted: candidates.length - included.filter((item) => item.path !== "DEV state summary").length,
+    content
+  };
 }
 
 function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
-  if (options.help) { printHelp(); return 0; }
+  if (options.help) {
+    printHelp();
+    return 0;
+  }
   const brief = buildBrief(options);
   console.log(options.json ? JSON.stringify(brief, null, 2) : brief.content);
   return 0;
 }
 
 if (require.main === module) {
-  try { process.exitCode = main(); } catch (error) { console.error(`Erro: ${error.message}`); process.exitCode = 1; }
+  try {
+    process.exitCode = main();
+  } catch (error) {
+    console.error(`Erro: ${error.message}`);
+    process.exitCode = 1;
+  }
 }
 
-module.exports = { DEFAULT_MAX_CHARS, buildBrief, main, parseArgs };
+module.exports = { DEFAULT_MAX_CHARS, buildBrief, buildDevState, main, parseArgs, parsePhaseState };

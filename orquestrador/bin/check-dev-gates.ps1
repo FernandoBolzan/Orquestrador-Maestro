@@ -1,4 +1,4 @@
-$script = Join-Path $PSScriptRoot "dev-context-tools.js"
+$script = Join-Path $PSScriptRoot "check-dev-gates.js"
 $node = Get-Command node -ErrorAction SilentlyContinue
 
 if (-not $node) {

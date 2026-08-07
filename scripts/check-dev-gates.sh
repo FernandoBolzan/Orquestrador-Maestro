@@ -9,4 +9,4 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-node "$REPO_ROOT/orquestrador/bin/dev-context-tools.js" check-dev-gates "$@"
+node "$REPO_ROOT/orquestrador/bin/check-dev-gates.js" "$@"

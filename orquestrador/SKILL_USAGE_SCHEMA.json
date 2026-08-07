@@ -13,6 +13,29 @@
     "result",
     "notes"
   ],
+  "optionalFields": [
+    "workflow",
+    "provenance"
+  ],
+  "fieldSchemas": {
+    "workflow": {
+      "entry": "SKILL.md",
+      "kind": "task",
+      "validation": "standard",
+      "referencesOptional": true,
+      "legacyCompatible": true,
+      "notes": "Resolved workflow metadata after manifest defaults and per-skill overrides are applied."
+    },
+    "provenance": {
+      "evidence": [
+        "orquestrador/SKILLS_MANIFEST.json"
+      ],
+      "steward": "orquestrador-maintainers",
+      "reviewedAt": "2026-08-06",
+      "legacyCompatible": true,
+      "notes": "Resolved provenance metadata after manifest defaults and per-skill overrides are applied."
+    }
+  },
   "example": {
     "timestamp": "2026-05-12T00:00:00-03:00",
     "tool": "codex",
@@ -22,6 +45,23 @@
     "openedSkills": ["skill-saas-factory", "skill-stripe-integration"],
     "openedReferences": [],
     "result": "completed",
-    "notes": "Loaded two skills; dashboard skill not opened because SaaS factory covered the needed workflow."
+    "notes": "Loaded two skills; dashboard skill not opened because SaaS factory covered the needed workflow.",
+    "workflow": {
+      "entry": "SKILL.md",
+      "kind": "task",
+      "validation": "standard",
+      "referencesOptional": true,
+      "legacyCompatible": true,
+      "notes": "Resolved from manifest defaults."
+    },
+    "provenance": {
+      "evidence": [
+        "orquestrador/SKILLS_MANIFEST.json"
+      ],
+      "steward": "orquestrador-maintainers",
+      "reviewedAt": "2026-08-06",
+      "legacyCompatible": true,
+      "notes": "Resolved from manifest defaults."
+    }
   }
 }

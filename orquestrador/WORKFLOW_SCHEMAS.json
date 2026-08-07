@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "purpose": "Declarative, opt-in workflows for coordinating planning, execution, verification, and release evidence.",
+  "defaultWorkflow": "plan-build-verify",
+  "workflows": {
+    "plan-build-verify": {
+      "profile": "phase-loop",
+      "phases": [
+        { "id": "discuss", "artifact": "CONTEXT.md", "required": true },
+        { "id": "plan", "artifact": "PLAN.md", "required": true },
+        { "id": "execute", "artifact": "CHECKPOINT.md", "required": true },
+        { "id": "verify", "artifact": "VERIFY.md", "required": true },
+        { "id": "ship", "artifact": "HANDOFF.md", "required": true }
+      ],
+      "gates": ["tests", "public-validation", "diff-check"]
+    },
+    "review-security": {
+      "profile": "security",
+      "phases": ["discuss", "plan", "execute", "verify"],
+      "gates": ["security-review", "tests", "public-validation"]
+    },
+    "research-decision": {
+      "profile": "deep",
+      "phases": ["discuss", "research", "plan", "verify"],
+      "gates": ["sources", "decision-record"]
+    },
+    "onboard-project": {
+      "profile": "standard",
+      "phases": ["discuss", "plan", "execute", "verify"],
+      "gates": ["dev-context", "tests"]
+    }
+  }
+}

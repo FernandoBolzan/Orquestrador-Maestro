@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.18 - 2026-08-06
+
+### Evolução do workflow
+
+- Adicionado o perfil opt-in `phase-loop`, inspirado em fluxos por fases como GSD, para organizar `discuss`, `plan`, `execute`, `verify` e `ship` sem alterar o caminho padrão.
+- Adicionado o contrato declarativo `orquestrador/WORKFLOW_SCHEMAS.json` com workflows para construção, segurança, pesquisa e onboarding.
+- Adicionada documentação de adoção gradual em `docs/workflows.md`, mantendo provedores e integrações opcionais.
+
+### Contexto e verificação
+
+- O briefing de contexto agora resume o estado de `DEV/`, incluindo fase, próxima ação, riscos e artefatos relevantes, respeitando o orçamento de caracteres.
+- Adicionado um gate dedicado para validar hierarquia de `DEV/`, estado de fase, artefatos e documentação, com wrappers PowerShell e Bash.
+- Adicionada cobertura de regressão para briefing, gates, workflows, catálogo de skills e execução em modo dry-run.
+
+### Governança de skills
+
+- O catálogo passou a aceitar metadados opcionais de proveniência e workflow, preservando fallback compatível para skills legadas.
+- Adicionados schemas públicos para validar manifestos e registros de uso das skills.
+- Os bootstraps PowerShell e Bash foram alinhados com a versão publicada `0.1.18`.
+
+### Verificação
+
+- `npm test`
+- `npm run validate`
+- `scripts/check-dev-gates.ps1`
+- `git diff --check`
+- `npm pack --dry-run`
+
 ## 0.1.17 - 2026-08-06
 
 ### Corrigido

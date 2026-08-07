@@ -40,6 +40,13 @@ Arquivos essenciais:
 - `DEV/WORKLOG.md`: hook cronologico curto do que foi feito.
 - `DEV/VERIFY.md`: evidencias da ultima verificacao.
 
+Estado de fase opcional:
+
+- dentro de `DEV/SPECS/ACTIVE.md > ## Status`, o projeto pode declarar `Phase`, `Status`, `Next gate` e `Started at`;
+- fases padrao: `discuss`, `plan`, `execute`, `verify`, `ship` e `handoff`;
+- esses campos sao opcionais e projetos DEV legados continuam validos sem eles;
+- quando presentes, `context brief` resume a fase atual e `check-dev-gates` valida os campos estruturados.
+
 ## Ordem De Leitura Da IA
 
 1. `AGENTS.md` do projeto, se existir.
@@ -94,7 +101,7 @@ orquestrador-maestro check-dev-gates --project-path . --max-entries 12 --strict
 
 O primeiro mantem so as entradas recentes no `WORKLOG`, move historico para `DEV/HANDOFFS/WORKLOG_ARCHIVE.md` e atualiza `DEV/HANDOFF.md`.
 
-O segundo valida se a combinacao `spec + handoff + verify + worklog` esta inteira e compacta o bastante para evitar loops e leitura desnecessaria. O flag `--max-entries` deixa explicito qual limite o `WORKLOG` pode ter antes de falhar.
+O segundo valida se a combinacao `spec + handoff + verify + worklog` esta inteira e compacta o bastante para evitar loops e leitura desnecessaria. Quando o estado de fase estruturado estiver presente, ele tambem valida `Phase`, `Status`, `Next gate` e `Started at`, e imprime acoes corretivas concretas. O flag `--max-entries` deixa explicito qual limite o `WORKLOG` pode ter antes de falhar.
 
 ## Criar DEV Em Um Projeto
 

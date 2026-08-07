@@ -1,6 +1,27 @@
 {
   "version": 1,
+  "schema": "./SKILLS_MANIFEST_SCHEMA.json",
   "purpose": "Canonical registry for Orquestrador skills. Sync scripts use mirrorEverywhere instead of hardcoded skill lists.",
+  "defaults": {
+    "provenance": {
+      "evidence": [
+        "orquestrador/SKILLS_ORGANIZATION.md",
+        "docs/skill-catalog.md"
+      ],
+      "steward": "orquestrador-maintainers",
+      "reviewedAt": "2026-08-06",
+      "legacyCompatible": true,
+      "notes": "Legacy skills remain valid without per-skill metadata overrides."
+    },
+    "workflow": {
+      "entry": "SKILL.md",
+      "kind": "task",
+      "validation": "standard",
+      "referencesOptional": true,
+      "legacyCompatible": true,
+      "notes": "Per-skill workflow metadata is optional. Defaults preserve install and routing behavior."
+    }
+  },
   "skills": {
     "skill-saas-factory": {
       "description": "Top-level SaaS construction and review workflow for dashboards, admin, Supabase, payments, security, infra, and production readiness.",
@@ -591,6 +612,15 @@
       "category": "marketing",
       "risk": "low",
       "source": "filipe-detrey-campanha-whatsapp-2026",
+      "provenance": {
+        "evidence": [
+          "orquestrador/skills/skill-whatsapp-meta-ads-leads/SKILL.md"
+        ],
+        "steward": "orquestrador-maintainers",
+        "reviewedAt": "2026-08-06",
+        "legacyCompatible": true,
+        "notes": "Imported canonical skill preserved with source-specific provenance."
+      },
       "mirrorEverywhere": true,
       "triggers": [
         "whatsapp meta ads",
@@ -640,9 +670,9 @@
     },
     "skill-quality-gate": {"description":"Avalia skills, plugins e MCPs antes da adoção.","category":"governance","risk":"high","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["quality gate","skill gate","avaliar skill","auditar plugin"],"aliases":["quality gate","skill gate"],"status":"canonical"},
     "skill-repo-health": {"description":"Diagnóstico de saúde, stack, verificação e riscos de repositórios.","category":"engineering","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["repo health","saúde do repositorio","inspecionar repositorio"],"aliases":["repo health","health check repositorio"],"status":"canonical"},
-    "skill-preflight": {"description":"Preflight de escopo, baseline, riscos, ownership e testes.","category":"workflow","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["preflight","pre-flight","antes de implementar"],"aliases":["preflight"],"status":"canonical"},
+    "skill-preflight": {"description":"Preflight de escopo, baseline, riscos, ownership e testes.","category":"workflow","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["preflight","pre-flight","antes de implementar"],"aliases":["preflight"],"status":"canonical","workflow":{"entry":"SKILL.md","kind":"workflow","validation":"standard","referencesOptional":true,"legacyCompatible":true,"notes":"Explicit workflow schema for operator-style preflight execution."}},
     "skill-systematic-debugging": {"description":"Debugging sistemático orientado por evidência e causa raiz.","category":"engineering","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["debug sistematico","causa raiz","investigar bug"],"aliases":["debug sistematico"],"status":"canonical"},
-    "skill-verification-before-completion": {"description":"Verificação proporcional antes de declarar conclusão.","category":"quality","risk":"low","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["verificar conclusão","verification before completion","validar antes de concluir"],"aliases":["verificação final"],"status":"canonical"},
+    "skill-verification-before-completion": {"description":"Verificação proporcional antes de declarar conclusão.","category":"quality","risk":"low","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["verificar conclusão","verification before completion","validar antes de concluir"],"aliases":["verificação final"],"status":"canonical","workflow":{"entry":"SKILL.md","kind":"workflow","validation":"strict","referencesOptional":true,"legacyCompatible":true,"notes":"Verification-oriented workflow override with stricter validation."}},
     "skill-webapp-testing": {"description":"Testes web E2E, acessibilidade, estados e regressão visual.","category":"testing","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["webapp testing","teste e2e","playwright","teste de aplicação web"],"aliases":["teste web","teste e2e"],"status":"canonical"},
     "skill-mcp-builder": {"description":"Construção segura de MCP servers tipados e testáveis.","category":"integrations","risk":"high","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["mcp builder","criar mcp","servidor mcp"],"aliases":["mcp builder"],"status":"canonical"},
     "skill-deep-wiki": {"description":"Documentação técnica navegável com arquitetura, Mermaid e onboarding.","category":"documentation","risk":"low","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["deep wiki","wiki tecnica","documentar repositorio"],"aliases":["deep wiki"],"status":"canonical"},

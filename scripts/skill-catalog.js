@@ -7,9 +7,16 @@ const repoRoot = path.resolve(__dirname, "..");
 const orchestratorRoot = path.join(repoRoot, "orquestrador");
 const skillsRoot = path.join(orchestratorRoot, "skills");
 const manifestPath = path.join(orchestratorRoot, "SKILLS_MANIFEST.json");
+const manifestSchemaPath = path.join(orchestratorRoot, "SKILLS_MANIFEST_SCHEMA.json");
+const usageSchemaPath = path.join(orchestratorRoot, "SKILL_USAGE_SCHEMA.json");
 const routerPath = path.join(orchestratorRoot, "SKILLS_ROUTER.json");
 const aliasesPath = path.join(orchestratorRoot, "SKILL_ALIASES.json");
 const chainsPath = path.join(orchestratorRoot, "SKILL_CHAINS.json");
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const VALID_RISKS = new Set(["low", "medium", "high"]);
+const VALID_STATUSES = new Set(["canonical", "legacy", "experimental", "deprecated"]);
+const VALID_WORKFLOW_KINDS = new Set(["task", "workflow", "reference"]);
+const VALID_VALIDATION_LEVELS = new Set(["light", "standard", "strict"]);
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -66,6 +73,212 @@ function unique(values) {
   return Array.from(new Set((values || []).map((value) => String(value).trim()).filter(Boolean)));
 }
 
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function validateString(value, label, issues, { allowEmpty = false } = {}) {
+  if (typeof value !== "string") {
+    issues.push(`${label}: must be a string`);
+    return false;
+  }
+  if (!allowEmpty && value.trim().length === 0) {
+    issues.push(`${label}: must not be empty`);
+    return false;
+  }
+  return true;
+}
+
+function validateBoolean(value, label, issues) {
+  if (typeof value !== "boolean") issues.push(`${label}: must be a boolean`);
+}
+
+function validateEnum(value, allowed, label, issues) {
+  if (!allowed.has(value)) {
+    issues.push(`${label}: must be one of ${Array.from(allowed).join(", ")}`);
+  }
+}
+
+function validateStringArray(value, label, issues, { minItems = 0 } = {}) {
+  if (!Array.isArray(value)) {
+    issues.push(`${label}: must be an array`);
+    return;
+  }
+  if (value.length < minItems) {
+    issues.push(`${label}: must contain at least ${minItems} item(s)`);
+  }
+  const normalized = [];
+  for (const item of value) {
+    if (typeof item !== "string" || item.trim().length === 0) {
+      issues.push(`${label}: entries must be non-empty strings`);
+      continue;
+    }
+    normalized.push(item.trim());
+  }
+  if (new Set(normalized).size !== normalized.length) {
+    issues.push(`${label}: entries must be unique`);
+  }
+}
+
+function validateProvenance(value, label, issues) {
+  if (!isPlainObject(value)) {
+    issues.push(`${label}: must be an object`);
+    return;
+  }
+  const allowedKeys = new Set(["evidence", "steward", "reviewedAt", "legacyCompatible", "notes"]);
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) issues.push(`${label}: unknown field ${key}`);
+  }
+  validateStringArray(value.evidence, `${label}.evidence`, issues, { minItems: 1 });
+  validateString(value.steward, `${label}.steward`, issues);
+  if (validateString(value.reviewedAt, `${label}.reviewedAt`, issues) && !ISO_DATE_RE.test(value.reviewedAt)) {
+    issues.push(`${label}.reviewedAt: must use YYYY-MM-DD`);
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "legacyCompatible")) {
+    validateBoolean(value.legacyCompatible, `${label}.legacyCompatible`, issues);
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "notes")) {
+    validateString(value.notes, `${label}.notes`, issues);
+  }
+}
+
+function validateWorkflow(value, label, issues) {
+  if (!isPlainObject(value)) {
+    issues.push(`${label}: must be an object`);
+    return;
+  }
+  const allowedKeys = new Set(["entry", "kind", "validation", "referencesOptional", "legacyCompatible", "notes"]);
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) issues.push(`${label}: unknown field ${key}`);
+  }
+  if (validateString(value.entry, `${label}.entry`, issues) && /^(?:[a-zA-Z]:[\\/]|[\\/])/.test(value.entry)) {
+    issues.push(`${label}.entry: must be a relative path`);
+  }
+  if (validateString(value.kind, `${label}.kind`, issues)) {
+    validateEnum(value.kind, VALID_WORKFLOW_KINDS, `${label}.kind`, issues);
+  }
+  if (validateString(value.validation, `${label}.validation`, issues)) {
+    validateEnum(value.validation, VALID_VALIDATION_LEVELS, `${label}.validation`, issues);
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "referencesOptional")) {
+    validateBoolean(value.referencesOptional, `${label}.referencesOptional`, issues);
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "legacyCompatible")) {
+    validateBoolean(value.legacyCompatible, `${label}.legacyCompatible`, issues);
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "notes")) {
+    validateString(value.notes, `${label}.notes`, issues);
+  }
+}
+
+function validateManifestSchemaDocument(value, issues) {
+  if (!isPlainObject(value)) {
+    issues.push("manifest: document must be an object");
+    return;
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "schema")) {
+    if (validateString(value.schema, "manifest.schema", issues) && value.schema !== "./SKILLS_MANIFEST_SCHEMA.json") {
+      issues.push("manifest.schema: must point to ./SKILLS_MANIFEST_SCHEMA.json");
+    }
+    if (!fs.existsSync(manifestSchemaPath)) {
+      issues.push("manifest.schema: target file does not exist");
+    } else {
+      try {
+        readJson(manifestSchemaPath);
+      } catch (error) {
+        issues.push(`manifest.schema: ${error.message}`);
+      }
+    }
+  }
+  if (!Number.isInteger(value.version) || value.version < 1) {
+    issues.push("manifest.version: must be an integer >= 1");
+  }
+  validateString(value.purpose, "manifest.purpose", issues);
+  if (Object.prototype.hasOwnProperty.call(value, "defaults")) {
+    if (!isPlainObject(value.defaults)) {
+      issues.push("manifest.defaults: must be an object");
+    } else {
+      const allowedKeys = new Set(["provenance", "workflow"]);
+      for (const key of Object.keys(value.defaults)) {
+        if (!allowedKeys.has(key)) issues.push(`manifest.defaults: unknown field ${key}`);
+      }
+      if (Object.prototype.hasOwnProperty.call(value.defaults, "provenance")) {
+        validateProvenance(value.defaults.provenance, "manifest.defaults.provenance", issues);
+      }
+      if (Object.prototype.hasOwnProperty.call(value.defaults, "workflow")) {
+        validateWorkflow(value.defaults.workflow, "manifest.defaults.workflow", issues);
+      }
+    }
+  }
+  if (!isPlainObject(value.skills)) {
+    issues.push("manifest.skills: must be an object");
+  }
+}
+
+function validateManifestSchemaFile(value, issues) {
+  if (!isPlainObject(value)) {
+    issues.push("SKILLS_MANIFEST_SCHEMA.json: document must be an object");
+    return;
+  }
+  for (const field of ["$schema", "$id", "title", "type", "properties", "$defs"]) {
+    if (!Object.prototype.hasOwnProperty.call(value, field)) {
+      issues.push(`SKILLS_MANIFEST_SCHEMA.json: missing ${field}`);
+    }
+  }
+  if (value.type !== "object") issues.push("SKILLS_MANIFEST_SCHEMA.json: type must be object");
+  if (!Array.isArray(value.required) || !value.required.includes("skills")) {
+    issues.push("SKILLS_MANIFEST_SCHEMA.json: required must include skills");
+  }
+}
+
+function validateUsageSchemaDocument(value, issues) {
+  if (!isPlainObject(value)) {
+    issues.push("usageSchema: document must be an object");
+    return;
+  }
+  if (!Number.isInteger(value.version) || value.version < 1) {
+    issues.push("usageSchema.version: must be an integer >= 1");
+  }
+  validateString(value.logPath, "usageSchema.logPath", issues);
+  validateString(value.purpose, "usageSchema.purpose", issues);
+  validateStringArray(value.requiredFields, "usageSchema.requiredFields", issues, { minItems: 1 });
+  if (Object.prototype.hasOwnProperty.call(value, "optionalFields")) {
+    validateStringArray(value.optionalFields, "usageSchema.optionalFields", issues);
+  }
+  if (!isPlainObject(value.example)) {
+    issues.push("usageSchema.example: must be an object");
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "fieldSchemas")) {
+    if (!isPlainObject(value.fieldSchemas)) {
+      issues.push("usageSchema.fieldSchemas: must be an object");
+    } else {
+      const allowedKeys = new Set(["workflow", "provenance"]);
+      for (const key of Object.keys(value.fieldSchemas)) {
+        if (!allowedKeys.has(key)) issues.push(`usageSchema.fieldSchemas: unknown field ${key}`);
+      }
+      if (Object.prototype.hasOwnProperty.call(value.fieldSchemas, "workflow")) {
+        validateWorkflow(value.fieldSchemas.workflow, "usageSchema.fieldSchemas.workflow", issues);
+      }
+      if (Object.prototype.hasOwnProperty.call(value.fieldSchemas, "provenance")) {
+        validateProvenance(value.fieldSchemas.provenance, "usageSchema.fieldSchemas.provenance", issues);
+      }
+    }
+  }
+  if (isPlainObject(value.example)) {
+    for (const field of value.requiredFields || []) {
+      if (!Object.prototype.hasOwnProperty.call(value.example, field)) {
+        issues.push(`usageSchema.example: missing required field ${field}`);
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(value.example, "workflow")) {
+      validateWorkflow(value.example.workflow, "usageSchema.example.workflow", issues);
+    }
+    if (Object.prototype.hasOwnProperty.call(value.example, "provenance")) {
+      validateProvenance(value.example.provenance, "usageSchema.example.provenance", issues);
+    }
+  }
+}
+
 function readFrontmatter(skillFile) {
   const text = fs.readFileSync(skillFile, "utf8");
   const match = text.match(/^---\n([\s\S]*?)\n---\n/);
@@ -112,7 +325,12 @@ function createSkill(args) {
 
   const manifest = fs.existsSync(manifestPath)
     ? readJson(manifestPath)
-    : { version: 1, purpose: "Canonical Orquestrador skill registry.", skills: {} };
+    : {
+        version: 1,
+        schema: "./SKILLS_MANIFEST_SCHEMA.json",
+        purpose: "Canonical Orquestrador skill registry.",
+        skills: {},
+      };
   manifest.skills[name] = {
     description,
     category,
@@ -149,11 +367,19 @@ function createSkill(args) {
 function validate() {
   const issues = [];
   const manifest = readJson(manifestPath);
+  const manifestSchema = fs.existsSync(manifestSchemaPath) ? readJson(manifestSchemaPath) : null;
+  const usageSchema = fs.existsSync(usageSchemaPath) ? readJson(usageSchemaPath) : null;
   const router = readJson(routerPath);
   const aliases = readJson(aliasesPath);
   const chains = readJson(chainsPath);
   const manifestSkills = manifest.skills || {};
   const routerSkills = router.skills || {};
+  let provenanceCount = 0;
+  let workflowCount = 0;
+
+  validateManifestSchemaDocument(manifest, issues);
+  if (manifestSchema) validateManifestSchemaFile(manifestSchema, issues);
+  if (usageSchema) validateUsageSchemaDocument(usageSchema, issues);
 
   for (const [name, entry] of Object.entries(manifestSkills)) {
     if (normalizeSkillName(name) !== name) issues.push(`manifest:${name}: name is not normalized`);
@@ -164,6 +390,25 @@ function validate() {
     }
     for (const field of ["description", "category", "risk", "source", "status"]) {
       if (!entry[field]) issues.push(`manifest:${name}: missing ${field}`);
+    }
+    if (entry.risk) validateEnum(entry.risk, VALID_RISKS, `manifest:${name}.risk`, issues);
+    if (entry.status) validateEnum(entry.status, VALID_STATUSES, `manifest:${name}.status`, issues);
+    if (Object.prototype.hasOwnProperty.call(entry, "mirrorEverywhere")) {
+      validateBoolean(entry.mirrorEverywhere, `manifest:${name}.mirrorEverywhere`, issues);
+    }
+    if (Object.prototype.hasOwnProperty.call(entry, "triggers")) {
+      validateStringArray(entry.triggers, `manifest:${name}.triggers`, issues, { minItems: 1 });
+    }
+    if (Object.prototype.hasOwnProperty.call(entry, "aliases")) {
+      validateStringArray(entry.aliases, `manifest:${name}.aliases`, issues);
+    }
+    if (Object.prototype.hasOwnProperty.call(entry, "provenance")) {
+      provenanceCount++;
+      validateProvenance(entry.provenance, `manifest:${name}.provenance`, issues);
+    }
+    if (Object.prototype.hasOwnProperty.call(entry, "workflow")) {
+      workflowCount++;
+      validateWorkflow(entry.workflow, `manifest:${name}.workflow`, issues);
     }
 
     const skillFile = path.join(skillsRoot, name, "SKILL.md");
@@ -221,7 +466,11 @@ function validate() {
     for (const issue of issues.sort()) console.error(`  - ${issue}`);
     process.exit(1);
   }
-  console.log(`Skill validation passed. Skills: ${Object.keys(manifestSkills).length}`);
+  const defaultProvenance = manifest.defaults && manifest.defaults.provenance ? 1 : 0;
+  const defaultWorkflow = manifest.defaults && manifest.defaults.workflow ? 1 : 0;
+  console.log(
+    `Skill validation passed. Skills: ${Object.keys(manifestSkills).length}. Provenance metadata: ${provenanceCount} overrides + ${defaultProvenance} default. Workflow metadata: ${workflowCount} overrides + ${defaultWorkflow} default.`
+  );
 }
 
 function printMirrorEverywhere() {

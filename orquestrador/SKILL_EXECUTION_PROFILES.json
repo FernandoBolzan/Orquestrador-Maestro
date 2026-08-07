@@ -32,6 +32,22 @@
       "validation": "integration-plus-lane-verification",
       "notes": "Use when the user asks for subagents/multiagents/team/swarm or when independent workstreams materially improve speed or review quality."
     },
+    "phase-loop": {
+      "maxSkills": 4,
+      "startSkill": "plan",
+      "loadReferences": "progressive",
+      "allowSubagents": true,
+      "validation": "phase-gates",
+      "phases": [
+        "discuss",
+        "plan",
+        "execute",
+        "verify",
+        "ship"
+      ],
+      "requiresExplicitAuthorization": true,
+      "notes": "Opt-in workflow for changes that benefit from explicit phase artifacts, bounded delegation, verification, and release evidence."
+    },
     "saas": {
       "maxSkills": 5,
       "startSkill": "skill-saas-factory",

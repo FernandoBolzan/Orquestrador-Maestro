@@ -33,6 +33,17 @@ Use these paths when relevant:
 - `DEV/HANDOFFS/`
 - `DEV/HANDOFFS/WORKLOG_ARCHIVE.md`
 
+## Optional Phase State
+
+`DEV/SPECS/ACTIVE.md` may also carry a lightweight phase state inside `## Status`:
+
+- `Phase`: one of `discuss`, `plan`, `execute`, `verify`, `ship`, `handoff`.
+- `Status`: short current state summary.
+- `Next gate`: next concrete verification or handoff checkpoint.
+- `Started at`: `YYYY-MM-DD` or an ISO-like timestamp.
+
+These fields are optional. Legacy DEV projects without them remain valid. When present, `context brief` surfaces the current phase summary and `check-dev-gates` validates the structured fields.
+
 ## Compatible Existing Sub-Hierarchies
 
 Many projects already use a richer DEV tree. Treat these as first-class compatible paths:
@@ -101,7 +112,7 @@ Use the helpers below:
 
 `compact-worklog` keeps only the most recent entries in `DEV/WORKLOG.md`, archives older entries into `DEV/HANDOFFS/WORKLOG_ARCHIVE.md`, and refreshes `DEV/HANDOFF.md`.
 
-`check-dev-gates` verifies that the spec, handoff, verify, context, and worklog structure are present and still compact enough to avoid context sprawl.
+`check-dev-gates` verifies that the spec, handoff, verify, context, and worklog structure are present and still compact enough to avoid context sprawl. When structured phase state is present, it also validates the phase fields and prints concrete corrective actions. Legacy handoff/spec/verify formats remain accepted when the structured fields are absent.
 
 ## Documentation Placement
 

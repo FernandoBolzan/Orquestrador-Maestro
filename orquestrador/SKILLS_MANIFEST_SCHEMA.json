@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orquestrador.local/schemas/skills-manifest.schema.json",
+  "title": "Orquestrador Skills Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "purpose",
+    "skills"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "schema": {
+      "type": "string",
+      "const": "./SKILLS_MANIFEST_SCHEMA.json"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        },
+        "workflow": {
+          "$ref": "#/$defs/workflow"
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^skill-[a-z0-9][a-z0-9-]{0,58}[a-z0-9]$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/skillEntry"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "uniqueItems": true
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence",
+        "steward",
+        "reviewedAt"
+      ],
+      "properties": {
+        "evidence": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/stringList"
+            },
+            {
+              "minItems": 1
+            }
+          ]
+        },
+        "steward": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "reviewedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "legacyCompatible": {
+          "type": "boolean"
+        },
+        "notes": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry",
+        "kind",
+        "validation"
+      ],
+      "properties": {
+        "entry": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?![A-Za-z]:[\\\\/])(?![\\\\/]).+"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "task",
+            "workflow",
+            "reference"
+          ]
+        },
+        "validation": {
+          "type": "string",
+          "enum": [
+            "light",
+            "standard",
+            "strict"
+          ]
+        },
+        "referencesOptional": {
+          "type": "boolean"
+        },
+        "legacyCompatible": {
+          "type": "boolean"
+        },
+        "notes": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "skillEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "description",
+        "category",
+        "risk",
+        "source",
+        "mirrorEverywhere",
+        "triggers",
+        "aliases",
+        "status"
+      ],
+      "properties": {
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "category": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "risk": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "mirrorEverywhere": {
+          "type": "boolean"
+        },
+        "triggers": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/stringList"
+            },
+            {
+              "minItems": 1
+            }
+          ]
+        },
+        "aliases": {
+          "$ref": "#/$defs/stringList"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "canonical",
+            "legacy",
+            "experimental",
+            "deprecated"
+          ]
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        },
+        "workflow": {
+          "$ref": "#/$defs/workflow"
+        }
+      }
+    }
+  }
+}
