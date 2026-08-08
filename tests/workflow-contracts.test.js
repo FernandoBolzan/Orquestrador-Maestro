@@ -18,6 +18,7 @@ test("phase-loop and declarative workflows preserve the legacy profiles", () => 
   }
 
   assert.deepEqual(profiles["phase-loop"].phases, ["discuss", "plan", "execute", "verify", "ship"]);
+  assert.equal(profiles["phase-loop"].startSkill, "plan");
   assert.equal(workflows.defaultWorkflow, "plan-build-verify");
   assert.equal(workflows.workflows["plan-build-verify"].profile, "phase-loop");
   assert.ok(workflows.workflows["plan-build-verify"].gates.includes("tests"));

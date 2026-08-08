@@ -141,3 +141,27 @@ test("check-dev-gates accepts DEV trees that include legacy workflow folders", (
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /DEV gates passed\./u);
 });
+
+test("PowerShell DEV gate wrappers translate strict options on Windows", { skip: process.platform !== "win32" }, () => {
+  const wrapperPaths = [
+    path.join(repoRoot, "scripts", "check-dev-gates.ps1"),
+    path.join(repoRoot, "orquestrador", "bin", "check-dev-gates.ps1")
+  ];
+
+  for (const wrapperPath of wrapperPaths) {
+    const result = spawnSync("powershell.exe", [
+      "-NoProfile",
+      "-ExecutionPolicy", "Bypass",
+      "-File", wrapperPath,
+      "-ProjectPath", repoRoot,
+      "-MaxEntries", "12",
+      "-Strict"
+    ], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+
+    assert.equal(result.status, 0, `${wrapperPath}\n${result.stderr}`);
+    assert.match(result.stdout, /DEV gates passed\./u);
+  }
+});

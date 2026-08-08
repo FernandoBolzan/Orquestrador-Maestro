@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.19 - 2026-08-08
+
+### Correções de funcionamento
+
+- Corrigida a validação do `doctor` para aceitar skills nativas do Codex/OMX usadas como ponto de entrada de perfis, incluindo `phase-loop` com `plan`.
+- Corrigidos os wrappers PowerShell de `check-dev-gates`, que falhavam ao receber `-Strict` e, em um dos caminhos, repassavam indevidamente o nome do comando ao parser.
+- Adicionado teste de regressão dos dois wrappers PowerShell no Windows.
+- Documentados os avisos de subagente, autenticação MCP e sandbox do Codex/DANTE.
+
+### Verificação
+
+- 12 testes automatizados aprovados.
+- Validação pública, skills, gates DEV estritos, smoke test de instalação e auditoria de dependências aprovados.
+- `npm audit --omit=dev --audit-level=high`: 0 vulnerabilidades.
+
 ## 0.1.18 - 2026-08-06
 
 ### Evolução do workflow

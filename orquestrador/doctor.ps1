@@ -263,13 +263,22 @@ function Get-OrchestratorRoutingHealth {
   $profilesDoc = $docs | Where-Object { $_.Name -eq "profiles" }
   $profileCount = 0
   if ($profilesDoc.Parsed -and $profilesDoc.Value.profiles) {
+    # Profiles may start with a native Codex/OMX workflow skill that is
+    # intentionally outside the canonical Orquestrador router.
+    $nativeStartSkills = @(
+      "orquestrador-maestro", "autopilot", "code-review", "deep-interview",
+      "plan", "ralph", "ralplan", "security-review", "team", "ultrawork",
+      "web-clone"
+    )
     foreach ($prop in $profilesDoc.Value.profiles.PSObject.Properties) {
       $profileCount++
       $maxSkills = $prop.Value.maxSkills
       if (($null -eq $maxSkills) -or ([int]$maxSkills -lt 1) -or ([int]$maxSkills -gt 8)) {
         Add-RoutingIssue -Issues $issues -Kind "profile-bad-maxSkills" -Name $prop.Name -Detail ([string]$maxSkills)
       }
-      if ($prop.Value.startSkill -and (-not $routerSet.ContainsKey([string]$prop.Value.startSkill))) {
+      if ($prop.Value.startSkill -and
+          (-not $routerSet.ContainsKey([string]$prop.Value.startSkill)) -and
+          ([string]$prop.Value.startSkill -notin $nativeStartSkills)) {
         Add-RoutingIssue -Issues $issues -Kind "profile-bad-startSkill" -Name $prop.Name -Detail ([string]$prop.Value.startSkill)
       }
     }

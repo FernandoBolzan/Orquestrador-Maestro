@@ -122,3 +122,17 @@ orquestrador-maestro doctor
 ```
 
 No macOS e Linux, `doctor` requer `pwsh` ou `powershell`; `verify` não possui essa dependência.
+
+## Avisos do Codex sobre subagentes, MCP e sandbox no Windows
+
+Se o Codex mostrar `agent role 'subagent' must define a description`, o perfil local de subagente está sem o campo obrigatório `description`. No Windows, abra `%USERPROFILE%\\.codex\\config.toml` e mantenha o bloco com uma descrição, por exemplo:
+
+```toml
+[agents.subagent]
+description = "Subagente Codex para tarefas independentes e delimitadas."
+model = "cheap-fast"
+```
+
+Avisos como `MCP server is not logged in` pertencem à autenticação do servidor remoto, não ao Orquestrador. Faça login apenas no MCP que você pretende usar; não coloque tokens no repositório nem em arquivos de configuração publicados.
+
+Já `windows sandbox: helper_unknown_error` é uma falha do runtime/sandbox do Codex ou do terminal que o está hospedando. Ela não é corrigida por skills, agentes ou prompts do Orquestrador. Reinicie o terminal e o Codex; se persistir, execute `orquestrador-maestro doctor` e reporte o erro completo ao mantenedor do runtime.
