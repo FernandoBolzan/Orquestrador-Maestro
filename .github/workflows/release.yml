@@ -18,7 +18,7 @@ permissions:
 jobs:
   publish:
     name: Validate and publish npm package
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     environment: npm-release
     steps:
       - name: Checkout release tag
