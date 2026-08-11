@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Correção de funcionamento
+
+- Corrigida a CLI para resolver `--project-path` relativo do `init-dev`, `compact-worklog` e `check-dev-gates` a partir do diretório de onde o comando foi chamado, inclusive quando a CLI está instalada globalmente.
+
 ## 0.1.19 - 2026-08-08
 
 ### Correções de funcionamento

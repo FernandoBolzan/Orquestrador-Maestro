@@ -169,9 +169,9 @@ function translateArgs(args, defs, target) {
   return translated;
 }
 
-function run(command, args) {
+function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
-    cwd: rootDir,
+    cwd: options.cwd || rootDir,
     stdio: "inherit",
     shell: false
   });
@@ -279,11 +279,11 @@ function runInitDev(args) {
 
   if (isWindows) {
     const translated = translateArgs(args, initDevFlagDefs, "ps");
-    return run("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, ...translated]);
+    return run("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, ...translated], { cwd: process.cwd() });
   }
 
   const translated = translateArgs(args, initDevFlagDefs, "sh");
-  return run("bash", [script, ...translated]);
+  return run("bash", [script, ...translated], { cwd: process.cwd() });
 }
 
 function runDevContextHelper(helperCommand, args) {
@@ -291,7 +291,7 @@ function runDevContextHelper(helperCommand, args) {
   if (!commandExists(script)) {
     throw new Error(`Helper DEV nao encontrado: ${script}`);
   }
-  return run(process.execPath, [script, helperCommand, ...args]);
+  return run(process.execPath, [script, helperCommand, ...args], { cwd: process.cwd() });
 }
 
 function getTelemetryConfigPath() {
