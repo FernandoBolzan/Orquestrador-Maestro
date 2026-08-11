@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.20 - 2026-08-11
+
+### Correção de funcionamento
+
+- Publicado o fix que preserva o diretório de invocação ao executar os helpers DEV, fazendo `--project-path .` funcionar também na CLI instalada globalmente.
+- Incluída regressão para a chamada da CLI a partir de um projeto externo.
+
 ## Unreleased
 
 ### Correção de funcionamento
