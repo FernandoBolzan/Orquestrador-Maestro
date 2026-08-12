@@ -11,6 +11,20 @@ The installer writes `~/.grok/config.toml` and points Grok at `~/.orquestrador/s
 
 `tool-profiles/` guarda hooks e perfis textuais selecionados para reaproveitar o comportamento do Orquestrador em outras ferramentas sem publicar o diretório completo de cada uma.
 
+## Catálogo de adaptadores
+
+O catálogo declarativo de agentes e providers está em [`orquestrador/TOOL_ADAPTERS.json`](../orquestrador/TOOL_ADAPTERS.json). Ele separa superfícies de execução, destinos globais/projeto, capacidades e estado que nunca deve ser gerenciado pelo snapshot público.
+
+Consulte o catálogo sem alterar arquivos:
+
+```text
+orquestrador-maestro adapters list
+orquestrador-maestro adapters paths junie
+orquestrador-maestro adapters validate
+```
+
+Os adaptadores nunca devem copiar autenticação, sessões, caches, logs, bancos locais, histórico de conversas ou secrets. Para ferramentas que aceitam `AGENTS.md` e `.agents/skills`, esse contrato compartilhado continua sendo a primeira opção; formatos proprietários devem ser renderizados somente quando agregarem MCP, hooks, agents, permissões ou outra capacidade específica.
+
 Os hooks e entrypoints estão detalhados em [orquestrador-reference.md](orquestrador-reference.md). Este arquivo explica principalmente quais perfis são empacotados e onde o instalador os coloca.
 
 ## Incluído
@@ -109,6 +123,18 @@ No Linux/macOS, os mesmos pontos ficam sob `$HOME`, como `$HOME/AGENTS.md`, `$HO
 Se uma ferramenta estiver em uma versão que só aceita regra global por UI ou conta em nuvem, copie o conteúdo de `%USERPROFILE%\AGENTS.md` no Windows ou `$HOME/AGENTS.md` no Linux/macOS para a regra global dessa ferramenta.
 
 ## Matriz De Capacidades
+
+## Catalogo De Adaptadores
+
+O catalogo estruturado fica em `orquestrador/TOOL_ADAPTERS.json`. Para inspecionar os destinos sem alterar arquivos:
+
+```text
+node bin/orquestrador-maestro.js adapters list
+node bin/orquestrador-maestro.js adapters paths junie
+node bin/orquestrador-maestro.js adapters render junie --project-path . --dry-run
+```
+
+O modo `render` e simulado por padrao; `--apply` precisa ser explicito. Nesta primeira fatia, Junie recebe configuracao segura e skill do projeto, enquanto Goose e OpenHands recebem a skill compartilhada. OpenHands tambem recebe um agente baseado em arquivo. Arquivos existentes sao preservados. Modelos, provedores, extensoes, MCP, credenciais, sessoes, cache, logs, historico e bancos continuam fora do escopo.
 
 A fonte estruturada da matriz é `orquestrador/PROGRAM_ENTRYPOINTS.json`. A tabela abaixo resume o comportamento público esperado:
 

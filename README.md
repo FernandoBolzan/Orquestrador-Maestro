@@ -236,6 +236,19 @@ O pacote prepara integração global para Codex, Claude Code, OpenCode, Cursor, 
 
 Para VS Code/GitHub Copilot, Continue, JetBrains AI Assistant, Aider, Cline e outros fluxos baseados no projeto, o caminho suportado é inicializar DEV/ no repositório e usar os arquivos de instrução/entrypoint criados pelo bootstrap quando aplicável.
 
+### Adaptadores de ferramentas em alta
+
+O Maestro também possui um catálogo declarativo para ferramentas AI-native e renderização segura por projeto. A primeira fatia executável cobre Junie CLI, Goose e OpenHands; Continue, Cline, GitHub Copilot CLI, Ollama e LM Studio já aparecem no catálogo para inspeção e serão habilitados gradualmente.
+
+```text
+orquestrador-maestro adapters list
+orquestrador-maestro adapters paths junie
+orquestrador-maestro adapters render junie --project-path . --dry-run
+orquestrador-maestro adapters render junie --project-path . --apply
+```
+
+O `render` usa simulação por padrão; `--apply` é obrigatório para gravar. Ele cria somente arquivos de instrução, skills e agentes do projeto, preservando arquivos existentes. Não instala a ferramenta, não escolhe modelo ou provedor e não gerencia login, credenciais, MCP, extensões, sessões, cache, logs ou histórico. OpenHands continua exigindo seu ambiente suportado, incluindo WSL no Windows.
+
 Depois da instalação, uma solicitação útil para qualquer IA é:
 
 ~~~text
@@ -256,6 +269,8 @@ orquestrador-maestro init-dev --project-path PATH
 orquestrador-maestro compact-worklog --project-path PATH --keep N
 orquestrador-maestro check-dev-gates --project-path PATH --max-entries N --strict
 orquestrador-maestro context brief --project-path PATH --task TEXT
+orquestrador-maestro adapters <list|paths|validate> [id]
+orquestrador-maestro adapters render <junie|goose|openhands> --project-path PATH [--dry-run|--apply]
 orquestrador-maestro changelog [--full]
 orquestrador-maestro list-targets
 orquestrador-maestro dry-run

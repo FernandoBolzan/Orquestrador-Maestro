@@ -53,6 +53,8 @@ Uso:
   orquestrador-maestro compact-worklog [--project-path PATH] [--keep N]
   orquestrador-maestro check-dev-gates [--project-path PATH] [--max-entries N] [--strict]
   orquestrador-maestro context brief [--project-path PATH] [--task TEXT] [--max-chars N] [--json]
+  orquestrador-maestro adapters <list|paths|validate> [id]
+  orquestrador-maestro adapters render <junie|goose|openhands> --project-path PATH [--dry-run|--apply]
   orquestrador-maestro changelog [--full]
   orquestrador-maestro uninstall [opcoes]
   orquestrador-maestro list-targets [opcoes]
@@ -292,6 +294,14 @@ function runDevContextHelper(helperCommand, args) {
     throw new Error(`Helper DEV nao encontrado: ${script}`);
   }
   return run(process.execPath, [script, helperCommand, ...args], { cwd: process.cwd() });
+}
+
+function runToolAdapters(args) {
+  const script = path.join(rootDir, "orquestrador", "bin", "tool-adapters.js");
+  if (!commandExists(script)) {
+    throw new Error(`Manifesto de adaptadores nao encontrado: ${script}`);
+  }
+  return run(process.execPath, [script, ...args], { cwd: process.cwd() });
 }
 
 function getTelemetryConfigPath() {
@@ -710,6 +720,10 @@ async function dispatch(command, args) {
 
   if (command === "context") {
     return contextBrief.main(args);
+  }
+
+  if (command === "adapters") {
+    return runToolAdapters(args);
   }
 
   if (command === "changelog") {

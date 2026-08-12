@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.22 - 2026-08-12
+
+### Adaptadores de ferramentas AI-native
+
+- Adicionado o catálogo `orquestrador/TOOL_ADAPTERS.json` para Junie CLI, Goose, OpenHands, Continue, Cline, GitHub Copilot CLI, Ollama e LM Studio.
+- Adicionado `orquestrador-maestro adapters` com comandos de listagem, inspeção de caminhos, validação e renderização segura.
+- Adicionado renderizador de projeto para Junie, Goose e OpenHands, com `dry-run` por padrão, `--apply` explícito e preservação de arquivos existentes.
+- Mantido fora do escopo o gerenciamento de autenticação, modelos, provedores, MCP, extensões, sessões, cache, logs, histórico e bancos de dados.
+- Adicionados testes de contrato e fixtures temporárias para os adaptadores P0.
+
+### Verificação
+
+- 22 testes automatizados aprovados.
+- Validação pública, validação de skills, gates DEV estritos, empacotamento e `git diff --check` aprovados.
+- Corrigida a resolução de `--project-path` relativo nos helpers `init-dev`, `compact-worklog` e `check-dev-gates`, inclusive na CLI instalada globalmente.
+
 ## 0.1.21 - 2026-08-12
 
 ### Evolução de workflow e coordenação
@@ -27,12 +43,6 @@
 
 - Publicado o fix que preserva o diretório de invocação ao executar os helpers DEV, fazendo `--project-path .` funcionar também na CLI instalada globalmente.
 - Incluída regressão para a chamada da CLI a partir de um projeto externo.
-
-## Unreleased
-
-### Correção de funcionamento
-
-- Corrigida a CLI para resolver `--project-path` relativo do `init-dev`, `compact-worklog` e `check-dev-gates` a partir do diretório de onde o comando foi chamado, inclusive quando a CLI está instalada globalmente.
 
 ## 0.1.19 - 2026-08-08
 
