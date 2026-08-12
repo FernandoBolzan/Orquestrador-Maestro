@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.21 - 2026-08-12
+
+### Evolução de workflow e coordenação
+
+- Adicionado o Workflow Schema v2, preservando os campos legados e acrescentando etapas, eventos, gates humanos, retry manual e referências de workspace.
+- Adicionado `orquestrador/TASK_SCHEMA.json` para padronizar tarefas, status, dependências, subtarefas, artefatos, aprovações e sessões de execução.
+- Adicionado `orquestrador/WORKSPACE_SCHEMA.json` para descrever branches, worktrees, isolamento por repositório e executores sem publicar caminhos locais.
+- Adicionada documentação da relação entre workflow, tarefa e workspace em `docs/task-and-workspace-contracts.md`.
+- Adicionada cobertura de contrato em `tests/orchestration-contracts.test.js`.
+
+### Compatibilidade e segurança
+
+- Os novos contratos permanecem descritivos e opt-in; não executam agentes, não criam integrações obrigatórias e não autorizam efeitos externos.
+- Paralelismo exige isolamento explícito, e commit, push, publicação e compartilhamento continuam sendo gates separados.
+
+### Verificação
+
+- 16 testes automatizados aprovados.
+- Validação pública e validação de skills aprovadas.
+- `git diff --check` aprovado.
+
 ## 0.1.20 - 2026-08-11
 
 ### Correção de funcionamento

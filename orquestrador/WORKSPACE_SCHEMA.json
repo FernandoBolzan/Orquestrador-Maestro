@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "purpose": "Portable contract for isolated repository workspaces used by task execution.",
+  "execution": "descriptive-only",
+  "required": ["id", "kind", "repositories"],
+  "fields": {
+    "id": { "type": "string", "pattern": "workspace/<stable-slug>" },
+    "kind": { "type": "string", "enum": ["project", "task", "shared"] },
+    "root": { "type": "string", "relative": true, "description": "Logical root only; never publish a concrete user home." },
+    "repositories": { "type": "array", "items": { "type": "object", "required": ["id", "source", "baseBranch", "branch", "isolation"], "fields": { "id": { "type": "string" }, "source": { "type": "string", "description": "Repository URL or project-relative identifier." }, "baseBranch": { "type": "string" }, "branch": { "type": "string" }, "worktree": { "type": ["string", "null"], "relative": true }, "isolation": { "type": "string", "enum": ["none", "branch", "worktree", "container", "remote"] }, "copyIgnoredFiles": { "type": "array", "items": "relative-path" } } } },
+    "executor": { "type": "object", "fields": { "kind": { "type": "string", "enum": ["local", "docker", "ssh", "cloud", "unspecified"] }, "profile": { "type": ["string", "null"] } } }
+  },
+  "invariants": [
+    "Concurrent tasks must not share a mutable worktree unless the workflow explicitly declares shared isolation.",
+    "A worktree path must be relative or opaque; concrete user-home paths are runtime state, not portable task data.",
+    "A repository branch must be recorded before an agent starts modifying files.",
+    "Secrets and ignored files may be copied only through an explicit allowlist and never into public artifacts."
+  ]
+}

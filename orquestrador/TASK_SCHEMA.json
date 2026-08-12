@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "purpose": "Portable task contract for coordinating agents, artifacts, dependencies, approvals, and repository workspaces.",
+  "execution": "descriptive-only",
+  "required": ["id", "title", "status", "workflow", "createdAt", "updatedAt"],
+  "fields": {
+    "id": { "type": "string", "pattern": "task/<stable-slug>" },
+    "title": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string" },
+    "status": { "type": "string", "enum": ["backlog", "ready", "in-progress", "blocked", "review", "verification", "done", "canceled"] },
+    "workflow": { "type": "string", "reference": "WORKFLOW_SCHEMAS.json#/workflows" },
+    "currentStep": { "type": "string" },
+    "parentTaskId": { "type": ["string", "null"] },
+    "owner": { "type": ["string", "null"], "description": "Human or agent responsible for the current handoff." },
+    "dependencies": { "type": "object", "fields": { "blockedBy": { "type": "array", "items": "task-id" }, "blocks": { "type": "array", "items": "task-id" } } },
+    "execution": { "type": "object", "fields": { "agent": { "type": ["string", "null"] }, "executor": { "type": ["string", "null"] }, "attempt": { "type": "integer", "minimum": 0 }, "maxAttempts": { "type": "integer", "minimum": 1 }, "sessionRef": { "type": ["string", "null"] } } },
+    "repositories": { "type": "array", "items": "workspace-repository" },
+    "artifacts": { "type": "array", "items": { "type": "object", "required": ["path", "kind", "status"], "fields": { "path": { "type": "string", "relative": true }, "kind": { "type": "string", "enum": ["context", "plan", "checkpoint", "review", "verification", "handoff", "custom"] }, "status": { "type": "string", "enum": ["required", "pending", "complete", "superseded"] } } } },
+    "approvals": { "type": "array", "items": { "type": "object", "required": ["kind", "status"], "fields": { "kind": { "type": "string", "enum": ["plan", "review", "release", "side-effect"] }, "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }, "by": { "type": ["string", "null"] }, "at": { "type": ["string", "null"] } } } },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "invariants": [
+    "A blocked task must have at least one dependencies.blockedBy entry or an explicit blocker note.",
+    "A task may not enter done while required artifacts or approvals remain pending.",
+    "A child task inherits workflow and workspace defaults from parentTaskId unless explicitly overridden.",
+    "Task identifiers are stable and must not contain secrets, absolute paths, or user-specific data."
+  ]
+}
