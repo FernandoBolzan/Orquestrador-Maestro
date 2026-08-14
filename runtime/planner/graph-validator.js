@@ -16,7 +16,7 @@ class GraphValidator {
     }
 
     const opts = options || {};
-    const blockers = [];
+    const blockers = [...(proposal.blockers || [])];
     const warnings = [...(proposal.warnings || [])];
     const tasks = proposal.tasks || [];
 
@@ -31,7 +31,7 @@ class GraphValidator {
       }
       seenIds.add(task.id);
 
-      if (typeof task.title === "string" && GENERIC_TITLES.includes(task.title.trim().toUpperCase())) {
+      if (task.title && GENERIC_TITLES.includes(task.title.trim().toUpperCase())) {
         blockers.push({
           code: "GENERIC_TASK_TITLE_REJECTED",
           message: `Task title "${task.title}" is a generic workflow phase. Use a descriptive engineering title.`,
@@ -57,8 +57,8 @@ class GraphValidator {
       }
     }
 
-    if (options.missionBrief || options.taskRelevantContext) {
-      GraphValidator._validateContextAuthority(tasks, options.missionBrief, options.taskRelevantContext, blockers, warnings);
+    if (opts.missionBrief || opts.taskRelevantContext) {
+      GraphValidator._validateContextAuthority(tasks, opts.missionBrief, opts.taskRelevantContext, blockers, warnings);
     }
 
     const valid = blockers.length === 0;
