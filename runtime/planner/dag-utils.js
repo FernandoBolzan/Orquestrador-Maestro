@@ -43,7 +43,10 @@ function validateDAG(tasks, externalDependenciesMap = null) {
     for (const [id, deps] of Object.entries(externalDependenciesMap)) {
       const canonical = dependencies[id] || [];
       const depsArr = Array.isArray(deps) ? deps : [];
-      if (depsArr.length !== canonical.length || !depsArr.every((d) => canonical.includes(d))) {
+      const canonicalSet = new Set(canonical);
+      const depsSet = new Set(depsArr);
+      const setsEqual = canonicalSet.size === depsSet.size && [...canonicalSet].every((d) => depsSet.has(d));
+      if (!setsEqual) {
         errors.push(`CONFLICTING_DEPENDENCY_MAPPING: task ${id} canonical dependsOn does not match external dependencies`);
       }
     }
