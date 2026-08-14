@@ -1,6 +1,11 @@
 {
-  "version": 1,
-  "purpose": "Declarative, opt-in workflows for coordinating planning, execution, verification, and release evidence.",
+  "version": 2,
+  "purpose": "Declarative, opt-in workflows for coordinating tasks, agents, workspaces, human gates, verification, and release evidence.",
+  "compatibility": {
+    "legacyPhaseLists": true,
+    "execution": "descriptive-only",
+    "defaultAuthorization": "human-required-for-side-effects"
+  },
   "defaultWorkflow": "plan-build-verify",
   "workflows": {
     "plan-build-verify": {
@@ -12,7 +17,14 @@
         { "id": "verify", "artifact": "VERIFY.md", "required": true },
         { "id": "ship", "artifact": "HANDOFF.md", "required": true }
       ],
-      "gates": ["tests", "public-validation", "diff-check"]
+      "gates": ["tests", "public-validation", "diff-check"],
+      "steps": [
+        { "id": "discuss", "phase": "discuss", "onEnter": "record-context", "onComplete": "await-plan" },
+        { "id": "plan", "phase": "plan", "onEnter": "prepare-plan", "onComplete": "await-human-approval", "humanGate": { "required": true, "approval": "plan" } },
+        { "id": "execute", "phase": "execute", "onEnter": "start-agent", "onComplete": "await-verification", "workspace": "task-default", "retry": { "maxAttempts": 2, "backoff": "manual" } },
+        { "id": "verify", "phase": "verify", "onEnter": "run-gates", "onFailure": "return-to-execute", "onComplete": "await-ship" },
+        { "id": "ship", "phase": "ship", "onEnter": "prepare-handoff", "onComplete": "await-human-release", "humanGate": { "required": true, "approval": "release" } }
+      ]
     },
     "review-security": {
       "profile": "security",

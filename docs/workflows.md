@@ -6,7 +6,14 @@ O Orquestrador Maestro agora possui contratos opt-in para trabalhos que precisam
 
 Use `phase-loop` para mudanças amplas, releases, migrações, revisões com vários agentes ou tarefas em que a retomada por outra sessão é importante. Para uma alteração pequena, `fast` ou `standard` continua sendo o caminho mais leve.
 
-Os workflows declarativos estão em [`orquestrador/WORKFLOW_SCHEMAS.json`](../orquestrador/WORKFLOW_SCHEMAS.json). Eles descrevem fases e gates; não executam agentes nem criam integrações obrigatórias.
+Os workflows declarativos estão em [`orquestrador/WORKFLOW_SCHEMAS.json`](../orquestrador/WORKFLOW_SCHEMAS.json). A versão 2 adiciona etapas, eventos, gates humanos, retry e workspace lógico. O schema continua descritivo: não executa agentes nem cria integrações obrigatórias.
+
+## Contratos complementares
+
+- [`TASK_SCHEMA.json`](../orquestrador/TASK_SCHEMA.json) define identidade, status, dependências, subtarefas, artefatos, aprovações e execução.
+- [`WORKSPACE_SCHEMA.json`](../orquestrador/WORKSPACE_SCHEMA.json) define isolamento por repositório, branch, worktree e executor sem publicar caminhos locais.
+
+Esses contratos permitem que uma futura CLI, integração MCP ou interface visual coordene tarefas sem acoplar o núcleo a um provedor de agentes. A execução real e qualquer efeito externo continuam sujeitos à autorização humana e às regras do projeto.
 
 ## Contrato das fases
 

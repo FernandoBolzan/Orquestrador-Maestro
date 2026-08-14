@@ -80,6 +80,8 @@ Uso:
   orquestrador-maestro providers list [--project-path PATH]
   orquestrador-maestro bridge --stdio [--project-path PATH]
   orquestrador-maestro runtime [--project-path PATH]
+  orquestrador-maestro adapters <list|paths|validate> [id]
+  orquestrador-maestro adapters render <junie|goose|openhands> --project-path PATH [--dry-run|--apply]
   orquestrador-maestro changelog [--full]
   orquestrador-maestro uninstall [opcoes]
   orquestrador-maestro list-targets [opcoes]
@@ -197,9 +199,9 @@ function translateArgs(args, defs, target) {
   return translated;
 }
 
-function run(command, args) {
+function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
-    cwd: rootDir,
+    cwd: options.cwd || rootDir,
     stdio: "inherit",
     shell: false
   });
@@ -310,11 +312,11 @@ function runInitDev(args) {
 
   if (isWindows) {
     const translated = translateArgs(args, initDevFlagDefs, "ps");
-    return run("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, ...translated]);
+    return run("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, ...translated], { cwd: process.cwd() });
   }
 
   const translated = translateArgs(args, initDevFlagDefs, "sh");
-  return run("bash", [script, ...translated]);
+  return run("bash", [script, ...translated], { cwd: process.cwd() });
 }
 
 function runDevContextHelper(helperCommand, args) {
@@ -322,7 +324,15 @@ function runDevContextHelper(helperCommand, args) {
   if (!commandExists(script)) {
     throw new Error(`Helper DEV nao encontrado: ${script}`);
   }
-  return run(process.execPath, [script, helperCommand, ...args]);
+  return run(process.execPath, [script, helperCommand, ...args], { cwd: process.cwd() });
+}
+
+function runToolAdapters(args) {
+  const script = path.join(rootDir, "orquestrador", "bin", "tool-adapters.js");
+  if (!commandExists(script)) {
+    throw new Error(`Manifesto de adaptadores nao encontrado: ${script}`);
+  }
+  return run(process.execPath, [script, ...args], { cwd: process.cwd() });
 }
 
 function parseRuntimeArgs(args, allowed = [], booleanFlags = []) {
@@ -1259,6 +1269,10 @@ async function dispatch(command, args) {
   if (command === "providers") return handleProvidersCommand(args);
   if (command === "bridge") return handleBridgeCommand(args);
   if (command === "runtime") return handleRuntimeCommand(args);
+
+  if (command === "adapters") {
+    return runToolAdapters(args);
+  }
 
   if (command === "changelog") {
     return handleChangelogCommand(args);

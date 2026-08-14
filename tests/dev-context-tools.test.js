@@ -10,6 +10,7 @@ const { makeTempDir, writeFile } = require("./test-helpers.js");
 
 const repoRoot = path.resolve(__dirname, "..");
 const toolPath = path.join(repoRoot, "orquestrador", "bin", "dev-context-tools.js");
+const cliPath = path.join(repoRoot, "bin", "orquestrador-maestro.js");
 
 function makeLegacyCompatibleDevProject() {
   const root = makeTempDir("orquestrador-dev-gates-");
@@ -135,6 +136,24 @@ test("check-dev-gates accepts DEV trees that include legacy workflow folders", (
     "--strict"
   ], {
     cwd: repoRoot,
+    encoding: "utf8"
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /DEV gates passed\./u);
+});
+
+test("CLI resolves a relative project path from the caller directory", () => {
+  const projectRoot = makeLegacyCompatibleDevProject();
+
+  const result = spawnSync(process.execPath, [
+    cliPath,
+    "check-dev-gates",
+    "--project-path",
+    ".",
+    "--strict"
+  ], {
+    cwd: projectRoot,
     encoding: "utf8"
   });
 

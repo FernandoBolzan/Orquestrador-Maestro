@@ -123,6 +123,17 @@ orquestrador-maestro doctor
 
 No macOS e Linux, `doctor` requer `pwsh` ou `powershell`; `verify` não possui essa dependência.
 
+## `check-dev-gates --project-path .` procura `DEV/` no lugar errado
+
+Em versões anteriores, a CLI podia resolver `.` contra o diretório onde o pacote npm estava instalado, em vez do diretório atual do projeto. A correção mantém o diretório de invocação ao executar os helpers DEV. Atualize a CLI e rode novamente:
+
+```text
+npm update -g @iapro/orquestrador-maestro-cli
+orquestrador-maestro check-dev-gates --project-path . --strict
+```
+
+O caminho explícito e absoluto continua sendo uma alternativa válida quando necessário.
+
 ## Avisos do Codex sobre subagentes, MCP e sandbox no Windows
 
 Se o Codex mostrar `agent role 'subagent' must define a description`, o perfil local de subagente está sem o campo obrigatório `description`. No Windows, abra `%USERPROFILE%\\.codex\\config.toml` e mantenha o bloco com uma descrição, por exemplo:
