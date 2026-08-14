@@ -9,6 +9,8 @@
     "bin/",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
+    "DESIGN.md",
+    "PRODUCT.md",
     "codex/agents/",
     "codex/prompts/",
     "codex/skills/.system/",
@@ -61,9 +63,11 @@
     "codex/skills/web-clone/",
     "codex/skills/worker/",
     "docs/",
+    "extensions/vscode-maestro/",
     "home/AGENTS.md",
     "install.ps1",
     "install.sh",
+    "runtime/",
     "orquestrador/*.json",
     "orquestrador/*.md",
     "orquestrador/*.ps1",
@@ -119,5 +123,14 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "optionalDependencies": {
+    "@opentui/core": "^0.5.1"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "@xterm/headless": "^5.5.0",
+    "node-notifier": "^10.0.1",
+    "node-pty": "^1.1.0"
   }
 }

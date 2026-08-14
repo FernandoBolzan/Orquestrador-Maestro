@@ -4,6 +4,22 @@ Kit público e sanitizado para padronizar o trabalho de agentes de IA no Windows
 
 O Orquestrador Maestro instala uma camada compartilhada de regras, skills, hooks, perfis de ferramentas e memória operacional de projetos. Ele não é um modelo de IA nem substitui as ferramentas que você já usa: cria um contrato comum para que elas trabalhem com mais consistência, segurança e continuidade.
 
+## Iniciar o cockpit local
+
+No diretório do projeto, mantenha o runtime aberto em um terminal:
+
+```bash
+orquestrador-maestro runtime
+```
+
+Em outro terminal, abra a interface visual:
+
+```bash
+orquestrador-maestro tui
+```
+
+Use `A` para escolher um provider e iniciar um agente, `M` para criar uma missão e `S` para abrir um shell. `Enter` entrega o teclado ao terminal selecionado e `Ctrl+]` retorna ao cockpit. Se estiver executando o repositório sem instalação global, substitua `orquestrador-maestro` por `node bin/orquestrador-maestro.js`.
+
 [GitHub](https://github.com/FernandoBolzan/Orquestrador-Maestro) · [Pacote npm](https://www.npmjs.com/package/@iapro/orquestrador-maestro-cli) · [Changelog](CHANGELOG.md)
 
 ### Veja o fluxo
