@@ -1,6 +1,7 @@
 {
   "name": "@iapro/orquestrador-maestro-cli",
-  "version": "0.1.22",
+  "version": "0.1.23",
+  "license": "Apache-2.0",
   "description": "CLI npm para instalar, atualizar, verificar e remover o Orquestrador Maestro no usuário atual, com skills nativas enxutas e biblioteca externa para reduzir tokens.",
   "bin": {
     "orquestrador-maestro": "bin/orquestrador-maestro.js"
@@ -9,8 +10,6 @@
     "bin/",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
-    "DESIGN.md",
-    "PRODUCT.md",
     "codex/agents/",
     "codex/prompts/",
     "codex/skills/.system/",
@@ -62,8 +61,6 @@
     "codex/skills/visual-verdict/",
     "codex/skills/web-clone/",
     "codex/skills/worker/",
-    "docs/",
-    "extensions/vscode-maestro/",
     "home/AGENTS.md",
     "install.ps1",
     "install.sh",
@@ -83,7 +80,8 @@
     "skill-library/MANIFEST.json",
     "skill-library/community-skills/",
     "tool-profiles/",
-    "README.md"
+    "README.md",
+    "!runtime/**/__tests__/"
   ],
   "scripts": {
     "audit": "node scripts/audit-dependencies.js audit",
