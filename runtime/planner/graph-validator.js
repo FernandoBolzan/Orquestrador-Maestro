@@ -104,7 +104,69 @@ class GraphValidator {
   }
 
   static _validateContextAuthority(tasks, missionBrief, taskRelevantContext, blockers, warnings) {
-    // Extended in Task 4
+    const facts = new Map();
+    const inferences = new Map();
+
+    if (taskRelevantContext && Array.isArray(taskRelevantContext.items)) {
+      for (const item of taskRelevantContext.items) {
+        if (item.kind === "FACT" || item.kind === "USER_DECISION") {
+          facts.set(item.key, item.value);
+        } else if (item.kind === "INFERENCE") {
+          inferences.set(item.key, item.value);
+        }
+      }
+    }
+
+    const isBackendOnly = facts.get("project.frontend") === null || facts.get("frontend") === null || facts.get("architecture") === "backend-only";
+    const dbType = String(facts.get("database.type") || facts.get("database") || "").toLowerCase();
+
+    const constraints = (missionBrief?.constraints || []).map((c) => String(c).toLowerCase());
+
+    for (const task of tasks) {
+      const text = `${task.title} ${task.objective}`.toLowerCase();
+
+      if (isBackendOnly) {
+        if ((task.requiredCapabilities || []).includes("frontend") || /\b(react|vue|angular|svelte|frontend|ui form|html template)\b/i.test(text)) {
+          blockers.push({
+            code: "CONTEXT_FACT_CONTRADICTION",
+            message: `Task "${task.title}" proposes frontend/UI work on a backend-only project.`,
+            taskId: task.id
+          });
+        }
+      }
+
+      if (dbType.includes("mongo")) {
+        if (/\b(sql migration|knex|postgres|mysql|sqlite migration)\b/i.test(text)) {
+          blockers.push({
+            code: "DATABASE_CONTRADICTION",
+            message: `Task "${task.title}" proposes SQL migrations on a MongoDB project.`,
+            taskId: task.id
+          });
+        }
+      }
+
+      if (constraints.some((c) => c.includes("rest only") || c.includes("no graphql"))) {
+        if (/\b(graphql|apollo|schema\.gql|mutation|query resolver)\b/i.test(text)) {
+          blockers.push({
+            code: "MISSION_CONSTRAINT_CONTRADICTION",
+            message: `Task "${task.title}" contradicts mission constraint: REST only.`,
+            taskId: task.id
+          });
+        }
+      }
+
+      if (inferences.size > 0) {
+        for (const [k, v] of inferences.entries()) {
+          if (k.includes("cache") && text.includes("redis") && v === "memcached") {
+            warnings.push({
+              code: "INFERENCE_ADVISORY",
+              message: `Inference suggests ${k}=${v}, but task proposes redis.`,
+              taskId: task.id
+            });
+          }
+        }
+      }
+    }
   }
 }
 
