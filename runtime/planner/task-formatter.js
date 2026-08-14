@@ -27,13 +27,14 @@ function formatTasks(tasks, maxWidth = 80) {
   if (!Array.isArray(tasks)) return "";
   
   return tasks.map((task, index) => {
+    const t = task || {};
     const num = String(index + 1).padStart(2, '0');
-    const tier = (task.complexity || task.semanticMetadata?.complexity || "standard").toUpperCase();
-    const provider = (task.provider || "default");
+    const tier = (t.complexity || t.semanticMetadata?.complexity || "standard").toUpperCase();
+    const provider = (t.provider || "default");
     const providerCapitalized = provider.charAt(0).toUpperCase() + provider.slice(1);
     
     const header = `${tier} · ${providerCapitalized}`;
-    const label = task.label || task.title || task.id || "Tarefa não nomeada";
+    const label = t.label || t.title || t.id || "Tarefa não nomeada";
     
     const prefixLength = 4; // "01  "
     const availableLabelWidth = Math.max(10, maxWidth - prefixLength);

@@ -16,14 +16,15 @@ const TASK_TYPES = Object.freeze({
 });
 
 function decompose(spec, options = {}) {
-  const availableProviders = options.availableProviders || (options.provider ? [options.provider] : []);
+  const opts = options || {};
+  const availableProviders = opts.availableProviders || (opts.provider ? [opts.provider] : []);
   if (!availableProviders || availableProviders.length === 0) {
     throw new TypeError("MISSING_EXECUTION_TARGET: No available execution provider resolved");
   }
 
   const modelChoice = selectModel("medium", availableProviders);
-  const providerId = options.provider || modelChoice?.provider;
-  const model = options.model || modelChoice?.model || "default";
+  const providerId = opts.provider || modelChoice?.provider;
+  const model = opts.model || modelChoice?.model || "default";
 
   if (!providerId || !availableProviders.includes(providerId)) {
     throw new TypeError("MISSING_EXECUTION_TARGET: No available execution provider resolved");
