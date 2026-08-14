@@ -46,7 +46,8 @@ function createSemanticTask(input) {
     throw new TypeError(`SemanticTask.complexity must be one of: ${TASK_COMPLEXITY_LEVELS.join(", ")}`);
   }
 
-  const requiredCapabilities = (input.requiredCapabilities || []).map((cap) => {
+  const rawCaps = Array.isArray(input.requiredCapabilities) ? input.requiredCapabilities : [];
+  const requiredCapabilities = rawCaps.map((cap) => {
     if (!ENGINEERING_CAPABILITIES.includes(cap)) {
       throw new TypeError(`INVALID_ENGINEERING_CAPABILITY: ${cap} is not a valid engineering capability`);
     }
@@ -159,12 +160,12 @@ function fromCoreTaskGraph(coreGraph) {
     });
   });
 
-  return {
+  return Object.freeze({
     id: coreGraph.id,
     missionId: coreGraph.missionId,
-    semanticTasks,
+    semanticTasks: Object.freeze(semanticTasks),
     metadata: coreGraph.metadata || {}
-  };
+  });
 }
 
 module.exports = {
