@@ -77,3 +77,54 @@ test("Acceptance Scenario: Cyclic proposal is rejected and NEVER reaches LaneExe
 
   assert.equal(executorCallCount, 0, "LaneExecutor must never be called on invalid graph");
 });
+
+test("Characterization: LaneExecutor executes parallel DAG from LegacyExecutionProjection without modification", async () => {
+  const { LegacyExecutionProjection } = require("../runtime/planner/legacy-execution-projection");
+  const executionLog = [];
+  const fakeApp = {
+    executeRun: async ({ description, providerId, model }) => {
+      executionLog.push({ description, providerId, model });
+      return { success: true };
+    }
+  };
+
+  const executor = new LaneExecutor({ application: fakeApp, maxParallel: 2 });
+  const tasks = [
+    createSemanticTask({ id: "a", title: "Task A", objective: "Obj A", dependsOn: [] }),
+    createSemanticTask({ id: "b", title: "Task B", objective: "Obj B", dependsOn: ["a"] }),
+    createSemanticTask({ id: "c", title: "Task C", objective: "Obj C", dependsOn: ["a"] })
+  ];
+
+  const projected = LegacyExecutionProjection.projectGraph(tasks, {
+    executionTarget: { providerId: "opencode", model: "local-model" }
+  });
+
+  const results = await executor.execute(projected, "mission-1");
+  assert.equal(Object.keys(results).length, 3);
+  assert.equal(results.a.status, "completed");
+  assert.equal(results.b.status, "completed");
+  assert.equal(results.c.status, "completed");
+  assert.equal(executionLog[0].description.includes("Obj A"), true);
+  assert.equal(executionLog[0].providerId, "opencode");
+  assert.equal(executionLog[0].model, "local-model");
+});
+
+test("Characterization: JsonFileRunStore persists and reloads enriched TaskGraph without data loss", async () => {
+  const { JsonFileRunStore } = require("../runtime/store/json-file-run-store");
+  const { toCoreTaskGraph } = require("../runtime/planner/task-graph-proposal");
+  const os = require("node:os");
+  const path = require("node:path");
+  const storeFile = path.join(os.tmpdir(), `test-run-store-${Date.now()}.json`);
+  const store = new JsonFileRunStore({ filePath: storeFile });
+  await store.initialize();
+
+  const sTask = createSemanticTask({ id: "t1", title: "Domain", objective: "Entities", requiredCapabilities: ["backend"] });
+  const graph = toCoreTaskGraph({ id: "g1", missionId: "m1", semanticTasks: [sTask], metadata: { planningMode: "local-ai" } });
+
+  await store.saveTaskGraph(graph);
+  const loaded = await store.getTaskGraph("g1");
+  assert.equal(loaded.id, "g1");
+  assert.equal(loaded.tasks.length, 1);
+  assert.deepEqual(loaded.tasks[0].metadata.semantic.id, "t1");
+  assert.equal(loaded.metadata.planningMode, "local-ai");
+});
