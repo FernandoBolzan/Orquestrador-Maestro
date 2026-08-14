@@ -94,6 +94,9 @@ class SemanticPlanner {
       if (allowFallback) {
         const fallbackProposal = DeterministicFallbackPlanner.plan({ missionBrief, taskRelevantContext, resolvedSkills });
         const validated = GraphValidator.validate(fallbackProposal, { missionBrief, taskRelevantContext });
+        if (!validated.valid) {
+          throw new Error(`Fallback validation failed: ${validated.blockers.map((b) => b.message).join("; ")}`);
+        }
         const taskGraph = toCoreTaskGraph({
           id: `task-graph-${crypto.randomUUID()}`,
           missionId: resolvedMissionId,
