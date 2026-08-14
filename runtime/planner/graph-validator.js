@@ -7,20 +7,20 @@ const GENERIC_TITLES = Object.freeze(["PLANNING", "SCAFFOLD", "IMPLEMENT", "TEST
 
 class GraphValidator {
   static validate(proposal, options = {}) {
-    if (!proposal || typeof proposal !== "object") {
+    if (!proposal || typeof proposal !== "object" || Array.isArray(proposal)) {
       return Object.freeze({
         valid: false,
-        blockers: Object.freeze([{ code: "INVALID_PROPOSAL", message: "Proposal must be an object" }]),
-        warnings: Object.freeze([]),
-        normalizedProposal: null
+        blockers: Object.freeze([{ code: "INVALID_PROPOSAL", message: "Proposal must be a non-array object" }]),
+        warnings: Object.freeze([])
       });
     }
 
+    const opts = options || {};
     const blockers = [];
     const warnings = [...(proposal.warnings || [])];
     const tasks = proposal.tasks || [];
 
-    if (tasks.length === 0 && options.requireTasks !== false) {
+    if (tasks.length === 0 && opts.requireTasks !== false) {
       blockers.push({ code: "EMPTY_TASK_GRAPH", message: "Proposal contains no tasks" });
     }
 
