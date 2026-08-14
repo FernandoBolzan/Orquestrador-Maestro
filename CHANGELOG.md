@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.23 - 2026-08-14
+
+### Sincronização de skills entre clientes
+
+- Corrigida a disponibilidade de `code-review` no OpenCode/DANTE, sincronizando a skill compatível para `.opencode/skills`.
+- O sincronizador agora aceita diretórios nativos de compatibilidade por cliente, sem espalhar workflows específicos do Codex para outras ferramentas.
+- Corrigida a prioridade das fontes nativas do Codex para preservar skills oficiais atualizadas do runtime, incluindo `.system`.
+- Alinhados os sincronizadores PowerShell e Bash e documentada a auditoria completa de sincronização.
+
+### Verificação
+
+- 361 entradas de sincronização verificadas, sem divergências.
+- 42 skills canônicas validadas, doctor sem problemas de roteamento e 22 testes automatizados aprovados.
+- Validação pública, empacotamento e `git diff --check` aprovados.
+
 ## 0.1.22 - 2026-08-12
 
 ### Adaptadores de ferramentas AI-native

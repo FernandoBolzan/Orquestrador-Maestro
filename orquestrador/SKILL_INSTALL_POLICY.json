@@ -32,7 +32,7 @@
     "opencode": {
       "path": ".opencode/skills",
       "maxDirectories": 48,
-      "allowDirectories": ["orquestrador-maestro"]
+      "allowDirectories": ["orquestrador-maestro", "code-review"]
     },
     "agents": {
       "path": ".agents/skills",

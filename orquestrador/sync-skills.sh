@@ -59,7 +59,7 @@ DISABLED_NATIVE_ROOT="$(resolve_home_relative ".orquestrador/skill-library/disab
 
 TARGET_SPECS=(
   "codex|.codex/skills|64|.system,ask-claude,ask-gemini,autopilot,cancel,code-review,deep-interview,doctor,orquestrador-maestro,plan,ralplan,ralph,security-review,team,ultrawork,web-clone,worker"
-  "opencode|.opencode/skills|48|"
+  "opencode|.opencode/skills|48|orquestrador-maestro,code-review"
   "agents|.agents/skills|48|"
   "claude|.claude/skills|48|"
   "cursor|.cursor/skills|48|"
@@ -117,8 +117,8 @@ CANONICAL_SOURCES=(
 )
 
 CODEX_MANAGED_SOURCES=(
-  "$CODEX_LIBRARY"
   "$HOME_PATH/.codex/skills"
+  "$CODEX_LIBRARY"
 )
 
 filter_existing_dirs_into() {
@@ -322,11 +322,15 @@ EOF
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$program" "canonical" "$skill" "$action" "$target_root" ""
   done
 
-  if [ "$program" = "codex" ] && [ -n "$allow_csv" ]; then
+  if [ -n "$allow_csv" ]; then
     IFS=',' read -r -a allow_items <<< "$allow_csv"
     for name in "${allow_items[@]}"; do
       [ -z "$name" ] && continue
-      src="$(get_dir_source "$name" || true)"
+      if [ "$program" = "codex" ]; then
+        src="$(get_dir_source "$name" || true)"
+      else
+        src="$(get_skill_source "$name" || true)"
+      fi
       dest="$target_root/$name"
       action="ok"
 
@@ -347,7 +351,7 @@ EOF
         action="applied"
       fi
 
-      printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$program" "codex-native" "$name" "$action" "$target_root" ""
+      printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$program" "native-compatibility" "$name" "$action" "$target_root" ""
     done
   else
     allow_items=()

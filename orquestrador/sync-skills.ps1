@@ -200,8 +200,8 @@ $canonicalSourceRoots = @(
 ) | Where-Object { Test-Path -LiteralPath $_ }
 
 $codexManagedSourceRoots = @(
-  $libraryRoots.Codex,
-  (Join-Path $HomePath ".codex\skills")
+  (Join-Path $HomePath ".codex\skills"),
+  $libraryRoots.Codex
 ) | Where-Object { Test-Path -LiteralPath $_ }
 
 $targets = @()
@@ -286,9 +286,10 @@ foreach ($target in ($targets | Sort-Object Program)) {
     })
   }
 
-  if ($target.Program -eq "codex") {
-    foreach ($name in ($target.AllowDirectories | Sort-Object)) {
-      $src = Get-DirectorySource -Name $name -Roots $codexManagedSourceRoots
+  if ($target.AllowDirectories.Count -gt 0) {
+    $managedRoots = if ($target.Program -eq "codex") { $codexManagedSourceRoots } else { $canonicalSourceRoots }
+    foreach ($name in ($target.AllowDirectories | Where-Object { $_ -notin $mustHave } | Sort-Object)) {
+      $src = Get-DirectorySource -Name $name -Roots $managedRoots
       $dest = Join-Path $target.Root $name
       $exists = Test-Path -LiteralPath $dest
       $different = if ($src -and $targetExists -and $exists) { Test-DirectoryDifferent -SourceDir $src -DestDir $dest } else { $false }
@@ -304,7 +305,7 @@ foreach ($target in ($targets | Sort-Object Program)) {
       $report.Add([pscustomobject]@{
         Program = $target.Program
         Target = $target.Root
-        Type = "codex-native"
+        Type = "native-compatibility"
         Item = $name
         Source = $src
         Action = $action
