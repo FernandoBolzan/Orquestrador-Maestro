@@ -1,5 +1,18 @@
 # Solução de problemas de instalação
 
+## Skill ausente no OpenCode/DANTE
+
+O Codex e o OpenCode mantêm raízes nativas diferentes. Por isso, uma skill disponível em `%USERPROFILE%\.codex\skills` pode não aparecer automaticamente no DANTE/OpenCode.
+
+Para conferir e corrigir a sincronização no Windows:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\.orquestrador\sync-skills.ps1 -Check
+powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\.orquestrador\sync-skills.ps1 -Apply
+```
+
+O `-Check` deve terminar sem ações diferentes de `ok`. A política mantém apenas compatibilidades explicitamente autorizadas por cliente; workflows que dependem de ferramentas internas do Codex/OMX não são copiados para o OpenCode. Depois de aplicar uma alteração, reinicie a ferramenta para que ela releia a raiz de skills.
+
 ## Instalação recomendada
 
 Use uma sessão normal do usuário. Não use `sudo`, `su`, root nem PowerShell como Administrador.
