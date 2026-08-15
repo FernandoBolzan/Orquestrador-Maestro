@@ -4,6 +4,7 @@ const crypto = require("node:crypto");
 const { GraphValidator } = require("./graph-validator");
 const { DeterministicFallbackPlanner } = require("./deterministic-fallback-planner");
 const { createTaskGraphProposal, toCoreTaskGraph } = require("./task-graph-proposal");
+const { extractAssistantText } = require("../providers/provider-output");
 
 class SemanticPlanner {
   constructor({
@@ -66,11 +67,12 @@ class SemanticPlanner {
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       let result;
       try {
-        result = await provider.execute({
+        const handle = await provider.execute({
           prompt,
           model: this.plannerTarget.model,
           workspacePath: process.cwd()
         });
+        result = await handle.result;
       } catch (err) {
         throw new Error(`Provider execution failed: ${err.message}`);
       }
@@ -152,7 +154,7 @@ Return ONLY a JSON object:
     if (typeof stdout !== "string") {
       throw new TypeError("Provider output stdout must be a string");
     }
-    const trimmed = stdout.trim();
+    const trimmed = extractAssistantText(stdout).trim();
     const match = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     const jsonText = (match ? match[1] : trimmed).trim();
     return JSON.parse(jsonText);

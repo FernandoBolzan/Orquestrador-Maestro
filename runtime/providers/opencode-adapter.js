@@ -15,7 +15,7 @@ class OpenCodeAdapter extends ProviderAdapter {
   async capabilities() { return capabilities({ headless: true, structuredEvents: true, streaming: true, sessionResume: true, modelSelection: true, mcp: true }); }
   async execute(request) {
     const args = [...this.commandPrefixArgs, "run", "--format", "json"];
-    if (request.model) args.push("--model", request.model);
+    if (request.model && request.model !== "default") args.push("--model", request.model);
     if (request.agent) args.push("--agent", request.agent);
     if (request.sessionId) args.push("--session", request.sessionId);
     else if (request.continue === true) args.push("--continue");

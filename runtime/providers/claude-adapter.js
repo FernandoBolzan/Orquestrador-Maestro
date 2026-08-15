@@ -18,7 +18,7 @@ class ClaudeAdapter extends ProviderAdapter {
 
   async execute(request) {
     const args = [...this.commandPrefixArgs, "--print", "--output-format", "stream-json", "--include-partial-messages"];
-    if (request.model) args.push("--model", request.model);
+    if (request.model && request.model !== "default") args.push("--model", request.model);
     if (request.permissionMode) args.push("--permission-mode", request.permissionMode);
     return startProcess({ executable: this.executable, args, request, providerId: this.id });
   }

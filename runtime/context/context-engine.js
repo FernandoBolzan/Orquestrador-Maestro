@@ -13,9 +13,9 @@ class ContextEngine {
    * Deterministic Discovery
    * Reuses context-preflight as a ContextSource.
    */
-  async _discoverFacts() {
+  async _discoverFacts(intent) {
     const items = [];
-    const facts = gatherPreflight(this.workspacePath, ""); // basic preflight
+    const facts = gatherPreflight(this.workspacePath, intent); // real user intent flows into preflight
 
     // Convert preflight facts into ContextItem contracts
     if (facts.projectName) {
@@ -51,6 +51,17 @@ class ContextEngine {
       });
     }
 
+    if (facts.contextBrief && typeof facts.contextBrief === "object") {
+      items.push({
+        key: "context.brief",
+        value: facts.contextBrief,
+        kind: "FACT",
+        confidence: 1,
+        relevance: 1,
+        sources: [{ type: "context-brief", path: "orquestrador/bin/context-brief.js" }]
+      });
+    }
+
     if (facts.devState) {
       for (const [devFile, content] of Object.entries(facts.devState)) {
         items.push({
@@ -75,7 +86,7 @@ class ContextEngine {
    */
   async buildContext(intent, maxTokens = 8000) {
     // 1. Deterministic Discovery
-    const items = await this._discoverFacts();
+    const items = await this._discoverFacts(intent);
 
     // 2. Local AI Semantic Enrichment
     if (this.semanticRanker) {

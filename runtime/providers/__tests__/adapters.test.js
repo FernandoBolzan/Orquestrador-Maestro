@@ -109,3 +109,21 @@ test("OpenCodeAdapter uses documented run JSON, model, agent, session, and works
   assert.equal((await adapter.capabilities()).mcp, true);
   assert.equal((await adapter.capabilities()).sandboxControl, false);
 });
+
+test("adapters skip the --model flag when model is the \"default\" sentinel", async () => {
+  const root = makeTempDir("maestro-provider-");
+  const script = fakeCli(root);
+  const cases = [
+    { Adapter: OpenCodeAdapter, expectedPrefix: ["run", "--format", "json"] },
+    { Adapter: CodexAdapter, expectedPrefix: ["exec", "--json", "--color", "never"] },
+    { Adapter: ClaudeAdapter, expectedPrefix: ["--print", "--output-format", "stream-json", "--include-partial-messages"] },
+    { Adapter: AgyAdapter, expectedPrefix: ["--print", "--output-format", "stream-json"] }
+  ];
+  for (const { Adapter, expectedPrefix } of cases) {
+    const adapter = new Adapter({ executable: process.execPath, commandPrefixArgs: [script] });
+    const result = await (await adapter.execute({ prompt: "review", workspacePath: root, model: "default" })).result;
+    const received = JSON.parse(result.stdout.trim());
+    assert.deepEqual(received.args.slice(0, expectedPrefix.length), expectedPrefix, `${Adapter.name} must not translate --model default`);
+    assert.ok(!received.args.includes("--model"), `${Adapter.name} must not emit --model` );
+  }
+});

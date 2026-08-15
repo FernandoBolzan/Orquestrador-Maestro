@@ -19,7 +19,23 @@ class MockApp {
             throw error;
           }
           const stdout = typeof providerResult === "function" ? providerResult(this.executeCalls.length, opts) : providerResult;
-          return { stdout };
+          return {
+            providerId: id,
+            pid: 1,
+            result: Promise.resolve({
+              providerId: id,
+              pid: 1,
+              stdout,
+              stderr: "",
+              cancelled: false,
+              timedOut: false,
+              durationMs: 1,
+              exitCode: 0,
+              signal: null,
+              error: undefined
+            }),
+            cancel() {}
+          };
         }
       })
     };

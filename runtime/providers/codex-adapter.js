@@ -18,7 +18,7 @@ class CodexAdapter extends ProviderAdapter {
 
   async execute(request) {
     const args = [...this.commandPrefixArgs, "exec", "--json", "--color", "never"];
-    if (request.model) args.push("--model", request.model);
+    if (request.model && request.model !== "default") args.push("--model", request.model);
     if (request.sandbox) args.push("--sandbox", request.sandbox);
     if (request.workspacePath) args.push("--cd", request.workspacePath);
     return startProcess({ executable: this.executable, args, request, providerId: this.id });

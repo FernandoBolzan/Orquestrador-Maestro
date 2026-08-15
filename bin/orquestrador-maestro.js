@@ -57,6 +57,8 @@ Uso:
   orquestrador-maestro check-dev-gates [--project-path PATH] [--max-entries N] [--strict]
   orquestrador-maestro context brief [--project-path PATH] [--task TEXT] [--max-chars N] [--json]
   orquestrador-maestro run [--provider ID] [--profile ID] [--policy ID] [--workspace PATH] "tarefa"
+  orquestrador-maestro go [--auto] [--provider ID] [--interviewer ID] [--project-path PATH] "tarefa"
+  orquestrador-maestro plan [--auto] [--provider ID] [--interviewer ID] [--project-path PATH] "tarefa"
   orquestrador-maestro runs [--project-path PATH]
   orquestrador-maestro run show <id> [--project-path PATH]
   orquestrador-maestro run inspect <id> [--project-path PATH]

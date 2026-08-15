@@ -1,13 +1,52 @@
 "use strict";
 
-const p = require("@clack/prompts");
+const defaultPrompts = require("@clack/prompts");
 const { DynamicInterviewer } = require("./dynamic-interviewer");
 const { createIntentSpec } = require("./intent-spec");
 const { IntentRefiner } = require("./intent-refiner");
 const { evaluateReadiness } = require("./readiness-evaluator");
 
+function blockerSignature(blocker) {
+  return `${blocker.type}|${blocker.dimension}|${blocker.description}`;
+}
+
+function canonicalReadinessState(intentSpec) {
+  return JSON.stringify({
+    requirements: (intentSpec.requirements || []).length,
+    constraints: (intentSpec.constraints || []).length,
+    openUnknowns: (intentSpec.unknowns || [])
+      .filter(u => u.blocking && u.status === "OPEN")
+      .map(u => `${u.id}:${u.dimension}`)
+  });
+}
+
+function resolveUnknown(unknown, blocker, answer) {
+  if (unknown && unknown.dimension === blocker.dimension && unknown.status === "OPEN") {
+    const resolved = {
+      ...unknown,
+      status: "RESOLVED",
+      metadata: { ...(unknown.metadata || {}), resolvedBy: "USER_DECISION", answeredAt: new Date().toISOString(), answer }
+    };
+    try {
+      return createIntentUnknown({
+        id: unknown.id,
+        dimension: unknown.dimension,
+        description: unknown.description,
+        reason: unknown.reason,
+        blocking: unknown.blocking === true,
+        status: "RESOLVED",
+        metadata: resolved.metadata
+      });
+    } catch (e) {
+      return resolved;
+    }
+  }
+  return unknown;
+}
+
 class AiInterviewer {
-  constructor({ resolvedSkills, preflightFacts, application, intent, aiProvider = "opencode" }) {
+  constructor({ resolvedSkills, preflightFacts, application, intent, aiProvider = "opencode", prompts = defaultPrompts }) {
+    this.p = prompts;
     this.resolvedSkills = resolvedSkills;
     this.facts = preflightFacts;
     this.app = application;
@@ -40,22 +79,27 @@ class AiInterviewer {
     }
 
     if (fallbackToLegacy) {
-      p.note(`Provedor de IA (${this.aiProvider}) não detectado. Usando modo de refinamento por heurística.`, "Fallback");
+      this.p.note(`Provedor de IA (${this.aiProvider}) não detectado. Usando modo de refinamento por heurística.`, "Fallback");
       const fallback = new DynamicInterviewer({ resolvedSkills: this.resolvedSkills, preflightFacts: this.facts });
       return fallback.runInteractive();
     }
 
-    p.note(`Assistente Inteligente ativado (${this.aiProvider}). Analisando projeto e skills...`, "AI Planner");
+    this.p.note(`Assistente Inteligente ativado (${this.aiProvider}). Analisando projeto e skills...`, "AI Planner");
 
     let isReady = false;
-    const s = p.spinner();
+    const s = this.p.spinner();
+    let lastQuestion = null;
+    let lastCanonicalState = null;
 
     while (!isReady) {
        try {
          s.start("IA analisando intenção...");
-         this.intentSpec = await this.refiner.refine(this.intentSpec);
+         this.intentSpec = await this.refiner.refine(this.intentSpec, lastQuestion && lastQuestion.answer ? {
+           blocker: lastQuestion.blocker,
+           answer: lastQuestion.answer
+         } : null);
        } catch (e) {
-         require("@clack/prompts").log.error(`Falha no refinamento via IA: ${e.message}`);
+         this.p.log.error(`Falha no refinamento via IA: ${e.message}`);
          throw e;
        } finally {
          s.stop();
@@ -69,22 +113,40 @@ class AiInterviewer {
 
        // We have blockers. Just ask the first one for now (naive UI)
        const blocker = evalResult.blockers[0];
+       const currentState = canonicalReadinessState(this.intentSpec);
 
-       const answer = await p.text({
+       // Narrow loop safety: the identical question must not repeat from
+       // unchanged readiness-relevant state after a human answer was applied.
+       if (lastQuestion &&
+           blockerSignature(blocker) === lastQuestion.signature &&
+           currentState === lastCanonicalState) {
+         throw new Error(
+           `M2_CLARIFICATION_LOOP: a pergunta "${blocker.description}" (${blocker.dimension}) repetiu sem evolução de estado (requirements=${this.intentSpec.requirements.length}, constraints=${this.intentSpec.constraints.length}).`
+         );
+       }
+
+       const answer = await this.p.text({
           message: `[AI] Esclareça a seguinte pendência (${blocker.dimension}): ${blocker.description}`,
           placeholder: "Sua resposta (ou 'skip' para prosseguir)"
        });
 
-       if (p.isCancel(answer) || answer === "skip" || answer === "q" || answer.trim() === "") {
+       if (this.p.isCancel(answer) || answer === "skip" || answer === "q" || answer.trim() === "") {
          break; // user skipped, we might still be not ready but we stop
        }
 
-       // Convert user answer to a user decision and resolve the unknown
-       this.intentSpec.userDecisions.push(`Decided [${blocker.dimension}]: ${answer}`);
-       const targetUnknown = this.intentSpec.unknowns.find(u => u.dimension === blocker.dimension);
-       if (targetUnknown) {
-         targetUnknown.status = "RESOLVED";
-       }
+       // A human answer is an authoritative USER_DECISION. It is recorded
+       // verbatim and the answered dimension transitions to RESOLVED. The
+       // next refinement round receives the clarification so the AI can
+       // propose structured requirements/constraints derived from it.
+       this.intentSpec = createIntentSpec(this.intentSpec.intent, {
+         ...this.intentSpec,
+         updatedAt: new Date().toISOString(),
+         userDecisions: [...this.intentSpec.userDecisions, `Decided [${blocker.dimension}]: ${answer}`],
+         unknowns: this.intentSpec.unknowns.map(u => resolveUnknown(u, blocker, answer))
+       });
+
+       lastQuestion = { signature: blockerSignature(blocker), blocker, answer };
+       lastCanonicalState = canonicalReadinessState(this.intentSpec);
     }
 
     return this.buildSpec();
@@ -113,7 +175,11 @@ class AiInterviewer {
       skills: this.resolvedSkills,
       answers: {
         intent: this.intentSpec.objective,
-        ai_refinement: JSON.stringify(this.intentSpec)
+        ai_refinement: JSON.stringify(this.intentSpec),
+        requirements: [...this.intentSpec.requirements],
+        constraints: [...this.intentSpec.constraints],
+        userDecisions: [...this.intentSpec.userDecisions],
+        unknowns: [...this.intentSpec.unknowns]
       }
     });
   }

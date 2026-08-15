@@ -13,7 +13,21 @@ test("M2 Final Gate: --auto with parser failure throws and preserves spec", asyn
         detect: async () => ({ installed: true }),
         execute: async () => {
           callCount++;
-          return { stdout: "invalid json response" };
+          return {
+            providerId: "opencode",
+            pid: 1,
+            result: Promise.resolve({
+              providerId: "opencode",
+              pid: 1,
+              stdout: "invalid json response",
+              stderr: "",
+              exitCode: 0,
+              signal: null,
+              cancelled: false,
+              timedOut: false
+            }),
+            cancel() {}
+          };
         }
       })
     }
@@ -75,11 +89,23 @@ test("M2 Final Gate: --auto passes if sufficient dimensions and no blockers", as
       get: (id) => ({
         detect: async () => ({ installed: true }),
         execute: async () => ({
-          stdout: JSON.stringify({
-            updates: { objective: "CRUD completo" },
-            addRequirements: ["Req 1"],
-            detectedUnknowns: [] // No blockers
-          })
+          providerId: "opencode",
+          pid: 1,
+          result: Promise.resolve({
+            providerId: "opencode",
+            pid: 1,
+            stdout: JSON.stringify({
+              updates: { objective: "CRUD completo" },
+              addRequirements: ["Req 1"],
+              detectedUnknowns: [] // No blockers
+            }),
+            stderr: "",
+            exitCode: 0,
+            signal: null,
+            cancelled: false,
+            timedOut: false
+          }),
+          cancel() {}
         })
       })
     }

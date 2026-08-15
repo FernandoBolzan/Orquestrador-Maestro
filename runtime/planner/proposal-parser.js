@@ -1,5 +1,7 @@
 "use strict";
 
+const { extractAssistantText } = require("../providers/provider-output");
+
 class StructuredOutputError extends Error {
   constructor(message) {
     super(message);
@@ -12,8 +14,14 @@ function parseRefinementProposal(rawOutput) {
     throw new StructuredOutputError("Output is empty or not a string.");
   }
 
-  let jsonStr = rawOutput;
-  const match = rawOutput.match(/```json\s*([\s\S]*?)\s*```/);
+  // Normalize a structured NDJSON event stream (opencode run --format json,
+  // claude stream-json, ...) into the assistant's plain-text response. A single
+  // JSON object is passed through unchanged; transport-error events are returned
+  // verbatim so they are rejected below rather than read as an empty proposal.
+  const content = extractAssistantText(rawOutput);
+
+  let jsonStr = content;
+  const match = content.match(/```json\s*([\s\S]*?)\s*```/);
   if (match) {
     jsonStr = match[1];
   }
@@ -27,6 +35,11 @@ function parseRefinementProposal(rawOutput) {
 
   // Schema validation
   if (parsed && typeof parsed === "object") {
+    // Reject provider transport errors (e.g. `opencode run` error events)
+    // instead of silently treating them as an empty proposal.
+    if (parsed.type === "error" || (parsed.error && typeof parsed.error === "object")) {
+      throw new StructuredOutputError("Provider returned a transport error, not a proposal.");
+    }
     if (parsed.addRequirements && !Array.isArray(parsed.addRequirements)) {
       throw new StructuredOutputError("addRequirements must be an array.");
     }

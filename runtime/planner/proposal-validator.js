@@ -37,11 +37,17 @@ function applyProposal(intentSpec, validProposal) {
     validProposal.addConstraints.forEach(c => mergedConstraints.add(c));
   }
 
-  // Handle unknowns: merge by id
+  // Handle unknowns: merge by id, existing state wins (first-wins).
+  // A RESOLVED/answered unknown must not be resurrected by a same-id OPEN
+  // proposal; genuinely new concerns must arrive under a new id.
   const unknownsMap = new Map();
   intentSpec.unknowns.forEach(u => unknownsMap.set(u.id, u));
   if (Array.isArray(validProposal.detectedUnknowns)) {
-    validProposal.detectedUnknowns.forEach(u => unknownsMap.set(u.id, u));
+    validProposal.detectedUnknowns.forEach(u => {
+      if (u && typeof u.id === "string" && !unknownsMap.has(u.id)) {
+        unknownsMap.set(u.id, u);
+      }
+    });
   }
   const mergedUnknowns = Array.from(unknownsMap.values());
 

@@ -15,7 +15,7 @@ class AgyAdapter extends ProviderAdapter {
   async capabilities() { return capabilities({ headless: true, structuredEvents: true, streaming: true, sessionResume: true, toolApproval: true, sandboxControl: true, modelSelection: true }); }
   async execute(request) {
     const args = [...this.commandPrefixArgs, "--print", "--output-format", "stream-json"];
-    if (request.model) args.push("--model", request.model);
+    if (request.model && request.model !== "default") args.push("--model", request.model);
     if (request.mode) args.push("--mode", request.mode);
     if (request.sandbox === true || request.sandbox === "enabled") args.push("--sandbox");
     return startProcess({ executable: this.executable, args, request, providerId: this.id });
