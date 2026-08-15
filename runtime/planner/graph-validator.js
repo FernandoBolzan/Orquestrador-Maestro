@@ -120,7 +120,10 @@ class GraphValidator {
     const isBackendOnly = facts.get("project.frontend") === null || facts.get("frontend") === null || facts.get("architecture") === "backend-only";
     const dbType = String(facts.get("database.type") || facts.get("database") || "").toLowerCase();
 
+    const userDecisions = (missionBrief?.userDecisions || []).map((d) => String(d).toLowerCase());
     const constraints = (missionBrief?.constraints || []).map((c) => String(c).toLowerCase());
+    const reusePersistence = userDecisions.some((d) => /\b(reutilizar|reuso|manter|preserve|keep|reuse)\b.*\b(persistencia|persistência|banco|database|db)\b/i.test(d)) ||
+      constraints.some((c) => /\b(reutilizar|reuso|manter|preserve|keep|reuse)\b.*\b(persistencia|persistência|banco|database|db)\b/i.test(c));
 
     for (const task of tasks) {
       const text = `${task.title} ${task.objective}`.toLowerCase();
@@ -142,6 +145,20 @@ class GraphValidator {
             message: `Task "${task.title}" proposes SQL migrations on a MongoDB project.`,
             taskId: task.id
           });
+        }
+      }
+
+      if (reusePersistence && dbType) {
+        const otherDbs = ["mongo", "sqlite", "mysql", "mariadb", "postgres"].filter((db) => !dbType.includes(db));
+        for (const otherDb of otherDbs) {
+          if (new RegExp(`\\b${otherDb}\\b`, "i").test(text)) {
+            blockers.push({
+              code: "DATABASE_CONTRADICTION",
+              message: `Task "${task.title}" proposes switching database to ${otherDb} while mission specifies reusing existing persistence (${dbType}).`,
+              taskId: task.id
+            });
+            break;
+          }
         }
       }
 

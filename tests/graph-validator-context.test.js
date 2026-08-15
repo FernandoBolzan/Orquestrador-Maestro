@@ -94,3 +94,26 @@ test("INFERENCE isolated generates warning without hard-rejecting proposal", () 
   assert.equal(res.valid, true);
   assert.ok(res.warnings.some((w) => w.code === "INFERENCE_ADVISORY"));
 });
+
+test("Reusing persistence decision rejects proposal that switches database engine (Gap N2 fix)", () => {
+  const proposal = createTaskGraphProposal({
+    tasks: [
+      createSemanticTask({ id: "t1", title: "Migrate schema to MongoDB", objective: "Replace Postgres with Mongo" })
+    ]
+  });
+
+  const missionBrief = {
+    objective: "Evoluir a API de estoque",
+    userDecisions: ["reutilizar persistencia existente"]
+  };
+
+  const context = {
+    items: [
+      { key: "database.type", value: "postgres", kind: "FACT" }
+    ]
+  };
+
+  const res = GraphValidator.validate(proposal, { missionBrief, taskRelevantContext: context });
+  assert.equal(res.valid, false);
+  assert.ok(res.blockers.some((b) => b.code === "DATABASE_CONTRADICTION" && b.taskId === "t1"));
+});
