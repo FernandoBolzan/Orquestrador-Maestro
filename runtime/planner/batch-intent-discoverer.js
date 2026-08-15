@@ -69,7 +69,7 @@ class BatchIntentDiscoverer {
       validationErrors: [lastError ? lastError.message : "Discovery failed after retries"],
       questionCount: 0,
       discoveryRound: this._discoveryRound,
-      error: lastError ? lastError.message : "Unknown error"
+      error: lastError
     });
   }
 

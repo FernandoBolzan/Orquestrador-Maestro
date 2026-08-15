@@ -37,22 +37,15 @@ class BatchRefinementCoordinator {
     counters.discoveryRounds = discovery.discoveryRound || 1;
     allQuestions = [...discovery.questions];
 
-    if (!discovery.valid || allQuestions.length === 0) {
-      const reconciliation = await this._reconciler.reconcile(currentSpec, [], context);
-      counters.reconciliationCalls = this._reconciler.aiCalls || 0;
-      if (reconciliation.success && reconciliation.proposal) {
-        currentSpec = this._applyProposal(currentSpec, reconciliation.proposal);
+    if (discovery.error) {
+      if (typeof discovery.error === "object" && discovery.error instanceof Error) {
+        throw discovery.error;
       }
-      return Object.freeze({
-        success: true,
-        cancelled: false,
-        autoApproved: auto,
-        reconciled: true,
-        batchesProcessed: 0,
-        totalQuestions: 0,
-        intentSpec: Object.freeze(currentSpec),
-        counters: Object.freeze(counters)
-      });
+      throw new Error(`Discovery failed: ${discovery.error}`);
+    }
+
+    if (!discovery.valid) {
+      throw new Error(`Discovery produced invalid question set: ${discovery.validationErrors.join("; ")}`);
     }
 
     const answers = new Map();

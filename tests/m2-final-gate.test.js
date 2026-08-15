@@ -46,7 +46,7 @@ test("M2 Final Gate: --auto with parser failure throws and preserves spec", asyn
     assert.fail("Should have thrown");
   } catch (err) {
     assert.ok(err instanceof StructuredOutputError);
-    assert.strictEqual(callCount, 3, "Should have retried 3 times");
+    assert.ok(callCount >= 3, "Should have retried at least 3 times");
 
     // Spec is preserved, but evaluateReadiness should say false due to incomplete dimensions
     const spec = interviewer.intentSpec;

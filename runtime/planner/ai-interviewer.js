@@ -5,6 +5,11 @@ const { DynamicInterviewer } = require("./dynamic-interviewer");
 const { createIntentSpec } = require("./intent-spec");
 const { IntentRefiner } = require("./intent-refiner");
 const { evaluateReadiness } = require("./readiness-evaluator");
+const { BatchIntentDiscoverer } = require("./batch-intent-discoverer");
+const { IntentReconciler } = require("./intent-reconciler");
+const { BatchRefinementCoordinator } = require("./batch-refinement-coordinator");
+const { ClackBatchInteractionAdapter } = require("./clack-batch-adapter");
+const { validateQuestionSet } = require("./question-set-validator");
 
 function blockerSignature(blocker) {
   return `${blocker.type}|${blocker.dimension}|${blocker.description}`;
@@ -42,6 +47,11 @@ function resolveUnknown(unknown, blocker, answer) {
     }
   }
   return unknown;
+}
+
+function createIntentUnknown(input) {
+  const core = require("../core");
+  return core.createIntentUnknown(input);
 }
 
 class AiInterviewer {
@@ -86,6 +96,63 @@ class AiInterviewer {
 
     this.p.note(`Assistente Inteligente ativado (${this.aiProvider}). Analisando projeto e skills...`, "AI Planner");
 
+    const useBatch = process.env.ORQUESTRADOR_BATCH_REFINEMENT === "1";
+
+    if (useBatch) {
+      const taskRelevantContext = { items: Object.entries(this.facts || {}).map(([k, v]) => ({ key: k, value: v, type: "FACT" })) };
+      const discoverer = new BatchIntentDiscoverer({ provider });
+      try {
+        const discoveryResult = await discoverer.discover(this.intentSpec.intent || this.intentSpec.objective, this.intentSpec, this.resolvedSkills, taskRelevantContext);
+        if (discoveryResult && discoveryResult.questions && discoveryResult.questions.length > 0) {
+          return await this._runBatchRefinement(provider, discoveryResult);
+        }
+      } catch (e) {
+        // Fall through to legacy
+      }
+    }
+
+    return await this._runLegacyRefinement(provider);
+  }
+
+  async _runBatchRefinement(provider, discoveryResult) {
+    const taskRelevantContext = { items: Object.entries(this.facts || {}).map(([k, v]) => ({ key: k, value: v, type: "FACT" })) };
+
+    const reconciler = new IntentReconciler({ provider });
+    const adapter = new ClackBatchInteractionAdapter({ prompts: this.p });
+
+    const coordinator = new BatchRefinementCoordinator({
+      discoverer: { discover: async () => discoveryResult, get discoveryRound() { return discoveryResult.discoveryRound || 1; } },
+      reconciler,
+      adapter
+    });
+
+    const s = this.p.spinner();
+    try {
+      s.start("IA descobrindo decisoes em lote...");
+      const result = await coordinator.run(this.intentSpec, taskRelevantContext, this.resolvedSkills, { batchSize: 4 });
+      s.stop();
+
+      if (result.cancelled) {
+        this.p.log.info("Operacao cancelada pelo usuario.");
+        return this.buildSpec();
+      }
+
+      if (result.success && result.intentSpec) {
+        this.intentSpec = createIntentSpec(this.intentSpec.intent, {
+          ...result.intentSpec,
+          status: "REFINING"
+        });
+      }
+
+      this.p.log.success(`Refinamento concluido: ${result.totalQuestions} questoes em ${result.batchesProcessed} lote(s).`);
+      return this.buildSpec();
+    } catch (e) {
+      s.stop();
+      throw e;
+    }
+  }
+
+  async _runLegacyRefinement(provider) {
     let isReady = false;
     const s = this.p.spinner();
     let lastQuestion = null;
@@ -111,12 +178,9 @@ class AiInterviewer {
          break;
        }
 
-       // We have blockers. Just ask the first one for now (naive UI)
        const blocker = evalResult.blockers[0];
        const currentState = canonicalReadinessState(this.intentSpec);
 
-       // Narrow loop safety: the identical question must not repeat from
-       // unchanged readiness-relevant state after a human answer was applied.
        if (lastQuestion &&
            blockerSignature(blocker) === lastQuestion.signature &&
            currentState === lastCanonicalState) {
@@ -126,18 +190,14 @@ class AiInterviewer {
        }
 
        const answer = await this.p.text({
-          message: `[AI] Esclareça a seguinte pendência (${blocker.dimension}): ${blocker.description}`,
-          placeholder: "Sua resposta (ou 'skip' para prosseguir)"
+         message: `[AI] Esclareça a seguinte pendência (${blocker.dimension}): ${blocker.description}`,
+         placeholder: "Sua resposta (ou 'skip' para prosseguir)"
        });
 
        if (this.p.isCancel(answer) || answer === "skip" || answer === "q" || answer.trim() === "") {
-         break; // user skipped, we might still be not ready but we stop
+         break;
        }
 
-       // A human answer is an authoritative USER_DECISION. It is recorded
-       // verbatim and the answered dimension transitions to RESOLVED. The
-       // next refinement round receives the clarification so the AI can
-       // propose structured requirements/constraints derived from it.
        this.intentSpec = createIntentSpec(this.intentSpec.intent, {
          ...this.intentSpec,
          updatedAt: new Date().toISOString(),
@@ -153,7 +213,31 @@ class AiInterviewer {
   }
 
   async runBatch() {
-    // Run exactly one refinement step
+    const provider = this.app.providers.get(this.aiProvider);
+
+    if (provider) {
+      try {
+        const installation = await provider.detect();
+        if (installation.installed) {
+          const taskRelevantContext = { items: Object.entries(this.facts || {}).map(([k, v]) => ({ key: k, value: v, type: "FACT" })) };
+          const discoverer = new BatchIntentDiscoverer({ provider });
+          const reconciler = new IntentReconciler({ provider });
+          const adapter = { collectBatch: async () => ({ action: "cancel", answers: {} }) };
+          const coordinator = new BatchRefinementCoordinator({ discoverer, reconciler, adapter });
+          const result = await coordinator.run(this.intentSpec, taskRelevantContext, this.resolvedSkills, { auto: true, batchSize: 4 });
+
+          if (result.success && result.intentSpec) {
+            this.intentSpec = createIntentSpec(this.intentSpec.intent, {
+              ...result.intentSpec,
+              status: "REFINING"
+            });
+          }
+        }
+      } catch (e) {
+        // Fall through to legacy single-pass
+      }
+    }
+
     try {
       this.intentSpec = await this.refiner.refine(this.intentSpec);
     } catch (e) {
