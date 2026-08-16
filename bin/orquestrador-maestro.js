@@ -57,8 +57,8 @@ Uso:
   orquestrador-maestro check-dev-gates [--project-path PATH] [--max-entries N] [--strict]
   orquestrador-maestro context brief [--project-path PATH] [--task TEXT] [--max-chars N] [--json]
   orquestrador-maestro run [--provider ID] [--profile ID] [--policy ID] [--workspace PATH] "tarefa"
-  orquestrador-maestro go [--auto] [--provider ID] [--interviewer ID] [--project-path PATH] "tarefa"
-  orquestrador-maestro plan [--auto] [--provider ID] [--interviewer ID] [--project-path PATH] "tarefa"
+  orquestrador-maestro go [--auto] [--plan] [--provider ID] [--interviewer ID] [--project-path PATH] "tarefa"
+  orquestrador-maestro plan [--auto] [--plan] [--provider ID] [--interviewer ID] [--project-path PATH] "tarefa"
   orquestrador-maestro runs [--project-path PATH]
   orquestrador-maestro run show <id> [--project-path PATH]
   orquestrador-maestro run inspect <id> [--project-path PATH]
@@ -932,8 +932,8 @@ Fluxo recomendado para quem ja tem o Orquestrador instalado:
   return 0;
 }
 
-async function handleGoCommand(args) {
-  const options = parseRuntimeArgs(args, ["--project-path", "--provider", "--interviewer", "--max-cost", "--max-parallel"], ["--auto"]);
+async function handleGoCommand(args, planningOnly = false) {
+  const options = parseRuntimeArgs(args, ["--project-path", "--provider", "--interviewer", "--max-cost", "--max-parallel"], ["--auto", "--plan"]);
   const description = options.values.join(" ").trim();
   if (!description) throw new Error('Informe a intenção: orquestrador-maestro go "tarefa"');
   
@@ -1008,13 +1008,21 @@ async function handleGoCommand(args) {
     ? await interviewer.runBatch()
     : await interviewer.runInteractive();
   
+  // Fallback interviewers may return per-dimension answers as plain strings;
+  // the MissionBrief contract requires string arrays.
+  const normalizeList = (value) => {
+    if (value === undefined || value === null) return [];
+    if (Array.isArray(value)) return value.filter((entry) => typeof entry === "string" && entry.trim() !== "");
+    return typeof value === "string" && value.trim() !== "" ? [value] : [];
+  };
+
   let approvedBrief = null;
   if (session) {
     approvedBrief = await app.approveMissionBrief(session.id, {
       objective: spec.answers?.intent || description,
-      requirements: spec.answers?.requirements || [],
-      userDecisions: spec.answers?.userDecisions || [],
-      constraints: spec.answers?.constraints || [],
+      requirements: normalizeList(spec.answers?.requirements),
+      userDecisions: normalizeList(spec.answers?.userDecisions),
+      constraints: normalizeList(spec.answers?.constraints),
       relevantContext: JSON.stringify(spec.answers)
     });
   } else {
@@ -1022,9 +1030,9 @@ async function handleGoCommand(args) {
       id: `brief-${crypto.randomUUID()}`,
       intentSessionId: `session-${crypto.randomUUID()}`,
       objective: spec.answers?.intent || description,
-      requirements: spec.answers?.requirements || [],
-      userDecisions: spec.answers?.userDecisions || [],
-      constraints: spec.answers?.constraints || [],
+      requirements: normalizeList(spec.answers?.requirements),
+      userDecisions: normalizeList(spec.answers?.userDecisions),
+      constraints: normalizeList(spec.answers?.constraints),
       relevantContext: JSON.stringify(spec.answers)
     });
   }
@@ -1044,7 +1052,8 @@ async function handleGoCommand(args) {
 
   const planner = new SemanticPlanner({
     application: app,
-    plannerTarget: { providerId: selectedProviderId, model: "default", local: selectedProviderId === "opencode" }
+    plannerTarget: { providerId: selectedProviderId, model: "default", local: selectedProviderId === "opencode" },
+    localOnly: selectedProviderId === "opencode"
   });
 
   const planResult = await planner.plan({
@@ -1076,6 +1085,13 @@ async function handleGoCommand(args) {
       p.cancel(`Execução automática rejeitada: ${autoEval.reason}`);
       return 1;
     }
+    if (planningOnly) {
+      await app.createMission({ workspacePath, objective: approvedBrief.objective, status: "awaiting_approval", startedAt: new Date().toISOString() });
+      s.stop("Plano aprovado");
+      updateTitle("Plano aprovado");
+      p.outro("◆ Plano de engenharia aprovado — nenhuma execução será realizada (modo plan)");
+      return 0;
+    }
   } else {
     let planApproved = false;
     while (!planApproved) {
@@ -1095,6 +1111,13 @@ async function handleGoCommand(args) {
       } else if (action === "aprovar") {
         PlanApprovalGate.recordHumanApproval({ taskGraphId: planResult.taskGraph.id, userDecision: "approved" });
         planApproved = true;
+        if (planningOnly) {
+          await app.createMission({ workspacePath, objective: approvedBrief.objective, status: "awaiting_approval", startedAt: new Date().toISOString() });
+          s.stop("Plano aprovado");
+          updateTitle("Plano aprovado");
+          p.outro("◆ Plano de engenharia aprovado — nenhuma execução será realizada (modo plan)");
+          return 0;
+        }
       } else if (action === "inspecionar") {
         const details = planResult.taskGraph.tasks.map(t => {
           const s = t.metadata?.semantic || t;
@@ -1168,8 +1191,7 @@ async function handleContextCommand(args) {
   const options = parseRuntimeArgs(args.slice(1), ["--project-path", "--intent"]);
   const intent = options.intent || "";
   const workspacePath = path.resolve(options.projectPath || process.cwd());
-  
-  const { createRuntimeApplication } = require(path.join(rootDir, "runtime", "application", "maestro-application"));
+
   const app = await createRuntimeApplication(workspacePath);
   
   const { ContextEngine } = require(path.join(rootDir, "runtime", "context", "context-engine"));
@@ -1197,7 +1219,7 @@ async function handleContextCommand(args) {
 
 async function dispatch(command, args) {
   if (command === "go" || command === "plan") {
-    return handleGoCommand(args);
+    return handleGoCommand(args, command === "plan");
   }
 
   if (command === "context") {

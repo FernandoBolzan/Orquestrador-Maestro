@@ -34,6 +34,7 @@ class JsonFileRunStore extends RunStore {
     this.filePath = path.resolve(filePath);
     this._state = null;
     this._mutation = Promise.resolve();
+    this._lastWriteMtime = null;
   }
 
   async initialize() {
@@ -42,6 +43,7 @@ class JsonFileRunStore extends RunStore {
     try {
       const contents = await fs.readFile(this.filePath, "utf8");
       this._state = this._validateState(JSON.parse(contents));
+      this._lastWriteMtime = (await fs.stat(this.filePath)).mtimeMs;
     } catch (error) {
       if (error && error.code === "ENOENT") {
         this._state = emptyState();
@@ -175,10 +177,34 @@ class JsonFileRunStore extends RunStore {
   async _mutate(operation) {
     const next = this._mutation.then(async () => {
       await this.initialize();
+      await this._reloadIfChanged();
       return operation();
     });
     this._mutation = next.catch(() => undefined);
     return next;
+  }
+
+  /**
+   * Reloads the persisted state before a mutation when another process wrote
+   * the file since our last read/flush. Prevents last-writer-wins clobbering
+   * of concurrent runtime instances sharing the same run store file.
+   */
+  async _reloadIfChanged() {
+    if (this._lastWriteMtime === null) return;
+    let stat;
+    try {
+      stat = await fs.stat(this.filePath);
+    } catch {
+      return; // file is absent or unreadable; keep current state
+    }
+    if (stat.mtimeMs === this._lastWriteMtime) return;
+    try {
+      const contents = await fs.readFile(this.filePath, "utf8");
+      this._state = this._validateState(JSON.parse(contents));
+      this._lastWriteMtime = stat.mtimeMs;
+    } catch {
+      // Unreadable or invalid external write: keep current in-memory state.
+    }
   }
 
   _validateState(state) {
@@ -202,6 +228,7 @@ class JsonFileRunStore extends RunStore {
     await fs.writeFile(temporaryPath, `${JSON.stringify(this._state, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
     await fs.rename(temporaryPath, this.filePath);
     try { await fs.chmod(this.filePath, 0o600); } catch { /* Windows does not implement POSIX modes. */ }
+    try { this._lastWriteMtime = (await fs.stat(this.filePath)).mtimeMs; } catch { /* best-effort */ }
   }
 }
 

@@ -55,7 +55,7 @@ test("ClaudeAdapter uses print stream-json and lets the spawn cwd carry workspac
   const result = await handle.result;
   const received = JSON.parse(result.stdout.trim());
   assert.equal(result.exitCode, 0);
-  assert.deepEqual(received.args.slice(0, 5), ["--print", "--output-format", "stream-json", "--include-partial-messages", "--model"]);
+  assert.deepEqual(received.args.slice(0, 6), ["--print", "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--model"]);
   assert.ok(received.args.includes("--permission-mode"));
   assert.equal(received.cwd, root);
   assert.equal((await adapter.capabilities()).mcp, true);

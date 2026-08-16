@@ -5,6 +5,10 @@ const EventEmitter = require("node:events");
 /**
  * Executa tarefas paralelamente respeitando restrições de dependências
  * e limites de concorrência.
+ *
+ * Se uma dependência falha, as tarefas que dependem dela são marcadas como
+ * failed (BLOCKED) em vez de ficarem pendentes para sempre; o executor
+ * conclui quando não há mais tarefas pendentes nem em execução.
  */
 class LaneExecutor extends EventEmitter {
   constructor({ application, maxParallel = 3 }) {
@@ -20,10 +24,33 @@ class LaneExecutor extends EventEmitter {
     const completed = new Set();
     const failed = new Set();
 
+    let projectId = missionId;
+    try {
+      const mission = await this.app.getMission(missionId);
+      if (mission && typeof mission.projectId === "string" && mission.projectId.trim() !== "") {
+        projectId = mission.projectId;
+      }
+    } catch {
+      // Mission lookup is best-effort; fall back to the mission id.
+    }
+
+    const markFailed = (task, errorMessage) => {
+      results[task.id] = { status: "failed", error: errorMessage };
+      failed.add(task.id);
+      this.emit("task.failed", { ...task, error: errorMessage });
+    };
+
     return new Promise((resolve) => {
-      const checkNext = async () => {
-        if (completed.size + failed.size === tasks.length) {
-          return resolve(results);
+      const checkNext = () => {
+        if (pending.length === 0 && running.size === 0) return resolve(results);
+
+        for (let i = pending.length - 1; i >= 0; i--) {
+          const task = pending[i];
+          const deps = task.dependsOn || [];
+          const blockingFailures = deps.filter((dep) => failed.has(dep));
+          if (blockingFailures.length === 0) continue;
+          pending.splice(i, 1);
+          markFailed(task, `blocked by failed dependency: ${blockingFailures.join(", ")}`);
         }
 
         while (running.size < this.maxParallel) {
@@ -43,7 +70,7 @@ class LaneExecutor extends EventEmitter {
             providerId: task.provider,
             model: task.model,
             skills: task.skills,
-            projectId: missionId
+            projectId
           })
             .then((result) => {
               results[task.id] = { status: "completed", result };
@@ -51,9 +78,7 @@ class LaneExecutor extends EventEmitter {
               this.emit("task.completed", task);
             })
             .catch((error) => {
-              results[task.id] = { status: "failed", error: error.message };
-              failed.add(task.id);
-              this.emit("task.failed", { ...task, error: error.message });
+              markFailed(task, error.message);
             })
             .finally(() => {
               running.delete(task.id);

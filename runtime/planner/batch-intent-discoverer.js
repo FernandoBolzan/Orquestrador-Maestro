@@ -2,6 +2,7 @@
 
 const { createBatchQuestion } = require("./batch-question.js");
 const { validateQuestionSet } = require("./question-set-validator.js");
+const { extractAssistantText } = require("./../providers/provider-output.js");
 
 const MAX_RETRIES = 3;
 
@@ -23,6 +24,7 @@ class BatchIntentDiscoverer {
         validationErrors: [],
         questionCount: 0,
         discoveryRound: this._discoveryRound,
+        structuredRetries: 0,
         error: null
       });
     }
@@ -32,6 +34,7 @@ class BatchIntentDiscoverer {
     const prompt = this._buildDiscoveryPrompt(intent, intentSpec, skills, context);
 
     let lastError = null;
+    let structuredRetries = 0;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         const handle = await this._provider.execute({
@@ -42,12 +45,12 @@ class BatchIntentDiscoverer {
         const result = await handle.result;
         const parsed = this._parseDiscoveryResponse(result.stdout);
         const questions = this._buildQuestions(parsed);
+        const validation = validateQuestionSet(questions);
 
-        if (questions.length === 0 && attempt < MAX_RETRIES - 1) {
+        if (attempt < MAX_RETRIES - 1 && (questions.length === 0 || !validation.valid)) {
+          if (!validation.valid) structuredRetries++;
           continue;
         }
-
-        const validation = validateQuestionSet(questions);
 
         return Object.freeze({
           questions: validation.valid ? questions : [],
@@ -55,6 +58,7 @@ class BatchIntentDiscoverer {
           validationErrors: validation.blockers.map((b) => b.message),
           questionCount: questions.length,
           discoveryRound: this._discoveryRound,
+          structuredRetries,
           error: null
         });
       } catch (err) {
@@ -69,6 +73,7 @@ class BatchIntentDiscoverer {
       validationErrors: [lastError ? lastError.message : "Discovery failed after retries"],
       questionCount: 0,
       discoveryRound: this._discoveryRound,
+      structuredRetries,
       error: lastError
     });
   }
@@ -141,7 +146,7 @@ OUTPUT FORMAT (JSON only, no markdown):
       return { questions: [], detectedUnknowns: [], requirementsToAdd: [], constraintsToAdd: [] };
     }
 
-    let text = stdout;
+    let text = extractAssistantText(stdout);
     const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
     if (jsonMatch) text = jsonMatch[1];
 
@@ -169,6 +174,7 @@ OUTPUT FORMAT (JSON only, no markdown):
           group: q.group || q.dimension,
           text: q.text,
           answerType: q.answerType || "text",
+          decisionRequired: typeof q.decisionRequired === "string" ? q.decisionRequired : undefined,
           options: Array.isArray(q.options) ? q.options : [],
           blocking: q.blocking !== false,
           priority: typeof q.priority === "number" ? q.priority : 10,

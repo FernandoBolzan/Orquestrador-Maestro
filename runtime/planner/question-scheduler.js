@@ -44,11 +44,13 @@ function scheduleQuestions(questions, answers, intentSpec, options = {}) {
 
   const batchSize = (options && options.batchSize) || 4;
   const includeAnswered = Boolean(options && options.includeAnswered);
+  const showOptional = Boolean(options && options.showOptional);
 
   const active = [];
   for (const q of questions) {
     if (!evaluateActivation(q.activation, answers)) continue;
     if (!includeAnswered && hasAnswer(answers, q.id)) continue;
+    if (q.decisionRequired === "OPTIONAL" && !showOptional && q.blocking !== true) continue;
     active.push(q);
   }
 

@@ -1,6 +1,7 @@
 "use strict";
 
 const VALID_ANSWER_TYPES = ["text", "single-choice", "multi-choice", "boolean"];
+const VALID_DECISION_REQUIRED = ["HUMAN_REQUIRED", "CONTEXT_CONFIRMABLE", "OPTIONAL"];
 
 function createBatchQuestion(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -19,6 +20,11 @@ function createBatchQuestion(input) {
   const answerType = input.answerType || "text";
   if (!VALID_ANSWER_TYPES.includes(answerType)) {
     throw new TypeError(`BatchQuestion.answerType must be one of: ${VALID_ANSWER_TYPES.join(", ")}`);
+  }
+
+  const decisionRequired = input.decisionRequired || "HUMAN_REQUIRED";
+  if (!VALID_DECISION_REQUIRED.includes(decisionRequired)) {
+    throw new TypeError(`BatchQuestion.decisionRequired must be one of: ${VALID_DECISION_REQUIRED.join(", ")}`);
   }
 
   const needsOptions = answerType === "single-choice" || answerType === "multi-choice";
@@ -59,6 +65,7 @@ function createBatchQuestion(input) {
     group: typeof input.group === "string" ? input.group.trim() : input.dimension.trim(),
     text: input.text.trim(),
     answerType,
+    decisionRequired,
     options: Object.freeze(frozenOptions),
     blocking: input.blocking !== false,
     priority: typeof input.priority === "number" ? input.priority : 10,
@@ -68,4 +75,4 @@ function createBatchQuestion(input) {
   });
 }
 
-module.exports = { createBatchQuestion, VALID_ANSWER_TYPES };
+module.exports = { createBatchQuestion, VALID_ANSWER_TYPES, VALID_DECISION_REQUIRED };

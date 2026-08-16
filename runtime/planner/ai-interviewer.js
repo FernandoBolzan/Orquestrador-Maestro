@@ -55,13 +55,15 @@ function createIntentUnknown(input) {
 }
 
 class AiInterviewer {
-  constructor({ resolvedSkills, preflightFacts, application, intent, aiProvider = "opencode", prompts = defaultPrompts }) {
+  constructor({ resolvedSkills, preflightFacts, application, intent, aiProvider = "opencode", prompts = defaultPrompts, maxDiscoveryRounds, autoPolicy }) {
     this.p = prompts;
     this.resolvedSkills = resolvedSkills;
     this.facts = preflightFacts;
     this.app = application;
     this.intent = intent;
     this.aiProvider = aiProvider;
+    this.maxDiscoveryRounds = maxDiscoveryRounds;
+    this.autoPolicy = autoPolicy;
     this.conversationHistory = [];
     this.intentSpec = createIntentSpec(intent);
     this.refiner = new IntentRefiner({
@@ -89,39 +91,24 @@ class AiInterviewer {
     }
 
     if (fallbackToLegacy) {
-      this.p.note(`Provedor de IA (${this.aiProvider}) não detectado. Usando modo de refinamento por heurística.`, "Fallback");
+      this.p.note(`Provedor de IA (${this.aiProvider}) nao detectado. Usando modo de refinamento por heuristica.`, "Fallback");
       const fallback = new DynamicInterviewer({ resolvedSkills: this.resolvedSkills, preflightFacts: this.facts });
       return fallback.runInteractive();
     }
 
     this.p.note(`Assistente Inteligente ativado (${this.aiProvider}). Analisando projeto e skills...`, "AI Planner");
 
-    const useBatch = process.env.ORQUESTRADOR_BATCH_REFINEMENT === "1";
-
-    if (useBatch) {
-      const taskRelevantContext = { items: Object.entries(this.facts || {}).map(([k, v]) => ({ key: k, value: v, type: "FACT" })) };
-      const discoverer = new BatchIntentDiscoverer({ provider });
-      try {
-        const discoveryResult = await discoverer.discover(this.intentSpec.intent || this.intentSpec.objective, this.intentSpec, this.resolvedSkills, taskRelevantContext);
-        if (discoveryResult && discoveryResult.questions && discoveryResult.questions.length > 0) {
-          return await this._runBatchRefinement(provider, discoveryResult);
-        }
-      } catch (e) {
-        // Fall through to legacy
-      }
-    }
-
-    return await this._runLegacyRefinement(provider);
+    return await this._runBatchRefinementDefault(provider);
   }
 
-  async _runBatchRefinement(provider, discoveryResult) {
+  async _runBatchRefinementDefault(provider) {
     const taskRelevantContext = { items: Object.entries(this.facts || {}).map(([k, v]) => ({ key: k, value: v, type: "FACT" })) };
-
+    const discoverer = new BatchIntentDiscoverer({ provider });
     const reconciler = new IntentReconciler({ provider });
     const adapter = new ClackBatchInteractionAdapter({ prompts: this.p });
 
     const coordinator = new BatchRefinementCoordinator({
-      discoverer: { discover: async () => discoveryResult, get discoveryRound() { return discoveryResult.discoveryRound || 1; } },
+      discoverer,
       reconciler,
       adapter
     });
@@ -129,11 +116,26 @@ class AiInterviewer {
     const s = this.p.spinner();
     try {
       s.start("IA descobrindo decisoes em lote...");
-      const result = await coordinator.run(this.intentSpec, taskRelevantContext, this.resolvedSkills, { batchSize: 4 });
+      const result = await coordinator.run(this.intentSpec, taskRelevantContext, this.resolvedSkills, {
+        batchSize: 4,
+        maxDiscoveryRounds: this.maxDiscoveryRounds || 3
+      });
       s.stop();
 
       if (result.cancelled) {
         this.p.log.info("Operacao cancelada pelo usuario.");
+        return this.buildSpec();
+      }
+
+      if (result.blocked) {
+        const summary = (result.blockers || []).map((b) => b.description).join("; ");
+        if (typeof this.p.log?.error === "function") {
+          this.p.log.error(`Nao foi possivel esgotar os bloqueios da intent. Pendentes: ${summary}`);
+        }
+        this.intentSpec = createIntentSpec(this.intentSpec.intent, {
+          ...result.intentSpec,
+          status: "REFINING"
+        });
         return this.buildSpec();
       }
 
@@ -144,7 +146,9 @@ class AiInterviewer {
         });
       }
 
-      this.p.log.success(`Refinamento concluido: ${result.totalQuestions} questoes em ${result.batchesProcessed} lote(s).`);
+      if (this.p.log && typeof this.p.log.success === "function") {
+        this.p.log.success(`Refinamento concluido: ${result.totalQuestions} questoes em ${result.batchesProcessed} lote(s).`);
+      }
       return this.buildSpec();
     } catch (e) {
       s.stop();
@@ -160,7 +164,7 @@ class AiInterviewer {
 
     while (!isReady) {
        try {
-         s.start("IA analisando intenção...");
+         s.start("IA analisando intencao...");
          this.intentSpec = await this.refiner.refine(this.intentSpec, lastQuestion && lastQuestion.answer ? {
            blocker: lastQuestion.blocker,
            answer: lastQuestion.answer
@@ -185,12 +189,12 @@ class AiInterviewer {
            blockerSignature(blocker) === lastQuestion.signature &&
            currentState === lastCanonicalState) {
          throw new Error(
-           `M2_CLARIFICATION_LOOP: a pergunta "${blocker.description}" (${blocker.dimension}) repetiu sem evolução de estado (requirements=${this.intentSpec.requirements.length}, constraints=${this.intentSpec.constraints.length}).`
+           `M2_CLARIFICATION_LOOP: a pergunta "${blocker.description}" (${blocker.dimension}) repetiu sem evolucao de estado (requirements=${this.intentSpec.requirements.length}, constraints=${this.intentSpec.constraints.length}).`
          );
        }
 
        const answer = await this.p.text({
-         message: `[AI] Esclareça a seguinte pendência (${blocker.dimension}): ${blocker.description}`,
+         message: `[AI] Esclareca a seguinte pendencia (${blocker.dimension}): ${blocker.description}`,
          placeholder: "Sua resposta (ou 'skip' para prosseguir)"
        });
 
@@ -224,7 +228,32 @@ class AiInterviewer {
           const reconciler = new IntentReconciler({ provider });
           const adapter = { collectBatch: async () => ({ action: "cancel", answers: {} }) };
           const coordinator = new BatchRefinementCoordinator({ discoverer, reconciler, adapter });
-          const result = await coordinator.run(this.intentSpec, taskRelevantContext, this.resolvedSkills, { auto: true, batchSize: 4 });
+          const result = await coordinator.run(this.intentSpec, taskRelevantContext, this.resolvedSkills, {
+            auto: true,
+            batchSize: 4,
+            maxDiscoveryRounds: this.maxDiscoveryRounds || 3,
+            autoPolicy: this.autoPolicy || null
+          });
+
+          if (result.autoBlocked && result.autoBlocked.type === "HUMAN_INPUT_REQUIRED") {
+            return this._buildAutoStatus("HUMAN_INPUT_REQUIRED", result.autoBlocked.dimensions || []);
+          }
+
+          if (result.blocked) {
+            const summary = (result.blockers || []).map((b) => b.description).join("; ");
+            throw new Error(
+              `M2_AUTO_BLOCKED: Nao foi possivel resolver todos os bloqueios em modo automatico. Blockers: ${summary}`
+            );
+          }
+
+          if (result.success && result.ready && result.intentSpec) {
+            // Batch coordinator returned a validated reconciled IntentSpec — no redundant legacy refine call.
+            this.intentSpec = createIntentSpec(this.intentSpec.intent, {
+              ...result.intentSpec,
+              status: "REFINING"
+            });
+            return this.buildSpec();
+          }
 
           if (result.success && result.intentSpec) {
             this.intentSpec = createIntentSpec(this.intentSpec.intent, {
@@ -234,10 +263,13 @@ class AiInterviewer {
           }
         }
       } catch (e) {
-        // Fall through to legacy single-pass
+        // Provider runtime failure is atomic — do not silently fall back to legacy.
+        throw e;
       }
     }
 
+    // Legacy single-pass fallback: provider unavailable at detection time,
+    // or batch mode could not reach readiness (existing deterministic contract).
     try {
       this.intentSpec = await this.refiner.refine(this.intentSpec);
     } catch (e) {
@@ -250,6 +282,24 @@ class AiInterviewer {
     }
 
     return this.buildSpec();
+  }
+
+  _buildAutoStatus(status, dimensions) {
+    return Object.freeze({
+      status,
+      ambiguity: 1,
+      facts: this.facts,
+      skills: this.resolvedSkills,
+      unresolvedDimensions: Object.freeze([...dimensions]),
+      answers: {
+        intent: this.intentSpec.objective,
+        ai_refinement: JSON.stringify(this.intentSpec),
+        requirements: [...this.intentSpec.requirements],
+        constraints: [...this.intentSpec.constraints],
+        userDecisions: [...this.intentSpec.userDecisions],
+        unknowns: [...this.intentSpec.unknowns]
+      }
+    });
   }
 
   buildSpec() {

@@ -1,5 +1,7 @@
 "use strict";
 
+const { extractAssistantText } = require("../providers/provider-output");
+
 class IntentReconciler {
   constructor({ provider } = {}) {
     this._provider = provider || null;
@@ -10,12 +12,12 @@ class IntentReconciler {
     return this._aiCalls;
   }
 
-  async reconcile(intentSpec, confirmedAnswers, context) {
+  async reconcile(intentSpec, confirmedAnswers, context, discoveryCandidates = {}) {
     if (!this._provider || !this._provider.detect || !this._provider.detect()) {
       return Object.freeze({ success: false, error: "Provider not available", proposal: null });
     }
 
-    const prompt = this._buildReconciliationPrompt(intentSpec, confirmedAnswers, context);
+    const prompt = this._buildReconciliationPrompt(intentSpec, confirmedAnswers, context, discoveryCandidates);
 
     try {
       this._aiCalls++;
@@ -32,7 +34,10 @@ class IntentReconciler {
     }
   }
 
-  _buildReconciliationPrompt(intentSpec, confirmedAnswers, context) {
+  _buildReconciliationPrompt(intentSpec, confirmedAnswers, context, discoveryCandidates = {}) {
+    const candidateReqs = Array.isArray(discoveryCandidates.candidateRequirements) ? discoveryCandidates.candidateRequirements : [];
+    const candidateCons = Array.isArray(discoveryCandidates.candidateConstraints) ? discoveryCandidates.candidateConstraints : [];
+
     const specState = JSON.stringify({
       objective: intentSpec.objective,
       requirements: intentSpec.requirements || [],
@@ -51,13 +56,19 @@ ${specState}
 CONFIRMED HUMAN ANSWERS:
 ${JSON.stringify(confirmedAnswers, null, 2)}
 
+CANDIDATE REQUIREMENTS (from AI discovery, NOT yet confirmed):
+${candidateReqs.length > 0 ? JSON.stringify(candidateReqs, null, 2) : "none"}
+
+CANDIDATE CONSTRAINTS (from AI discovery, NOT yet confirmed):
+${candidateCons.length > 0 ? JSON.stringify(candidateCons, null, 2) : "none"}
+
 TASK: Reconcile all confirmed human answers into a refined IntentSpec.
 
 RULES:
 - Human answers are AUTHORITATIVE USER_DECISIONs.
 - They must NOT become AI INFERENCEs.
-- Refine objective based on human answers.
-- Add requirements and constraints derived from answers.
+- Add requirements and constraints derived DIRECTLY from human answers.
+- Candidate requirements/constraints from AI discovery should only be included if they are genuinely necessary and not contradicted by human answers.
 - Do NOT re-ask questions already answered by the human.
 - Only discover NEW unknowns if genuinely necessary.
 
@@ -76,14 +87,17 @@ OUTPUT FORMAT (JSON only):
       return { objective: null, addRequirements: [], addConstraints: [], detectedUnknowns: [], question: null };
     }
 
-    let text = stdout;
+    let text = extractAssistantText(stdout) || stdout;
     const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
     if (jsonMatch) text = jsonMatch[1];
 
     try {
       const parsed = JSON.parse(text.trim());
+      // Backward-compatible with the legacy refiner schema: objective may be
+      // wrapped under `updates.objective` (parseRefinementProposal contract).
+      const objective = parsed.objective || (parsed.updates && parsed.updates.objective) || null;
       return {
-        objective: parsed.objective || null,
+        objective,
         addRequirements: Array.isArray(parsed.addRequirements) ? parsed.addRequirements : [],
         addConstraints: Array.isArray(parsed.addConstraints) ? parsed.addConstraints : [],
         detectedUnknowns: Array.isArray(parsed.detectedUnknowns) ? parsed.detectedUnknowns : [],

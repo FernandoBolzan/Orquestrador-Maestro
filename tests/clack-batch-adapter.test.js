@@ -98,7 +98,9 @@ test("ClackBatchInteractionAdapter: text answer type uses text prompt", async ()
   const questions = [makeQ("q1", { text: "Nome do projeto?", answerType: "text" })];
   let textPromptCalled = false;
   const mockPrompts = {
-    select: async () => "q1",
+    select: async ({ message, options }) => {
+      return "confirm";
+    },
     text: async () => { textPromptCalled = true; return "meu-crud"; },
     confirm: async () => true,
     isCancel: (v) => v === Symbol.for("clack:cancel"),
