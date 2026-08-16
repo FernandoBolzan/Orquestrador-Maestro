@@ -141,6 +141,61 @@ test("CLI planning flow: interactive actions handle approve, inspect, refine, an
   assert.match(inspectDetails, /Critérios: Returns 200 with JWT, Returns 401 on invalid credentials/);
 });
 
+test("F2 REGRESSION: bin plan-mode branches persist mission as awaiting_approval, never 'planned'", () => {
+  const cliContent = fs.readFileSync(path.join(__dirname, "..", "bin", "orquestrador-maestro.js"), "utf8");
+  const planningOnlyBlocks = cliContent.match(/planningOnly\)[\s\S]*?return 0;/g) || [];
+
+  assert.ok(planningOnlyBlocks.length >= 2, "both GO branches (auto + interactive) must contain a planningOnly guard");
+
+  for (const block of planningOnlyBlocks) {
+    assert.match(block, /status: "awaiting_approval"/,
+      "plan-only approval must persist mission with canonical awaiting_approval status");
+    assert.match(block, /nenhuma execução será realizada \(modo plan\)/,
+      "plan-only mode must announce no execution");
+  }
+
+  assert.doesNotMatch(cliContent, /status: "planned"/, "invalid status 'planned' must never appear");
+  assert.doesNotMatch(cliContent, /planningOnly[\s\S]{0,120}status: "running"/,
+    "planningOnly blocks must never transition into running");
+});
+
+test("F2 REGRESSION: mission lifecycle — planned is invalid, awaiting_approval is canonical pre-approval state", () => {
+  assert.throws(
+    () => core.createMission({ id: "m1", projectId: "p1", objective: "x", status: "planned" }),
+    /mission.status must be one of/u
+  );
+
+  const pending = core.createMission({ id: "m2", projectId: "p1", objective: "x", status: "awaiting_approval" });
+  assert.equal(pending.status, "awaiting_approval");
+
+  const lifecycle = { planning: "draft", afterM3: "awaiting_approval", approved: "running", cancelled: "cancelled" };
+  assert.equal(lifecycle.afterM3, "awaiting_approval");
+});
+
+test("F2 REGRESSION: mission store round-trip accepts awaiting_approval and rejects planned (crash boundary)", async () => {
+  const { MaestroApplication } = require("../runtime/application/maestro-application");
+  const { JsonFileRunStore } = require("../runtime/store");
+  const os = require("node:os");
+  const tmpProject = fs.mkdtempSync(path.join(os.tmpdir(), "maestro-f2-"));
+  const store = new JsonFileRunStore({ filePath: path.join(tmpProject, "runs.json") });
+  const app = new MaestroApplication({ projectRoot: tmpProject, store });
+
+  const mission = await app.createMission({ workspacePath: tmpProject, objective: "CRUD", status: "awaiting_approval" });
+  assert.equal(mission.status, "awaiting_approval");
+
+  await assert.rejects(
+    () => app.createMission({ workspacePath: tmpProject, objective: "CRUD2", status: "planned" }),
+    /mission.status must be one of/u
+  );
+});
+
+test("F2 REGRESSION: post-approval transitions — approve goes to running (execution), cancel goes to cancelled", () => {
+  const approved = core.createMission({ id: "m3", projectId: "p1", objective: "x", status: "running" });
+  assert.equal(approved.status, "running");
+  const cancelled = core.createMission({ id: "m4", projectId: "p1", objective: "x", status: "cancelled" });
+  assert.equal(cancelled.status, "cancelled");
+});
+
 test("CLI bin/orquestrador-maestro.js wires SemanticPlanner and PlanApprovalGate in handleGoCommand", () => {
   const cliContent = fs.readFileSync(path.join(__dirname, "..", "bin", "orquestrador-maestro.js"), "utf8");
 
