@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "purpose": "Deterministic, versionable workflow resolution for a consumer project.",
+  "execution": "descriptive-only",
+  "required": ["version", "schema", "taskId", "workflow", "lockDigest", "defaultsExpanded", "sourceRefs", "contractRefs", "resolved", "provenance"],
+  "fields": {
+    "version": { "type": "integer", "const": 1 },
+    "schema": { "type": "string", "const": "orquestrador/WORKFLOW_LOCK_SCHEMA.json" },
+    "taskId": { "type": "string", "pattern": "task/<stable-slug>" },
+    "workflow": { "type": "string", "minLength": 1 },
+    "lockDigest": { "type": "string", "pattern": "sha256:[a-f0-9]{64}" },
+    "defaultsExpanded": { "type": "boolean", "const": true },
+    "sourceRefs": { "type": "object", "relativeTo": "project-root" },
+    "contractRefs": { "type": "object", "resolvedBy": "installed-package-root" },
+    "resolved": { "type": "object", "required": ["phases", "steps", "gates", "artifacts", "skillRefs", "adapterArtifacts"] },
+    "provenance": { "type": "object", "required": ["evidence", "steward", "reviewedAt"] }
+  },
+  "invariants": [
+    "lockDigest is the SHA-256 of the canonical UTF-8 JSON excluding lockDigest itself.",
+    "sourceRefs must not point inside the installed package.",
+    "contractRefs must not require vendoring schemas into the consumer project.",
+    "The lock is descriptive-only and cannot authorize side effects."
+  ]
+}

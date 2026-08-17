@@ -12,6 +12,8 @@ const path = require("node:path");
 const rootDir = path.resolve(__dirname, "..");
 const packageJson = require(path.join(rootDir, "package.json"));
 const contextBrief = require(path.join(rootDir, "orquestrador", "bin", "context-brief.js"));
+const workflowLock = require(path.join(rootDir, "orquestrador", "bin", "workflow-lock.js"));
+const workflowState = require(path.join(rootDir, "orquestrador", "bin", "workflow-state.js"));
 const telemetryTimeoutMs = 1200;
 const telemetryConsentVersion = 1;
 
@@ -55,6 +57,8 @@ Uso:
   orquestrador-maestro context brief [--project-path PATH] [--task TEXT] [--max-chars N] [--json]
   orquestrador-maestro adapters <list|paths|validate> [id]
   orquestrador-maestro adapters render <junie|goose|openhands> --project-path PATH [--dry-run|--apply]
+  orquestrador-maestro workflow-lock <generate|validate> [opcoes]
+  orquestrador-maestro workflow-state <init|get|validate|approve|advance> [opcoes]
   orquestrador-maestro changelog [--full]
   orquestrador-maestro uninstall [opcoes]
   orquestrador-maestro list-targets [opcoes]
@@ -99,6 +103,23 @@ Opcoes de check-dev-gates:
 
 Opcoes de changelog:
   --full                      Mostra o historico completo embutido no pacote
+
+Opcoes de workflow-lock:
+  --project-path <path>       Projeto consumidor
+  --task-id task/<slug>       Identificador estável da tarefa
+  --workflow <name>           Workflow declarativo (padrão: plan-build-verify)
+  --out <relative-path>       Saída em DEV/WORKFLOWS/
+  --force                     Permite sobrescrever lock existente
+
+Opcoes de workflow-state:
+  --project-path <path>       Projeto consumidor
+  --lockfile <relative-path>  Lock em DEV/WORKFLOWS/
+  --task-id task/<slug>       Identificador estável da tarefa
+  --kind <plan|review|release|side-effect>  Tipo de aprovação
+  --by <name>                 Responsável pela aprovação
+  --to-step <step>            Próxima etapa para advance
+  --force                     Permite reinicializar state existente
+  --json                      Imprime state completo em JSON
 
 Exemplos:
   npm install -g @iapro/orquestrador-maestro-cli
@@ -724,6 +745,14 @@ async function dispatch(command, args) {
 
   if (command === "adapters") {
     return runToolAdapters(args);
+  }
+
+  if (command === "workflow-lock") {
+    return workflowLock.main(args);
+  }
+
+  if (command === "workflow-state") {
+    return workflowState.main(args);
   }
 
   if (command === "changelog") {

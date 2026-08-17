@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "purpose": "Local-only cursor for a validated workflow lock.",
+  "execution": "descriptive-only",
+  "storage": ".local/orquestrador/workflow-state/",
+  "required": ["version", "taskId", "lockfile", "lockDigest", "workflow", "currentStep", "status", "attempt", "approvals", "gates", "history"],
+  "fields": {
+    "version": { "type": "integer", "const": 1 },
+    "taskId": { "type": "string", "pattern": "task/<stable-slug>" },
+    "lockfile": { "type": "string", "relative": true, "prefix": "DEV/WORKFLOWS/" },
+    "lockDigest": { "type": "string", "pattern": "sha256:[a-f0-9]{64}" },
+    "workflow": { "type": "string", "minLength": 1 },
+    "currentStep": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["ready", "in-progress", "blocked", "review", "verification", "done"] },
+    "attempt": { "type": "integer", "minimum": 0 },
+    "approvals": { "type": "array" },
+    "gates": { "type": "object" },
+    "history": { "type": "array", "minItems": 1 }
+  },
+  "invariants": [
+    "State is local-only and must never be used as canonical context by context brief.",
+    "lockDigest must match the loaded lock before read or mutation.",
+    "Human gates require an explicit approved entry in approvals.",
+    "State commands never invoke onEnter, onComplete, onFailure, adapters, providers, or renderers."
+  ]
+}

@@ -37,6 +37,7 @@ flowchart LR
 Além do fluxo padrão de instalação e execução, o snapshot atual oferece:
 
 - contratos declarativos e opt-in para workflows, tarefas e workspaces, com etapas, eventos, gates humanos, retry manual, dependências, artefatos e isolamento por repositório;
+- locks determinísticos versionáveis e state local-only para retomar workflows com digest, gates humanos e proteção contra drift;
 - o perfil `phase-loop`, que organiza trabalhos maiores em `discuss`, `plan`, `execute`, `verify` e `ship` sem alterar o caminho padrão;
 - briefing econômico de contexto, roteamento por índices compactos e gates dedicados para validar a hierarquia e os artefatos de `DEV/`;
 - instalação, atualização, diagnóstico, dry-run, sincronização de skills e verificação multiplataforma;
@@ -44,6 +45,24 @@ Além do fluxo padrão de instalação e execução, o snapshot atual oferece:
 - telemetria desabilitada por padrão, memória opcional e controles para manter efeitos externos sujeitos à autorização humana.
 
 Os contratos de workflow são descritivos: não executam agentes, não criam integrações obrigatórias e não autorizam commit, push, publicação ou compartilhamento. Consulte os [workflows declarativos](docs/workflows.md), os [contratos de tarefa e workspace](docs/task-and-workspace-contracts.md) e o [histórico completo](CHANGELOG.md) para detalhes e migrações.
+
+### Lock e state de workflow
+
+Para um projeto consumidor, gere um lock revisável em `DEV/WORKFLOWS/` e inicialize o cursor privado em `.local/`:
+
+~~~bash
+orquestrador-maestro workflow-lock generate --project-path . --task-id task/minha-tarefa --workflow plan-build-verify --out DEV/WORKFLOWS/minha-tarefa.lock.json
+orquestrador-maestro workflow-state init --project-path . --lockfile DEV/WORKFLOWS/minha-tarefa.lock.json
+orquestrador-maestro workflow-state validate --project-path . --task-id task/minha-tarefa
+orquestrador-maestro workflow-state get --project-path . --task-id task/minha-tarefa
+~~~
+
+O lock é versionável e não contém paths absolutos ou dados locais. O state fica em `.local/orquestrador/workflow-state/`, exige que `.local/` já esteja ignorado no Git e nunca é lido pelo briefing de contexto. Avanços atravessando gates humanos exigem aprovação explícita:
+
+~~~bash
+orquestrador-maestro workflow-state approve --project-path . --task-id task/minha-tarefa --kind plan --by "nome-do-responsavel"
+orquestrador-maestro workflow-state advance --project-path . --task-id task/minha-tarefa --to-step plan
+~~~
 
 ## Comece em dois minutos
 

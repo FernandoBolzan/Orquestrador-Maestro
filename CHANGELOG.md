@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.24 - 2026-08-17
+
+### Workflows retomáveis e seguros
+
+- Adicionados `workflow-lock generate|validate` para gerar locks determinísticos e versionáveis em `DEV/WORKFLOWS/`.
+- Adicionados `workflow-state init|get|validate|approve|advance` para manter cursor local-only em `.local/orquestrador/workflow-state/`.
+- Adicionados `WORKFLOW_LOCK_SCHEMA.json` e `WORKFLOW_STATE_SCHEMA.json`, com digest SHA-256, referências de proveniência e separação entre pacote instalado e projeto consumidor.
+- Escritas de lock/state são atômicas; sobrescrita exige `--force`, paths inseguros são rejeitados e drift bloqueia a operação.
+- Gates humanos exigem aprovação explícita e os comandos permanecem descritivos, sem executar adapters, providers ou efeitos externos.
+
+### Compatibilidade e verificação
+
+- Mantidos os schemas legados e os comandos existentes sem alteração de semântica.
+- Adicionados testes de round-trip, drift, gates, isolamento de `.local/` e proteção contra overwrite.
+- Atualizados README, documentação de workflows e contratos de tarefa/workspace.
+- 24 testes automatizados aprovados; validação pública, skills e empacotamento aprovados.
+
 ## 0.1.23 - 2026-08-14
 
 ### Sincronização de skills entre clientes
