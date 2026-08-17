@@ -47,7 +47,7 @@ class TerminalManager {
       if (!current) return;
       const text = `${current[stream] || ""}${chunk.toString("utf8")}`.slice(-100000);
       await this.store.saveTerminal({ ...current, [stream]: text });
-      await this.emitEvent(null, "terminal.output", { terminalId: id, stream, chunk: chunk.toString("utf8") });
+      await this.emitEvent(null, "terminal.output", { terminalId: id, projectId: record.projectId, stream, chunk: chunk.toString("utf8") });
     });
     child.stdout.on("data", (chunk) => { persistOutput("output", chunk).catch(() => {}); });
     child.stderr.on("data", (chunk) => { persistOutput("stderr", chunk).catch(() => {}); });
@@ -66,7 +66,7 @@ class TerminalManager {
         const current = await this.store.getTerminal(id);
         if (current) await this.store.saveTerminal({ ...current, status: exitCode === 0 ? "completed" : "failed", exitCode, signal: signal || null, completedAt: new Date().toISOString() });
       });
-      await this.emitEvent(null, "terminal.completed", { terminalId: id, exitCode, signal: signal || null });
+      await this.emitEvent(null, "terminal.completed", { terminalId: id, projectId: record.projectId, exitCode, signal: signal || null });
       settle(await this.store.getTerminal(id));
     });
     const active = { child, record, finished };

@@ -3,7 +3,6 @@
 const crypto = require("node:crypto");
 const { EventEmitter } = require("node:events");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 const core = require("../core");
 const { diff, snapshot } = require("../git/monitor");
@@ -34,7 +33,7 @@ class ProviderRegistry {
 class MaestroApplication {
   constructor(options = {}) {
     this.projectRoot = path.resolve(options.projectRoot || process.cwd());
-    const runFile = options.runFile || path.join(os.homedir(), ".orquestrador", "runtime", "runs.json");
+    const runFile = options.runFile || path.join(this.projectRoot, ".orquestrador", "runtime", "runs.json");
     this.store = options.store || new JsonFileRunStore({ filePath: runFile });
     this.providers = options.providers || new ProviderRegistry();
     this.skills = options.skills || new SkillRegistry({ maestroRoot: options.maestroRoot, projectRoot: this.projectRoot });
@@ -216,8 +215,12 @@ class MaestroApplication {
 
     const workspacePath = path.resolve(request.workspacePath || this.projectRoot);
     const projectId = request.projectId || projectIdForPath(workspacePath);
-    const task = core.createTask({ id: id("task"), description: request.description, projectId, createdAt: new Date().toISOString() });
-    const run = core.createRun({ id: id("run"), taskId: task.id, providerId: provider.id, status: "pending" });
+    const taskMetadata = {
+      ...(request.missionId ? { missionId: request.missionId } : {}),
+      ...(request.semanticTaskId ? { semanticTaskId: request.semanticTaskId } : {})
+    };
+    const task = core.createTask({ id: id("task"), description: request.description, projectId, createdAt: new Date().toISOString(), metadata: taskMetadata });
+    const run = core.createRun({ id: id("run"), taskId: task.id, providerId: provider.id, status: "pending", metadata: taskMetadata });
     const step = core.createStep({ id: id("step"), runId: run.id, profileId: profile.id, status: "pending" });
     await this.store.createProject({ id: projectId, path: workspacePath, name: path.basename(workspacePath), createdAt: new Date().toISOString() });
     await this.store.saveTask(task); await this.store.saveRun(run); await this.store.saveStep(step);

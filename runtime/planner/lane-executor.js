@@ -70,7 +70,9 @@ class LaneExecutor extends EventEmitter {
             providerId: task.provider,
             model: task.model,
             skills: task.skills,
-            projectId
+            projectId,
+            missionId,
+            semanticTaskId: task.id
           })
             .then((result) => {
               results[task.id] = { status: "completed", result };

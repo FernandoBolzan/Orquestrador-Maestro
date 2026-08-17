@@ -7,10 +7,12 @@ const { ExternalEditorLauncher } = require("./external-editor-launcher");
 const { PlanApprovalGate } = require("./plan-approval-gate");
 
 class PlanRevisionService {
-  constructor({ store, editor, compiler } = {}) {
+  constructor({ store, editor, compiler, persistenceHooks, producers } = {}) {
     this.store = store || null;
     this.editor = editor || new ExternalEditorLauncher();
     this.compiler = compiler || new PlanRevisionCompiler();
+    this.persistenceHooks = persistenceHooks || null;
+    this.producers = producers || null;
   }
 
   async createPlan(missionId, proposal, context = {}) {
@@ -92,6 +94,8 @@ class PlanRevisionService {
       });
     }
 
+    await this._callPersistenceHook("onApproved", { missionId, taskGraphId, approval });
+
     return approval;
   }
 
@@ -118,12 +122,27 @@ class PlanRevisionService {
       });
     }
 
+    if (evalResult.approved) {
+      await this._callPersistenceHook("onApproved", { missionId, taskGraphId, approval: evalResult });
+    } else {
+      await this._callPersistenceHook("onRejected", { missionId, taskGraphId, approval: evalResult });
+      if (this.producers && typeof this.producers.humanApprovalRequest === "function") {
+        await this.producers.humanApprovalRequest({ missionId, taskGraphId, evalResult, projectId: options.projectId });
+      }
+    }
+
     return evalResult;
   }
 
   async cancel(missionId) {
     if (!missionId || typeof missionId !== "string") throw new TypeError("missionId is required");
     return Object.freeze({ cancelled: true, missionId, cancelledAt: new Date().toISOString() });
+  }
+
+  async _callPersistenceHook(name, payload) {
+    if (!this.persistenceHooks || typeof this.persistenceHooks[name] !== "function") return;
+    try { await this.persistenceHooks[name](payload); }
+    catch (error) { console.warn(`[plan-persistence] ${name} failed: ${error.message}`); }
   }
 }
 

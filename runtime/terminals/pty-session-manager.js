@@ -96,15 +96,15 @@ class PtySessionManager {
       const buffer = createBuffer(columns, rows);
       const active = { child, buffer, columns, rows, focused: false, page: 0 };
       this.sessions.set(sessionId, active);
-      child.onData((data) => { buffer.write(data); this.emitEvent(null, "agentSession.output", { terminalId: sessionId, bytes: Buffer.byteLength(data) }).catch(() => {}); });
+      child.onData((data) => { buffer.write(data); this.emitEvent(null, "agentSession.output", { terminalId: sessionId, projectId: record.projectId, missionId: record.missionId, bytes: Buffer.byteLength(data) }).catch(() => {}); });
       child.onExit(({ exitCode, signal }) => {
         this.sessions.delete(sessionId); buffer.dispose();
         this.store.getTerminal(sessionId).then((current) => current && this.store.saveTerminal({ ...current, status: exitCode === 0 ? "completed" : "failed", completedAt: now(), exitCode, signal })).catch(() => {});
-        this.emitEvent(null, "agentSession.exited", { terminalId: sessionId, exitCode, signal }).catch(() => {});
+        this.emitEvent(null, "agentSession.exited", { terminalId: sessionId, projectId: record.projectId, missionId: record.missionId, exitCode, signal }).catch(() => {});
       });
       const started = { ...record, status: "active", startedAt: now(), pid: child.pid };
       await this.store.saveTerminal(started);
-      await this.emitEvent(null, "agentSession.active", { terminalId: sessionId, pid: child.pid });
+      await this.emitEvent(null, "agentSession.active", { terminalId: sessionId, projectId: record.projectId, missionId: record.missionId, pid: child.pid });
       return started;
     } catch (error) {
       await this.store.saveTerminal({ ...record, status: "failed", completedAt: now(), error: error.message });
@@ -120,7 +120,7 @@ class PtySessionManager {
     if (!stored) return false;
     if (active) { active.child.kill(); active.buffer.dispose(); this.sessions.delete(sessionId); }
     await this.store.saveTerminal({ ...stored, status: "closed", completedAt: now() });
-    await this.emitEvent(null, "agentSession.closed", { terminalId: sessionId });
+    await this.emitEvent(null, "agentSession.closed", { terminalId: sessionId, projectId: stored.projectId, missionId: stored.missionId });
     return true;
   }
   async input(sessionId, data) {

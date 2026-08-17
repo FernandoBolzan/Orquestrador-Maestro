@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-const { spawnSync } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -13,7 +13,9 @@ const rootDir = path.resolve(__dirname, "..");
 const packageJson = require(path.join(rootDir, "package.json"));
 const contextBrief = require(path.join(rootDir, "orquestrador", "bin", "context-brief.js"));
 const { MaestroApplication } = require(path.join(rootDir, "runtime", "application"));
-const { createBridge, createStdioServer, startSocketRuntime } = require(path.join(rootDir, "runtime", "bridge"));
+const { createBridge, createStdioServer, runtimePaths, startSocketRuntime } = require(path.join(rootDir, "runtime", "bridge"));
+const { SocketMaestroClient } = require(path.join(rootDir, "runtime", "client", "socket-maestro-client"));
+const { createProtocolV2Server } = require(path.join(rootDir, "runtime", "protocol", "protocol-v2"));
 const { startTui } = require(path.join(rootDir, "runtime", "tui"));
 const telemetryTimeoutMs = 1200;
 const telemetryConsentVersion = 1;
@@ -219,6 +221,11 @@ function commandExists(filePath) {
   return fs.existsSync(filePath);
 }
 
+function executableAvailable(command) {
+  const result = spawnSync(command, ["--version"], { stdio: "ignore", shell: false });
+  return !result.error && result.status === 0;
+}
+
 function runInstall(args, injectedFlags = []) {
   const isWindows = process.platform === "win32";
   const script = path.join(rootDir, isWindows ? "install.ps1" : "install.sh");
@@ -360,6 +367,15 @@ function parseRuntimeArgs(args, allowed = [], booleanFlags = []) {
 async function createRuntimeApplication(projectPath) {
   const app = new MaestroApplication({ projectRoot: projectPath });
   await app.initialize();
+  const { AttentionQueue } = require(path.join(rootDir, "runtime", "attention", "attention-queue"));
+  const { AttentionProducers } = require(path.join(rootDir, "runtime", "attention", "attention-producers"));
+  const { TaskGraphPersistence } = require(path.join(rootDir, "runtime", "planner", "task-graph-persistence"));
+  const { RunTerminalBridge } = require(path.join(rootDir, "runtime", "runs", "run-terminal-bridge"));
+  const project = await app.inspectProject({ projectPath: app.projectRoot });
+  app.attention = new AttentionQueue({ store: app.store, record: (type, data) => app.record(null, type, data) });
+  app.attentionProducers = new AttentionProducers({ queue: app.attention, projectId: project.id });
+  app.taskGraphs = new TaskGraphPersistence({ store: app.store });
+  app.runTerminals = new RunTerminalBridge({ app, store: app.store, terminals: app.terminals, terminalSessions: app.terminalSessions, graphs: app.taskGraphs });
   return app;
 }
 
@@ -523,7 +539,39 @@ async function handleTuiCommand(args) {
   const classic = args.includes("--classic");
   const options = parseRuntimeArgs(args.filter((arg) => arg !== "--classic"), ["--project-path"]);
   if (options.values.length) throw new Error("Uso: maestro tui [--project-path PATH]");
-  await startTui(await createRuntimeApplication(options.projectPath), { classic }); return 0;
+  if (classic) { await startTui(await createRuntimeApplication(options.projectPath), { classic: true }); return 0; }
+  const projectRoot = path.resolve(options.projectPath);
+  const paths = runtimePaths(projectRoot);
+  let externalRuntime = false;
+  if (fs.existsSync(paths.tokenPath)) {
+    const probe = new SocketMaestroClient({ socketPath: paths.socketPath, token: fs.readFileSync(paths.tokenPath, "utf8").trim(), watchdog: false, requestTimeoutMs: 500 });
+    try { await probe.initialize(); externalRuntime = true; } catch { externalRuntime = false; } finally { probe.close(); }
+  }
+  if (!externalRuntime) {
+    const daemon = spawn(process.execPath, [__filename, "runtime", "--project-path", projectRoot], { detached: true, stdio: "ignore", shell: false });
+    daemon.unref();
+    const deadline = Date.now() + 5_000;
+    while (!externalRuntime && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      if (!fs.existsSync(paths.tokenPath)) continue;
+      const probe = new SocketMaestroClient({ socketPath: paths.socketPath, token: fs.readFileSync(paths.tokenPath, "utf8").trim(), watchdog: false, requestTimeoutMs: 500 });
+      try { await probe.initialize(); externalRuntime = true; } catch { externalRuntime = false; } finally { probe.close(); }
+    }
+    if (!externalRuntime) throw new Error("O runtime canônico não iniciou dentro de 5 segundos.");
+  }
+  const visualHost = {
+    projectRoot,
+    terminalCapabilities: () => ({ tui: { bun: executableAvailable("bun"), opentui: (() => { try { require.resolve("@opentui/core"); return true; } catch { return false; } })() } })
+  };
+  await startTui(visualHost, { classic: false }); return 0;
+}
+
+function createRuntimeBridge(app, projectRoot) {
+  return createBridge({ projectRoot, services: {
+    projectInspector: { inspect: (params) => app.inspectProject(params) }, skillRegistry: app.skills,
+    providerRegistry: { list: () => app.listProviders() }, runtime: app,
+    runStore: { listRuns: (filters) => app.listRuns(filters), getRun: (id) => app.getRun(id), listArtifacts: (filters) => app.listArtifacts(filters), getArtifact: (id) => app.getArtifact(id), getVerification: (runId) => app.getVerification(runId) }
+  } });
 }
 
 async function handleSkillsCommand(args) {
@@ -560,14 +608,16 @@ async function handleRuntimeCommand(args) {
   const options = parseRuntimeArgs(args, ["--project-path"]);
   if (options.values.length) throw new Error("Uso: maestro runtime [--project-path PATH]");
   const app = await createRuntimeApplication(options.projectPath);
-  const bridge = createBridge({ projectRoot: options.projectPath, services: {
-    projectInspector: { inspect: (params) => app.inspectProject(params) }, skillRegistry: app.skills,
-    providerRegistry: { list: () => app.listProviders() }, runtime: app,
-    runStore: { listRuns: (filters) => app.listRuns(filters), getRun: (id) => app.getRun(id), listArtifacts: (filters) => app.listArtifacts(filters), getArtifact: (id) => app.getArtifact(id), getVerification: (runId) => app.getVerification(runId) }
-  } });
-  const runtime = startSocketRuntime(bridge, { projectRoot: options.projectPath });
+  const bridge = createRuntimeBridge(app, options.projectPath);
+  const protocolV2 = createProtocolV2Server({ runtime: app, store: app.store, serverInfo: { name: "maestro-runtime", projectRoot: path.resolve(options.projectPath) } });
+  const runtime = startSocketRuntime(bridge, { projectRoot: options.projectPath, protocolV2 });
+  await runtime.ready;
   console.log(`Runtime Maestro ativo em ${runtime.paths.socketPath}`);
-  return new Promise((resolve) => process.once("SIGINT", async () => { await runtime.close(); resolve(0); }));
+  return new Promise((resolve) => {
+    let closing = false;
+    const close = async () => { if (closing) return; closing = true; protocolV2.close(); await runtime.close(); resolve(0); };
+    process.once("SIGINT", close); process.once("SIGTERM", close);
+  });
 }
 
 function getTelemetryConfigPath() {
@@ -1064,6 +1114,20 @@ async function handleGoCommand(args, planningOnly = false) {
     allowFallback: true
   });
 
+  const { TaskGraphPersistence } = require(path.join(rootDir, "runtime", "planner", "task-graph-persistence"));
+  const { PlanPersistenceHooks } = require(path.join(rootDir, "runtime", "planner", "plan-persistence-hooks"));
+  const graphs = new TaskGraphPersistence({ store: app.store });
+  const project = await app.inspectProject({ projectPath: workspacePath });
+  const persistenceHooks = new PlanPersistenceHooks({
+    graphs,
+    getGraphInput: () => ({
+      graphId: planResult.taskGraph.id,
+      projectId: project.id,
+      planningMode: planResult.planningMode,
+      tasks: planResult.taskGraph.tasks.map((task) => task.metadata?.semantic || task)
+    })
+  });
+
   const executionTarget = { providerId: selectedProviderId, model: "default" };
   let tasks = planResult.taskGraph.tasks.map((st) =>
     LegacyExecutionProjection.projectTask(st.metadata?.semantic || st, { executionTarget })
@@ -1082,9 +1146,12 @@ async function handleGoCommand(args, planningOnly = false) {
     }, { autoFallbackAllowed: false });
 
     if (!autoEval.approved) {
+      await persistenceHooks.onRejected({ missionId: approvedBrief.id, taskGraphId: planResult.taskGraph.id, approval: autoEval });
+      await app.attentionProducers.humanApprovalRequest({ missionId: approvedBrief.id, taskGraphId: planResult.taskGraph.id, evalResult: autoEval, projectId: project.id });
       p.cancel(`Execução automática rejeitada: ${autoEval.reason}`);
       return 1;
     }
+    await persistenceHooks.onApproved({ missionId: approvedBrief.id, taskGraphId: planResult.taskGraph.id, approval: autoEval });
     if (planningOnly) {
       await app.createMission({ workspacePath, objective: approvedBrief.objective, status: "awaiting_approval", startedAt: new Date().toISOString() });
       s.stop("Plano aprovado");
@@ -1109,7 +1176,8 @@ async function handleGoCommand(args, planningOnly = false) {
         p.cancel("Operação cancelada pelo usuário.");
         return 0;
       } else if (action === "aprovar") {
-        PlanApprovalGate.recordHumanApproval({ taskGraphId: planResult.taskGraph.id, userDecision: "approved" });
+        const humanApproval = PlanApprovalGate.recordHumanApproval({ taskGraphId: planResult.taskGraph.id, userDecision: "approved" });
+        await persistenceHooks.onApproved({ missionId: approvedBrief.id, taskGraphId: planResult.taskGraph.id, approval: humanApproval });
         planApproved = true;
         if (planningOnly) {
           await app.createMission({ workspacePath, objective: approvedBrief.objective, status: "awaiting_approval", startedAt: new Date().toISOString() });
@@ -1135,6 +1203,8 @@ async function handleGoCommand(args, planningOnly = false) {
   updateTitle("Executando tarefas...");
   const mission = await app.createMission({ workspacePath, objective: spec.answers?.intent || description, status: "running", startedAt: new Date().toISOString() });
   const executor = new LaneExecutor({ application: app, maxParallel: parseInt(options.maxParallel, 10) || 3 });
+  const { TaskLifecycleMonitor } = require(path.join(rootDir, "runtime", "planner", "task-lifecycle-monitor"));
+  const lifecycleMonitor = TaskLifecycleMonitor.attach({ executor, app, graphs, store: app.store });
   
   const runningTasks = new Set();
   const updateSpinner = () => {
@@ -1166,6 +1236,7 @@ async function handleGoCommand(args, planningOnly = false) {
   
   s.start("Inicializando execução...");
   const results = await executor.execute(tasks, mission.id);
+  lifecycleMonitor.detach();
   s.stop("Execução concluída");
   
   const failures = Object.values(results).filter((r) => r.status === "failed");

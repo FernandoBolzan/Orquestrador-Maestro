@@ -322,7 +322,19 @@ function createAttentionRequest(input) {
     type: enumValue(input.type, "attention request.type", ATTENTION_REQUEST_TYPES, "QUESTION"),
     message: requiredString(input.message, "attention request.message"),
     context: optionalString(input.context, "attention request.context"),
-    status: enumValue(input.status, "attention request.status", ["pending", "resolved"], "pending")
+    status: enumValue(input.status, "attention request.status", ["pending", "snoozed", "resolved"], "pending"),
+    projectId: optionalString(input.projectId, "attention request.projectId"),
+    missionId: optionalString(input.missionId, "attention request.missionId"),
+    taskId: optionalString(input.taskId, "attention request.taskId"),
+    severity: enumValue(input.severity, "attention request.severity", ["low", "medium", "high", "critical"], "medium"),
+    title: optionalString(input.title, "attention request.title"),
+    reason: optionalString(input.reason, "attention request.reason"),
+    impact: optionalString(input.impact, "attention request.impact"),
+    recommendation: optionalString(input.recommendation, "attention request.recommendation"),
+    evidence: Array.isArray(input.evidence) ? input.evidence : [],
+    actions: Array.isArray(input.actions) ? input.actions : [],
+    createdAt: optionalString(input.createdAt, "attention request.createdAt"),
+    resolvedAt: optionalString(input.resolvedAt, "attention request.resolvedAt")
   });
 }
 

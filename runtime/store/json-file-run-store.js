@@ -5,10 +5,10 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { RunStore } = require("./run-store");
 
-const COLLECTIONS = Object.freeze(["projects", "missions", "tasks", "runs", "steps", "executions", "events", "artifacts", "verifications", "terminals", "projectSnapshots", "intentSessions", "missionBriefs", "taskGraphs"]);
+const COLLECTIONS = Object.freeze(["projects", "missions", "tasks", "runs", "steps", "executions", "events", "artifacts", "verifications", "terminals", "projectSnapshots", "intentSessions", "missionBriefs", "taskGraphs", "attention"]);
 
 function emptyState() {
-  return { version: 1, projects: [], missions: [], tasks: [], runs: [], steps: [], executions: [], events: [], artifacts: [], verifications: [], terminals: [], projectSnapshots: [], intentSessions: [], missionBriefs: [], taskGraphs: [] };
+  return { version: 1, projects: [], missions: [], tasks: [], runs: [], steps: [], executions: [], events: [], artifacts: [], verifications: [], terminals: [], projectSnapshots: [], intentSessions: [], missionBriefs: [], taskGraphs: [], attention: [] };
 }
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -82,6 +82,7 @@ class JsonFileRunStore extends RunStore {
   async saveIntentSession(session) { return this._save("intentSessions", session); }
   async saveMissionBrief(brief) { return this._save("missionBriefs", brief); }
   async saveTaskGraph(graph) { return this._save("taskGraphs", graph); }
+  async saveAttention(request) { return this._save("attention", request); }
 
   async appendEvent(event) {
     assertRecord(event, "event");
@@ -115,6 +116,7 @@ class JsonFileRunStore extends RunStore {
   async getIntentSession(id) { return this._get("intentSessions", id); }
   async getMissionBrief(id) { return this._get("missionBriefs", id); }
   async getTaskGraph(id) { return this._get("taskGraphs", id); }
+  async getAttention(id) { return this._get("attention", id); }
 
   async listProjects() { return this._list("projects"); }
   async listMissions(filters) { return this._list("missions", filters, ["projectId", "status", "mode"]); }
@@ -134,6 +136,8 @@ class JsonFileRunStore extends RunStore {
   async listArtifacts(filters) { return this._list("artifacts", filters); }
   async listVerifications(filters) { return this._list("verifications", filters); }
   async listTerminals(filters) { return this._list("terminals", filters, ["projectId", "kind", "backend", "status", "providerId"]); }
+  async listTaskGraphs(filters) { return this._list("taskGraphs", filters, ["missionId", "status"]); }
+  async listAttention(filters) { return this._list("attention", filters, ["projectId", "status", "type"]); }
 
   async _save(collection, record) {
     assertKnownCollection(collection);
@@ -217,6 +221,7 @@ class JsonFileRunStore extends RunStore {
     if (!Array.isArray(state.intentSessions)) state.intentSessions = [];
     if (!Array.isArray(state.missionBriefs)) state.missionBriefs = [];
     if (!Array.isArray(state.taskGraphs)) state.taskGraphs = [];
+    if (!Array.isArray(state.attention)) state.attention = [];
     for (const collection of COLLECTIONS) {
       if (!Array.isArray(state[collection])) throw new Error(`RunStore data is missing collection: ${collection}`);
     }

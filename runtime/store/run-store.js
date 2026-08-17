@@ -20,6 +20,10 @@ class RunStore {
   async saveIntentSession() { throw new Error("RunStore.saveIntentSession must be implemented"); }
   async saveMissionBrief() { throw new Error("RunStore.saveMissionBrief must be implemented"); }
   async saveTaskGraph() { throw new Error("RunStore.saveTaskGraph must be implemented"); }
+  async listTaskGraphs() { throw new Error("RunStore.listTaskGraphs must be implemented"); }
+  async saveAttention() { throw new Error("RunStore.saveAttention must be implemented"); }
+  async getAttention() { throw new Error("RunStore.getAttention must be implemented"); }
+  async listAttention() { throw new Error("RunStore.listAttention must be implemented"); }
   async getLatestProjectSnapshot() { throw new Error("RunStore.getLatestProjectSnapshot must be implemented"); }
   async getIntentSession() { throw new Error("RunStore.getIntentSession must be implemented"); }
   async getMissionBrief() { throw new Error("RunStore.getMissionBrief must be implemented"); }

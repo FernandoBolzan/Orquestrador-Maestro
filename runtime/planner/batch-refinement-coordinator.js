@@ -11,12 +11,13 @@ const DEFAULT_MAX_DISCOVERY_ROUNDS = 3;
 const DEFAULT_AUTO_POLICY_CLASSES = ["CONTEXT_CONFIRMABLE"];
 
 class BatchRefinementCoordinator {
-  constructor({ discoverer, reconciler, adapter, applier } = {}) {
+  constructor({ discoverer, reconciler, adapter, applier, producers } = {}) {
     this._discoverer = discoverer || null;
     this._reconciler = reconciler || new IntentReconciler();
     this._adapter = adapter || null;
     this._applier = applier || new BatchAnswerApplier();
     this._collector = new BatchAnswerCollector();
+    this._producers = producers || null;
   }
 
   async run(intentSpec, context, skills, options = {}) {
@@ -126,6 +127,7 @@ class BatchRefinementCoordinator {
               type: "HUMAN_INPUT_REQUIRED",
               dimensions: unauthorized.map((q) => q.dimension)
             };
+            await this._producers?.humanInputRequired?.({ missionId: options.missionId, projectId: options.projectId, dimensions: autoBlocked.dimensions });
             break;
           }
 

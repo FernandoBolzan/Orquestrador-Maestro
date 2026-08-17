@@ -28,6 +28,9 @@ const { BatchIntentDiscoverer } = require("./batch-intent-discoverer");
 const { IntentReconciler } = require("./intent-reconciler");
 const { BatchRefinementCoordinator } = require("./batch-refinement-coordinator");
 const { ClackBatchInteractionAdapter } = require("./clack-batch-adapter");
+const { TaskGraphPersistence } = require("./task-graph-persistence");
+const { PlanPersistenceHooks } = require("./plan-persistence-hooks");
+const { TaskLifecycleMonitor } = require("./task-lifecycle-monitor");
 const dagUtils = require("./dag-utils");
 
 module.exports = {
@@ -68,5 +71,8 @@ module.exports = {
   IntentReconciler,
   BatchRefinementCoordinator,
   ClackBatchInteractionAdapter,
+  TaskGraphPersistence,
+  PlanPersistenceHooks,
+  TaskLifecycleMonitor,
   dagUtils
 };
