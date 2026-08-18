@@ -63,6 +63,10 @@ function normalizeSkillName(name) {
     .replace(/^-+|-+$/g, "");
 }
 
+function normalizeTrigger(trigger) {
+  return String(trigger || "").trim().toLocaleLowerCase("pt-BR");
+}
+
 function assertSkillName(name) {
   if (!/^skill-[a-z0-9][a-z0-9-]{0,58}[a-z0-9]$/.test(name)) {
     throw new Error(`Invalid skill name: ${name}. Use skill-<lowercase-hyphen-name>, max 64 chars.`);
@@ -454,12 +458,45 @@ function validate() {
     if (!manifestSkills[skill]) issues.push(`aliases:${alias}: points to missing skill ${skill}`);
   }
 
+  const triggerOwners = new Map();
+  for (const [skill, entry] of Object.entries(routerSkills)) {
+    for (const trigger of entry.triggers || []) {
+      const normalized = normalizeTrigger(trigger);
+      if (!triggerOwners.has(normalized)) triggerOwners.set(normalized, new Set());
+      triggerOwners.get(normalized).add(skill);
+    }
+  }
+  for (const [trigger, owners] of triggerOwners.entries()) {
+    if (owners.size > 1) {
+      issues.push(`router:${trigger}: ambiguous trigger owners ${Array.from(owners).sort().join(", ")}`);
+    }
+  }
+
   for (const [skill, chain] of Object.entries(chains.chains || {})) {
     if (!manifestSkills[skill]) issues.push(`chains:${skill}: chain owner is not in manifest`);
     for (const target of chain.mayInvoke || []) {
       if (!manifestSkills[target]) issues.push(`chains:${skill}: mayInvoke points to missing skill ${target}`);
     }
   }
+
+  const chainState = new Map();
+  const chainStack = [];
+  function visitChain(skill) {
+    const state = chainState.get(skill);
+    if (state === "visiting") {
+      const cycleStart = chainStack.indexOf(skill);
+      const cycle = chainStack.slice(cycleStart).concat(skill).join(" -> ");
+      issues.push(`chains:${skill}: cycle detected ${cycle}`);
+      return;
+    }
+    if (state === "visited") return;
+    chainState.set(skill, "visiting");
+    chainStack.push(skill);
+    for (const target of (chains.chains[skill] && chains.chains[skill].mayInvoke) || []) visitChain(target);
+    chainStack.pop();
+    chainState.set(skill, "visited");
+  }
+  for (const skill of Object.keys(chains.chains || {})) visitChain(skill);
 
   if (issues.length > 0) {
     console.error("Skill validation failed:");

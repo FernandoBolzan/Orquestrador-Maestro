@@ -48,13 +48,7 @@
         "subscription",
         "billing",
         "multi-tenant",
-        "supabase saas",
-        "abacatepay",
-        "stripe",
-        "plans",
-        "planos",
-        "entitlements",
-        "limites"
+        "supabase saas"
       ],
       "aliases": [
         "criar saas",
@@ -106,8 +100,6 @@
         "cpf",
         "cnpj",
         "billing.paid",
-        "cobranca",
-        "cobrança",
         "brl checkout",
         "pagamento brasileiro"
       ],
@@ -148,7 +140,6 @@
       "mirrorEverywhere": true,
       "triggers": [
         "limites saas",
-        "entitlements",
         "quotas",
         "feature flags",
         "trial",
@@ -195,7 +186,6 @@
         "dast",
         "preview scan",
         "staging scan",
-        "zap",
         "nuclei",
         "authorized url scan"
       ],
@@ -379,7 +369,6 @@
       "triggers": [
         "evolution api",
         "whatsapp",
-        "zap",
         "webhook whatsapp",
         "instancia whatsapp",
         "qr code whatsapp",
@@ -657,9 +646,7 @@
         "notificação cobrança",
         "billing metrics",
         "mrr",
-        "billing admin",
-        "planos",
-        "plans"
+        "billing admin"
       ],
       "aliases": [
         "cobranca",

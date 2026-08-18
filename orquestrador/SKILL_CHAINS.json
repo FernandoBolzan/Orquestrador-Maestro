@@ -23,8 +23,7 @@
         "skill-security-hooks",
         "skill-unified-analytics",
         "skill-ai-orchestration",
-        "skill-multiagent-orchestration",
-        "skill-aionui-cowork-orchestration"
+        "skill-multiagent-orchestration"
       ],
       "rules": [
         "Use frontend/UI skills when landing, login, signup, onboarding, app dashboard, responsive behavior, or visual polish are present.",
@@ -54,19 +53,17 @@
     },
     "skill-security-hooks": {
       "mayInvoke": [
-        "skill-saas-security-scan"
+        "skill-verification-before-completion"
       ]
     },
     "skill-supabase-rls": {
       "mayInvoke": [
-        "skill-saas-security-scan",
         "skill-saas-core-limits"
       ]
     },
     "skill-ai-orchestration": {
       "mayInvoke": [
         "skill-multiagent-orchestration",
-        "skill-aionui-cowork-orchestration",
         "skill-unified-analytics",
         "skill-google-workspace-sync",
         "skill-elevenlabs-voice-cloning"
@@ -74,12 +71,10 @@
     },
     "skill-multiagent-orchestration": {
       "mayInvoke": [
-        "skill-saas-factory",
         "skill-saas-security-scan",
         "skill-security-hooks",
         "skill-frontend-ux-guardrails",
-        "skill-unified-analytics",
-        "skill-aionui-cowork-orchestration"
+        "skill-unified-analytics"
       ],
       "rules": [
         "Use only when workstreams are independent or the user explicitly asks for subagents/multiagents.",
@@ -108,7 +103,6 @@
     },
     "skill-google-workspace-sync": {
       "mayInvoke": [
-        "skill-ai-orchestration",
         "skill-unified-analytics"
       ]
     },

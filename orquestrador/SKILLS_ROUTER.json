@@ -23,13 +23,7 @@
         "subscription",
         "billing",
         "multi-tenant",
-        "supabase saas",
-        "abacatepay",
-        "stripe",
-        "plans",
-        "planos",
-        "entitlements",
-        "limites"
+        "supabase saas"
       ],
       "canonicalPath": "{{USER_HOME}}/.orquestrador/skills/skill-saas-factory/SKILL.md",
       "codexPath": "{{USER_HOME}}/.codex/skills/skill-saas-factory/SKILL.md",
@@ -62,8 +56,6 @@
         "cpf",
         "cnpj",
         "billing.paid",
-        "cobranca",
-        "cobrança",
         "brl checkout",
         "pagamento brasileiro"
       ],
@@ -93,7 +85,6 @@
       "description": "SaaS plan limits, quotas, entitlements, feature flags, trials, grace periods, and blocked account states.",
       "triggers": [
         "limites saas",
-        "entitlements",
         "quotas",
         "feature flags",
         "trial",
@@ -128,7 +119,6 @@
         "dast",
         "preview scan",
         "staging scan",
-        "zap",
         "nuclei",
         "authorized url scan"
       ],
@@ -258,7 +248,6 @@
       "triggers": [
         "evolution api",
         "whatsapp",
-        "zap",
         "webhook whatsapp",
         "instancia whatsapp",
         "qr code whatsapp",
@@ -469,9 +458,7 @@
         "notificação cobrança",
         "billing metrics",
         "mrr",
-        "billing admin",
-        "planos",
-        "plans"
+        "billing admin"
       ],
       "canonicalPath": "{{USER_HOME}}/.orquestrador/skills/skill-cobranca-automatizada-saas-abacatepay/SKILL.md",
       "codexPath": "{{USER_HOME}}/.codex/skills/skill-cobranca-automatizada-saas-abacatepay/SKILL.md",

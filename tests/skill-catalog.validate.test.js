@@ -104,3 +104,56 @@ test("skill-catalog validate fails when a skill file contains mojibake", () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /skills\/skill-phase-router\/SKILL\.md: possible mojibake/u);
 });
+
+test("skill-catalog validate fails when triggers are ambiguous", () => {
+  const fixtureRoot = makeCatalogFixture({
+    routerSkills: {
+      "skill-phase-router": {
+        description: "Validate phase router coverage.",
+        triggers: ["phase router"],
+        canonicalPath: "{{USER_HOME}}/.orquestrador/skills/skill-phase-router/SKILL.md",
+        codexPath: "{{USER_HOME}}/.codex/skills/skill-phase-router/SKILL.md",
+        cost: "medium",
+        safety: "task-specific-guardrails"
+      },
+      "skill-phase-secondary": {
+        description: "Validate secondary phase routing.",
+        triggers: ["phase router"],
+        canonicalPath: "{{USER_HOME}}/.orquestrador/skills/skill-phase-secondary/SKILL.md",
+        codexPath: "{{USER_HOME}}/.codex/skills/skill-phase-secondary/SKILL.md",
+        cost: "medium",
+        safety: "task-specific-guardrails"
+      }
+    },
+    skillText: "---\nname: skill-phase-router\ndescription: Validate phase router coverage.\ncategory: workflow\nrisk: medium\nsource: test\n---\n\nStable content."
+  });
+  const manifest = JSON.parse(fs.readFileSync(path.join(fixtureRoot, "orquestrador/SKILLS_MANIFEST.json"), "utf8"));
+  manifest.skills["skill-phase-secondary"] = { ...manifest.skills["skill-phase-router"] };
+  writeFile(fixtureRoot, "orquestrador/SKILLS_MANIFEST.json", JSON.stringify(manifest, null, 2));
+  writeFile(fixtureRoot, "orquestrador/skills/skill-phase-secondary/SKILL.md", "---\nname: skill-phase-secondary\ndescription: Validate secondary phase routing.\ncategory: workflow\nrisk: medium\nsource: test\n---\n\nStable content.");
+  const result = spawnSync(process.execPath, [path.join(fixtureRoot, "scripts", "skill-catalog.js"), "validate"], { cwd: fixtureRoot, encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /ambiguous trigger owners/u);
+});
+
+test("skill-catalog validate fails when chains contain a cycle", () => {
+  const fixtureRoot = makeCatalogFixture({
+    routerSkills: {
+      "skill-phase-router": {
+        description: "Validate phase router coverage.",
+        triggers: ["phase router"],
+        canonicalPath: "{{USER_HOME}}/.orquestrador/skills/skill-phase-router/SKILL.md",
+        codexPath: "{{USER_HOME}}/.codex/skills/skill-phase-router/SKILL.md",
+        cost: "medium",
+        safety: "task-specific-guardrails"
+      }
+    },
+    skillText: "---\nname: skill-phase-router\ndescription: Validate phase router coverage.\ncategory: workflow\nrisk: medium\nsource: test\n---\n\nStable content."
+  });
+  writeFile(fixtureRoot, "orquestrador/SKILL_CHAINS.json", JSON.stringify({ chains: {
+    "skill-phase-router": { mayInvoke: ["skill-phase-router"] }
+  } }, null, 2));
+  const result = spawnSync(process.execPath, [path.join(fixtureRoot, "scripts", "skill-catalog.js"), "validate"], { cwd: fixtureRoot, encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /cycle detected/u);
+});
