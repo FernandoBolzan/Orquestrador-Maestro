@@ -92,6 +92,10 @@
     "imagem para site": "skill-optimize-images",
     "compressão de imagens": "skill-optimize-images",
     "webp": "skill-optimize-images",
-    "avif": "skill-optimize-images"
+    "avif": "skill-optimize-images",
+    "clone site": "skill-web-clone",
+    "clonar site": "skill-web-clone",
+    "web clone": "skill-web-clone",
+    "web-clone": "skill-web-clone"
   }
 }
