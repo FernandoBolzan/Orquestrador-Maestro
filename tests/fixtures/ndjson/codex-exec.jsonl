@@ -1,0 +1,3 @@
+{"seq":1,"type":"reasoning","duration_ms":812,"item":{"type":"reasoning","id":"reason-1","text":"The user wants an isolated worktree per agent session. I should check the WorkspaceManager contract first, then propose the minimal change."}}
+{"seq":2,"type":"reasoning","duration_ms":41,"item":{"type":"reasoning","id":"reason-2","text":"copyWorkingTreeState must skip the session root directory or the copy hits EINVAL."}}
+{"seq":3,"type":"agent_message","duration_ms":9,"item":{"id":"msg-1","type":"agent_message","text":"```json\n{\"ok\":true}\n```"}}

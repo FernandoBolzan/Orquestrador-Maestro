@@ -17,9 +17,19 @@ class BatchIntentDiscoverer {
   }
 
   async discover(intent, intentSpec, skills, context) {
-    if (!this._provider || !this._provider.detect || !this._provider.detect()) {
+    let detection = true;
+    try {
+      detection = await this._provider.detect();
+    } catch {
+      detection = false;
+    }
+    const available = detection && typeof detection === "object" ? detection.installed !== false : Boolean(detection);
+    if (!this._provider || !this._provider.detect || !available) {
       return Object.freeze({
         questions: [],
+        detectedUnknowns: [],
+        requirementsToAdd: [],
+        constraintsToAdd: [],
         valid: true,
         validationErrors: [],
         questionCount: 0,
@@ -54,6 +64,9 @@ class BatchIntentDiscoverer {
 
         return Object.freeze({
           questions: validation.valid ? questions : [],
+          detectedUnknowns: Array.isArray(parsed.detectedUnknowns) ? parsed.detectedUnknowns : [],
+          requirementsToAdd: Array.isArray(parsed.requirementsToAdd) ? parsed.requirementsToAdd : [],
+          constraintsToAdd: Array.isArray(parsed.constraintsToAdd) ? parsed.constraintsToAdd : [],
           valid: validation.valid,
           validationErrors: validation.blockers.map((b) => b.message),
           questionCount: questions.length,
@@ -69,6 +82,9 @@ class BatchIntentDiscoverer {
 
     return Object.freeze({
       questions: [],
+      detectedUnknowns: [],
+      requirementsToAdd: [],
+      constraintsToAdd: [],
       valid: false,
       validationErrors: [lastError ? lastError.message : "Discovery failed after retries"],
       questionCount: 0,
@@ -165,9 +181,11 @@ OUTPUT FORMAT (JSON only, no markdown):
 
   _buildQuestions(parsed) {
     if (!parsed || !Array.isArray(parsed.questions)) return [];
-    return parsed.questions.map((q) => {
+    const questions = [];
+    const failures = [];
+    for (const q of parsed.questions) {
       try {
-        return createBatchQuestion({
+        questions.push(createBatchQuestion({
           id: q.id,
           unknownId: q.unknownId || null,
           dimension: q.dimension,
@@ -181,11 +199,17 @@ OUTPUT FORMAT (JSON only, no markdown):
           reason: q.reason || "",
           evidenceKeys: q.evidenceKeys || [],
           activation: q.activation || null
-        });
-      } catch {
-        return null;
+        }));
+      } catch (err) {
+        // Nao engolir pergunta invalida em silencio (review PR#6 item 30):
+        // a falha torna o conjunto invalido e aciona retry.
+        failures.push(`${q && q.id ? q.id : "<sem id>"}: ${err.message}`);
       }
-    }).filter(Boolean);
+    }
+    if (failures.length > 0) {
+      throw new TypeError(`Invalid questions in discovery response: ${failures.join(" | ")}`);
+    }
+    return questions;
   }
 }
 

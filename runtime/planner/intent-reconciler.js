@@ -13,7 +13,14 @@ class IntentReconciler {
   }
 
   async reconcile(intentSpec, confirmedAnswers, context, discoveryCandidates = {}) {
-    if (!this._provider || !this._provider.detect || !this._provider.detect()) {
+    let detection = true;
+    try {
+      detection = await this._provider.detect();
+    } catch {
+      detection = false;
+    }
+    const available = detection && typeof detection === "object" ? detection.installed !== false : Boolean(detection);
+    if (!this._provider || !this._provider.detect || !available) {
       return Object.freeze({ success: false, error: "Provider not available", proposal: null });
     }
 

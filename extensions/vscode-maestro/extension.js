@@ -4,6 +4,7 @@ const { spawn } = require("node:child_process");
 const crypto = require("node:crypto");
 const readline = require("node:readline");
 const vscode = require("vscode");
+const { parseCommandLine } = require("../../runtime/shell/parse-command-line");
 
 class BridgeClient {
   constructor(command = "maestro") { this.command = command; this.sequence = 0; this.pending = new Map(); }
@@ -56,13 +57,13 @@ class MaestroTreeProvider {
 }
 
 function commandLine(session) {
-  return [session.command, ...(session.args || [])].map((part) => /[\s"']/u.test(part) ? JSON.stringify(part) : part).join(" ");
+  return [session.command, ...(session.args || [])].map((part) => /[\s"']/u.test(part) ? `'${String(part).replace(/'/gu, "'\\''")}'` : part).join(" ");
 }
 
 async function createNativeTerminal({ client, workspacePath, terminals, provider, kind, command, args = [] }) {
   const session = await client.call("terminals.create", { workspacePath, backend: "vscode", kind, providerId: provider, command, args, label: provider || command });
-  const terminal = vscode.window.createTerminal({ name: `Maestro · ${session.label}`, cwd: workspacePath });
-  terminals.set(terminal.name, { terminal, sessionId: session.id });
+  const terminal = vscode.window.createTerminal({ name: `Maestro · ${session.label} · ${session.id}`, cwd: workspacePath });
+  terminals.set(session.id, { terminal, sessionId: session.id });
   await client.call("terminals.registerClient", { terminalId: session.id, clientId: terminals.clientId, terminalName: terminal.name });
   terminal.sendText(commandLine(session), true);
   terminal.show();
@@ -115,7 +116,9 @@ function activate(context) {
   }));
   context.subscriptions.push(vscode.commands.registerCommand("maestro.startShellTerminal", async () => {
     const commandLineInput = await vscode.window.showInputBox({ prompt: "Comando (ex.: npm test)" }); if (!commandLineInput) return;
-    const [command, ...args] = commandLineInput.trim().split(/\s+/u);
+    let command; let args;
+    try { [command, ...args] = parseCommandLine(commandLineInput); } catch { vscode.window.showErrorMessage("Comando inválido: aspas não fechadas."); return; }
+    if (!command) return;
     try { await createNativeTerminal({ client, workspacePath, terminals, kind: "shell", command, args }); provider.refresh(); } catch (error) { vscode.window.showErrorMessage(error.message); }
   }));
   // Alias compatível com a primeira extensão, agora abrindo um terminal nativo.

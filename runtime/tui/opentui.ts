@@ -14,6 +14,8 @@ import { createGateState, gateModalModel, gateReducer } from "./views/gate-modal
 import { createNotificationState, notificationReducer } from "./notifications/notification-state.ts"
 import { toastRegion } from "./notifications/toast-region.ts"
 import { buildWorkspaceTabs, isCockpitTab, railVisibility, primaryWorkspaceSurface } from "./shell/navigation-model.ts"
+import { InputContextStack, InputLayer, normalizeKeyEvent, resolveKeyAction } from "./input/input-pipeline.ts"
+import { deriveWhichKeyContext, formatWhichKeyHelp } from "./commands/which-key-model.ts"
 
 const { MaestroApplication } = require("../application")
 const { runtimePaths } = require("../bridge/socket-server")
@@ -423,43 +425,195 @@ async function main() {
   providerPicker.on(TabSelectRenderableEvents.ITEM_SELECTED, (option: any) => enqueue(() => createAgent(option?.value || providerPicker.getSelectedOption()?.value)))
   prompt.on(InputRenderableEvents.ENTER, () => enqueue(submitPrompt))
 
-  renderer.keyInput.on("keypress", (key: any) => {
-    const name = key.name || ""
+  const inputStack = new InputContextStack()
+
+  renderer.keyInput.on("keypress", (rawKey: any) => {
+    inputStack.reset()
     if (terminalInputActive()) {
-      if (key.ctrl && (name === "]" || key.sequence === "\u001d")) { key.preventDefault(); terminalOwnership = exitInput(terminalOwnership); scheduleRefresh("Foco retornou ao cockpit."); return }
-      const session = currentSession(); const data = terminalInputForKey(key)
-      if (session && data !== null) { key.preventDefault(); enqueue(async () => { const accepted = await app.inputTerminalSession(session.id, data); if (!accepted) { terminalOwnership = exitInput(terminalOwnership); await refresh("A PTY parou de responder. O foco voltou ao cockpit.") } }) }
+      inputStack.push(InputLayer.WORKSPACE)
+      inputStack.push(InputLayer.PTY_ATTACHED)
+    } else if (gateState.open && gateState.activeId) {
+      inputStack.push(InputLayer.WORKSPACE)
+      inputStack.push(InputLayer.CRITICAL_MODAL)
+    } else if (wizard === "palette") {
+      inputStack.push(InputLayer.WORKSPACE)
+      inputStack.push(InputLayer.OVERLAY_PALETTE)
+    } else if (wizard === "mission" || wizard === "shell" || wizard === "search") {
+      inputStack.push(InputLayer.WORKSPACE)
+      inputStack.push(InputLayer.TEXT_INPUT)
+    } else if (wizard === "agent") {
+      inputStack.push(InputLayer.WORKSPACE)
+      inputStack.push(InputLayer.WINDOW_CONTENT)
+    } else {
+      inputStack.push(InputLayer.GLOBAL)
+      inputStack.push(InputLayer.WORKSPACE)
+    }
+
+    const norm = normalizeKeyEvent(rawKey)
+    const action = resolveKeyAction(norm, inputStack)
+
+    if (process.env.MAESTRO_TUI_INPUT_DEBUG === "1") {
+      try {
+        fs.appendFileSync("/tmp/maestro-tui-input-debug.log", `[INPUT_DEBUG] key=${norm.chord} raw=${rawKey.name} layer=${inputStack.currentLayer()} action=${action.type}\n`)
+      } catch {}
+    }
+
+    if (action.type === "pty.detach") {
+      rawKey.preventDefault()
+      terminalOwnership = exitInput(terminalOwnership)
+      scheduleRefresh("Foco retornou ao cockpit.")
       return
     }
-    if (gateState.open && gateState.activeId) {
-      if (name === "escape") { key.preventDefault(); gateState = gateReducer(gateState, { type: "gate.escape" }); scheduleRefresh(); return }
-      if (["3", "4", "s"].includes(name)) { key.preventDefault(); enqueue(() => decideGate(name)); return }
-    }
-    const shortcut = cockpitShortcut(key, { textInput: prompt.focused })
-    if (shortcut === "quit") { key.preventDefault(); quit(); return }
-    if (shortcut === "palette") { key.preventDefault(); setWizard("palette"); return }
-    if (shortcut === "projects") { key.preventDefault(); prompt.blur(); providerPicker.blur(); missionTabs.blur(); projectTabs.focus(); return }
-    if (shortcut === "missions") { key.preventDefault(); prompt.blur(); providerPicker.blur(); projectSelect.blur(); missionTabs.focus(); return }
-    if (shortcut === "agent") { key.preventDefault(); setWizard("agent"); return }
-    if (shortcut === "mission") { key.preventDefault(); setWizard("mission"); return }
-    if (shortcut === "shell") { key.preventDefault(); enqueue(createShell); return }
-    if (shortcut === "close") { key.preventDefault(); projectSelect.blur(); missionTabs.blur(); enqueue(closeSelected); return }
-    if (shortcut === "maximize") { key.preventDefault(); projectSelect.blur(); missionTabs.blur(); maximized = !maximized; scheduleRefresh(); return }
-    if (prompt.focused || providerPicker.focused || projectSelect.focused || missionTabs.focused) {
-      if (name === "escape") { key.preventDefault(); setWizard("none"); scheduleRefresh() }
+    if (action.type === "pty.input") {
+      const session = currentSession()
+      if (session && action.data !== null) {
+        rawKey.preventDefault()
+        enqueue(async () => {
+          const accepted = await app.inputTerminalSession(session.id, action.data)
+          if (!accepted) {
+            terminalOwnership = exitInput(terminalOwnership)
+            await refresh("A PTY parou de responder. O foco voltou ao cockpit.")
+          }
+        })
+      }
       return
     }
-    const numericSlot = /^[1-4]$/u.test(name) ? Number(name) - 1 : -1
-    if (numericSlot >= 0) { const item = projectedSessions()[numericSlot]; if (item) { selectedSession = sessions.findIndex((entry) => entry.id === item.id); selectionTouched = true; scheduleRefresh(`Painel ${numericSlot + 1} selecionado.`) } }
-    else if (name === "up" || name === "k") { selectedSession = clampSelection(selectedSession - 1, sessions.length); selectionTouched = true; scheduleRefresh() }
-    else if (name === "down" || name === "j") { selectedSession = clampSelection(selectedSession + 1, sessions.length); selectionTouched = true; scheduleRefresh() }
-    else if (name === "left" || name === "h") { activeMission = clampSelection(activeMission - 1, missions.length); scheduleRefresh() }
-    else if (name === "right" || name === "l") { activeMission = clampSelection(activeMission + 1, missions.length); scheduleRefresh() }
-    else if (name === "return") enqueue(enterSelected)
-    else if (name === "tab") projectSelect.focus()
-    else if (name === "r") enqueue(startMission)
-    else if (name === "/" || key.sequence === "/") setWizard("search")
-    else if (name === "escape") { setWizard("none"); surface = "cockpit"; scheduleRefresh() }
+    if (action.type === "modal.escape") {
+      rawKey.preventDefault()
+      gateState = gateReducer(gateState, { type: "gate.escape" })
+      scheduleRefresh()
+      return
+    }
+    if (action.type === "modal.action") {
+      rawKey.preventDefault()
+      enqueue(() => decideGate(action.data))
+      return
+    }
+    if (action.type === "modal.ignore") {
+      rawKey.preventDefault()
+      return
+    }
+    if (action.type === "overlay.close" || action.type === "input.cancel") {
+      rawKey.preventDefault()
+      setWizard("none")
+      scheduleRefresh()
+      return
+    }
+    if (action.type === "overlay.select" || action.type === "input.submit") {
+      rawKey.preventDefault()
+      enqueue(submitPrompt)
+      return
+    }
+    if (action.type === "command.palette") {
+      rawKey.preventDefault()
+      setWizard("palette")
+      return
+    }
+    if (action.type === "project.switcher") {
+      rawKey.preventDefault()
+      prompt.blur(); providerPicker.blur(); missionTabs.blur(); projectTabs.focus()
+      return
+    }
+    if (action.type === "help.contextual") {
+      rawKey.preventDefault()
+      const help = deriveWhichKeyContext({ surface })
+      scheduleRefresh(formatWhichKeyHelp(help, { width: 60 }))
+      return
+    }
+    if (action.type === "system.quit") {
+      rawKey.preventDefault()
+      quit()
+      return
+    }
+    if (action.type === "workspace.terminal") {
+      rawKey.preventDefault()
+      const session = currentSession()
+      if (session && isInteractiveSession(session)) enqueue(enterSelected)
+      else enqueue(createShell)
+      return
+    }
+    if (action.type === "workspace.skills") {
+      rawKey.preventDefault()
+      surface = "skills"
+      scheduleRefresh()
+      return
+    }
+    if (action.type === "workspace.attention") {
+      rawKey.preventDefault()
+      surface = "attention"
+      scheduleRefresh()
+      return
+    }
+    if (action.type === "workspace.mission") {
+      rawKey.preventDefault()
+      setWizard("mission")
+      return
+    }
+    if (action.type === "workspace.run_mission") {
+      rawKey.preventDefault()
+      enqueue(startMission)
+      return
+    }
+    if (action.type === "workspace.maximize") {
+      rawKey.preventDefault()
+      projectSelect.blur(); missionTabs.blur()
+      maximized = !maximized
+      scheduleRefresh()
+      return
+    }
+    if (action.type === "workspace.slot") {
+      const numericSlot = action.data - 1
+      if (numericSlot >= 0) {
+        const item = projectedSessions()[numericSlot]
+        if (item) {
+          selectedSession = sessions.findIndex((entry) => entry.id === item.id)
+          selectionTouched = true
+          scheduleRefresh(`Painel ${numericSlot + 1} selecionado.`)
+        }
+      }
+      return
+    }
+    if (action.type === "workspace.navigate") {
+      const dir = action.data
+      if (dir === "up" || dir === "k") {
+        selectedSession = clampSelection(selectedSession - 1, sessions.length)
+        selectionTouched = true
+        scheduleRefresh()
+      } else if (dir === "down" || dir === "j") {
+        selectedSession = clampSelection(selectedSession + 1, sessions.length)
+        selectionTouched = true
+        scheduleRefresh()
+      } else if (dir === "left" || dir === "h") {
+        activeMission = clampSelection(activeMission - 1, missions.length)
+        scheduleRefresh()
+      } else if (dir === "right" || dir === "l") {
+        activeMission = clampSelection(activeMission + 1, missions.length)
+        scheduleRefresh()
+      }
+      return
+    }
+    if (action.type === "workspace.activate") {
+      rawKey.preventDefault()
+      enqueue(enterSelected)
+      return
+    }
+    if (action.type === "workspace.escape") {
+      rawKey.preventDefault()
+      setWizard("none")
+      surface = "cockpit"
+      scheduleRefresh()
+      return
+    }
+    if (action.type === "focus.next") {
+      rawKey.preventDefault()
+      projectSelect.focus()
+      return
+    }
+    if (action.type === "focus.previous") {
+      rawKey.preventDefault()
+      projectTabs.focus()
+      return
+    }
   })
   renderer.keyInput.on("paste", (event: any) => { if (terminalInputActive() && currentSession()) enqueue(async () => { await app.inputTerminalSession(currentSession().id, Buffer.from(event.bytes).toString("utf8")) }) })
 

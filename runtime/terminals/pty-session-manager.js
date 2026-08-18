@@ -66,6 +66,7 @@ class PtySessionManager {
     this.emitEvent = emitEvent || (async () => {});
     this.ptyModule = ptyModule;
     this.sessions = new Map();
+    this.closing = new Set();
   }
 
   available() {
@@ -98,8 +99,13 @@ class PtySessionManager {
       this.sessions.set(sessionId, active);
       child.onData((data) => { buffer.write(data); this.emitEvent(null, "agentSession.output", { terminalId: sessionId, projectId: record.projectId, missionId: record.missionId, bytes: Buffer.byteLength(data) }).catch(() => {}); });
       child.onExit(({ exitCode, signal }) => {
+        const closedByUser = this.closing.delete(sessionId);
         this.sessions.delete(sessionId); buffer.dispose();
-        this.store.getTerminal(sessionId).then((current) => current && this.store.saveTerminal({ ...current, status: exitCode === 0 ? "completed" : "failed", completedAt: now(), exitCode, signal })).catch(() => {});
+        this.store.getTerminal(sessionId).then((current) => {
+          if (!current) return;
+          if (closedByUser) { if (current.status !== "closed") this.store.saveTerminal({ ...current, status: "closed", completedAt: now(), exitCode, signal }); return; }
+          this.store.saveTerminal({ ...current, status: exitCode === 0 ? "completed" : "failed", completedAt: now(), exitCode, signal });
+        }).catch(() => {});
         this.emitEvent(null, "agentSession.exited", { terminalId: sessionId, projectId: record.projectId, missionId: record.missionId, exitCode, signal }).catch(() => {});
       });
       const started = { ...record, status: "active", startedAt: now(), pid: child.pid };
@@ -118,7 +124,7 @@ class PtySessionManager {
     const active = this.sessions.get(sessionId);
     const stored = await this.store.getTerminal(sessionId);
     if (!stored) return false;
-    if (active) { active.child.kill(); active.buffer.dispose(); this.sessions.delete(sessionId); }
+    if (active) { this.closing.add(sessionId); active.child.kill(); active.buffer.dispose(); this.sessions.delete(sessionId); }
     await this.store.saveTerminal({ ...stored, status: "closed", completedAt: now() });
     await this.emitEvent(null, "agentSession.closed", { terminalId: sessionId, projectId: stored.projectId, missionId: stored.missionId });
     return true;

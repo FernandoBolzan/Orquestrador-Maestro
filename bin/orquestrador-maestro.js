@@ -1057,6 +1057,20 @@ async function handleGoCommand(args, planningOnly = false) {
   const spec = args.includes("--auto")
     ? await interviewer.runBatch()
     : await interviewer.runInteractive();
+
+  if (spec && spec.cancelled === true) {
+    p.cancel("Missão cancelada pelo usuário.");
+    return 0;
+  }
+
+  if (args.includes("--auto") && spec && spec.status === "HUMAN_INPUT_REQUIRED") {
+    p.cancel(
+      `A missão requer decisão humana antes da execução automática. Dimensões pendentes: ${
+        (spec.unresolvedDimensions || []).join(", ") || "desconhecidas"
+      }`
+    );
+    return 1;
+  }
   
   // Fallback interviewers may return per-dimension answers as plain strings;
   // the MissionBrief contract requires string arrays.

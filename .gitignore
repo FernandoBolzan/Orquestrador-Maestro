@@ -29,6 +29,8 @@ orquestrador/memoria.md
 node_modules/
 dist/
 build/
+runtime/tui/opentui.bundle.mjs
+*.tgz
 security-reports/
 bun.lock
 bun.lockb

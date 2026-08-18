@@ -20,25 +20,29 @@ class ClackBatchInteractionAdapter {
       );
     }
 
+    // Answers persist across the whole batch session: re-asking must never
+    // discard previously confirmed answers (review PR#6 item 22).
     let answers = {};
+    let needsQuestions = true;
 
     while (true) {
-      answers = {};
+      if (needsQuestions) {
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const prefix = `${i + 1}/${questions.length}`;
+          const groupLabel = q.group || q.dimension;
 
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        const prefix = `${i + 1}/${questions.length}`;
-        const groupLabel = q.group || q.dimension;
-
-        if (i === 0 || (q.group && q.group !== questions[i - 1].group)) {
-          if (typeof p.log?.info === "function") {
-            p.log.info(`\n\x1b[1m${groupLabel}\x1b[0m`);
+          if (i === 0 || (q.group && q.group !== questions[i - 1].group)) {
+            if (typeof p.log?.info === "function") {
+              p.log.info(`\n\x1b[1m${groupLabel}\x1b[0m`);
+            }
           }
-        }
 
-        const answer = await this._promptQuestion(p, q, prefix, i);
-        if (answer === null) return { action: "cancel", answers: {} };
-        answers[q.id] = answer;
+          const answer = await this._promptQuestion(p, q, prefix, i);
+          if (answer === null) return { action: "cancel", answers: {} };
+          answers[q.id] = answer;
+        }
+        needsQuestions = false;
       }
 
       const summary = this._buildSummary(questions, answers);
@@ -84,6 +88,8 @@ class ClackBatchInteractionAdapter {
             answers[targetQ.id] = edited;
           }
         }
+        // Volta direto ao resumo/confirmacao: as demais respostas ja
+        // confirmadas permanecem intactas.
       }
     }
 

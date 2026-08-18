@@ -1,6 +1,15 @@
 "use strict";
 
 class ContextBudget {
+  static estimateCost(value) {
+    if (typeof value === "string") return Math.ceil(value.length / 4);
+    try {
+      const serialized = JSON.stringify(value);
+      return serialized === undefined ? 25 : Math.ceil(serialized.length / 4);
+    } catch {
+      return 25;
+    }
+  }
   /**
    * Applies the budget constraint to the context items.
    * Prioritizes USER_DECISION, high relevance, and high confidence.
@@ -31,10 +40,10 @@ class ContextBudget {
       const confB = b.confidence !== undefined ? b.confidence : 1;
       if (confA !== confB) return confB - confA; // Descending confidence
 
-      // Secondary: string length cost
-      const lenA = typeof a.value === "string" ? a.value.length : 100;
-      const lenB = typeof b.value === "string" ? b.value.length : 100;
-      return lenA - lenB; // Ascending length
+      // Secondary: token cost estimation
+      const lenA = ContextBudget.estimateCost(a.value);
+      const lenB = ContextBudget.estimateCost(b.value);
+      return lenA - lenB; // Ascending cost
     });
 
     const result = [];
@@ -42,7 +51,7 @@ class ContextBudget {
 
     for (const item of sorted) {
       // Estimate cost
-      const valueCost = typeof item.value === "string" ? Math.ceil(item.value.length / 4) : 25;
+      const valueCost = ContextBudget.estimateCost(item.value);
       const itemCost = 10 + valueCost; // base cost + value cost
 
       // USER_DECISION and critical blocking facts are ALWAYS preserved regardless of budget

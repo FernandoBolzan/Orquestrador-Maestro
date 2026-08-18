@@ -119,12 +119,18 @@ class BatchRefinementCoordinator {
 
         if (auto) {
           const authorized = this._autoAuthorizedClasses(autoPolicy);
-          const unauthorized = activeQuestions.filter(
-            (q) => q.decisionRequired === "HUMAN_REQUIRED" && !authorized.includes("HUMAN_REQUIRED")
-          );
+          const hasExplicitPolicy = Boolean(autoPolicy && Array.isArray(autoPolicy.decisionClasses));
+          const unauthorized = activeQuestions.filter((q) => {
+            if (hasExplicitPolicy) {
+              // Lista explicita = allow-list: qualquer classe fora dela bloqueia
+              // (review PR#6 item 23; lista vazia = nao auto-aprovar nada).
+              return !autoPolicy.decisionClasses.includes(q.decisionRequired);
+            }
+            return q.decisionRequired === "HUMAN_REQUIRED" && !authorized.includes("HUMAN_REQUIRED");
+          });
           if (unauthorized.length > 0) {
             autoBlocked = {
-              type: "HUMAN_INPUT_REQUIRED",
+              type: unauthorized.some((q) => q.decisionRequired === "HUMAN_REQUIRED") ? "HUMAN_INPUT_REQUIRED" : "DECISION_CLASS_NOT_AUTHORIZED",
               dimensions: unauthorized.map((q) => q.dimension)
             };
             await this._producers?.humanInputRequired?.({ missionId: options.missionId, projectId: options.projectId, dimensions: autoBlocked.dimensions });

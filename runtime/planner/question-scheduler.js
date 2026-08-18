@@ -17,15 +17,17 @@ function evaluateActivation(condition, answers) {
 
   const evalSingle = (cond) => {
     const answer = getAnswer(answers, cond.questionId);
+    const values = Array.isArray(cond.values) ? cond.values : [];
+    const multiValue = Array.isArray(answer);
     switch (cond.operator) {
       case "equals":
         return answer === cond.values[0];
       case "notEquals":
         return answer !== cond.values[0];
       case "in":
-        return Array.isArray(cond.values) && cond.values.includes(answer);
+        return multiValue ? answer.some((v) => values.includes(v)) : values.includes(answer);
       case "notIn":
-        return Array.isArray(cond.values) && !cond.values.includes(answer);
+        return multiValue ? answer.every((v) => !values.includes(v)) : !values.includes(answer);
       case "answered":
         return answer !== undefined && answer !== null && answer !== "";
       default:

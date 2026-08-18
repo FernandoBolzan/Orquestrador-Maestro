@@ -67,8 +67,12 @@ function stringifyAssistantText(obj) {
   }
   if (typeof obj.text === "string") return obj.text;
 
-  // codex exec --json: { item: { type: "message", content: [...] } }.
+  // codex exec --json: { item: { type: "message"|"agent_message"|"reasoning", text } }.
+  // "reasoning" lines carry the model's thinking, never the assistant answer,
+  // and would corrupt the downstream JSON.parse if concatenated.
   if (obj.item && typeof obj.item === "object") {
+    const itemType = typeof obj.item.type === "string" ? obj.item.type : "";
+    if (itemType === "reasoning") return undefined;
     if (typeof obj.item.text === "string") return obj.item.text;
     const contentText = textFromContent(obj.item.content);
     if (contentText !== undefined) return contentText;

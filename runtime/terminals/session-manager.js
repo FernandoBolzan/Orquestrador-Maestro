@@ -12,7 +12,7 @@ function sessionId() { return `terminal-session-${crypto.randomUUID()}`; }
 function now() { return new Date().toISOString(); }
 
 function shellQuote(value) {
-  return `'${String(value).replace(/'/gu, "'\\\"'\\\"'")}'`;
+  return `'${String(value).replace(/'/gu, "'\\''")}'`;
 }
 
 function tmuxSessionName(projectId, id) {
@@ -279,4 +279,4 @@ class TerminalSessionManager {
   async snapshot(id, afterSequence = 0) { return this.ptySessions.snapshot(id, afterSequence); }
 }
 
-module.exports = { BackendUnavailableError, SESSION_BACKENDS, SESSION_KINDS, SESSION_STATUSES, TerminalSessionManager, TmuxTerminalBackend, VsCodeTerminalBackend, commandForProvider };
+module.exports = { BackendUnavailableError, SESSION_BACKENDS, SESSION_KINDS, SESSION_STATUSES, TerminalSessionManager, TmuxTerminalBackend, VsCodeTerminalBackend, commandForProvider, shellQuote };

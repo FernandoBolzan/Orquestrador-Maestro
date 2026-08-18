@@ -41,6 +41,19 @@ test("application turns a task into a persisted provider run with real verificat
   assert.equal(inspection.verification.status, "passed");
 });
 
+test("verification skipped (no commands) must still complete the run", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "maestro-noverify-"));
+  const app = new MaestroApplication({
+    projectRoot: root,
+    store: new JsonFileRunStore({ filePath: path.join(root, "runs.json") }),
+    providers: new ProviderRegistry([new FakeAdapter()]),
+    skills: { get: () => null }
+  });
+  const outcome = await app.executeRun({ description: "Sem comandos de verificacao", providerId: "fake", verificationCommands: [] });
+  assert.equal(outcome.verification.status, "skipped");
+  assert.equal(outcome.run.status, "completed");
+});
+
 test("projects can be registered before their first Run", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "maestro-project-"));
   const app = new MaestroApplication({ projectRoot: root, store: new JsonFileRunStore({ filePath: path.join(root, "runs.json") }) });

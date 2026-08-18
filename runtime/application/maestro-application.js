@@ -158,7 +158,19 @@ class MaestroApplication {
     return this.terminalSessions.create({ ...request, sessionId, projectId, workspacePath, sourceWorkspacePath, workspaceId, isolation });
   }
   async attachTerminalSession(terminalId) { return this.terminalSessions.attach(terminalId); }
-  async closeTerminalSession(terminalId) { return this.terminalSessions.close(terminalId); }
+  async closeTerminalSession(terminalId) {
+    let session = null;
+    try { session = await this.terminalSessions.get(terminalId); } catch { /* removed below anyway */ }
+    const closed = await this.terminalSessions.close(terminalId);
+    if (closed && session && session.isolation === "worktree" && session.workspaceId) {
+      try {
+        await this.workspaces.removeSessionWorktree({ repositoryPath: session.sourceWorkspacePath, projectId: session.projectId, sessionId: session.workspaceId });
+      } catch (error) {
+        this.record(null, "worktree.remove_failed", { terminalId, error: error.message }).catch(() => {});
+      }
+    }
+    return closed;
+  }
   async registerTerminalClient(request) { return this.terminalSessions.registerClient(request); }
   async updateTerminalClientStatus(request) { return this.terminalSessions.updateClientStatus(request); }
   async inputTerminalSession(terminalId, input) { return this.terminalSessions.input(terminalId, input); }
@@ -250,8 +262,11 @@ class MaestroApplication {
     const commands = request.verificationCommands || this.inferProjectVerification(workspacePath);
     const verification = await this.verification.verify({ id: id("verification"), runId: run.id, commands, cwd: workspacePath, timeoutMs: policy.timeoutMs });
     await this.store.saveVerification(verification);
-    await this.record(run.id, verification.status === "passed" ? "verification.completed" : "verification.failed", { verificationId: verification.id });
-    const status = executionStatus === "completed" && verification.status === "passed" ? "completed" : executionStatus === "cancelled" ? "cancelled" : executionStatus === "timed_out" ? "timed_out" : "failed";
+    // "skipped" (nenhum comando de verificacao inferido) nao deve tornar o
+    // run "failed" (review PR#6 item 13).
+    const verificationOk = verification.status === "passed" || verification.status === "skipped";
+    await this.record(run.id, verificationOk ? (verification.status === "skipped" ? "verification.skipped" : "verification.completed") : "verification.failed", { verificationId: verification.id });
+    const status = executionStatus === "completed" && verificationOk ? "completed" : executionStatus === "cancelled" ? "cancelled" : executionStatus === "timed_out" ? "timed_out" : "failed";
     const completedAt = new Date().toISOString();
     await this.store.saveStep({ ...step, status: status === "completed" ? "completed" : status === "cancelled" ? "cancelled" : "failed", completedAt });
     await this.store.saveRun({ ...run, status, startedAt: execution.startedAt, completedAt });

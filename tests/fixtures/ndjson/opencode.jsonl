@@ -1,0 +1,3 @@
+{"type":"step_start","step":{"path":"plan","status":"running"},"part":{"type":"step-start"}}
+{"type":"text","part":{"type":"text","text":"```json\n{\"proposal\":\"ok\"}\n```"}}
+{"type":"step_finish","step":{"path":"plan","status":"completed"},"part":{"type":"step-finish"}}

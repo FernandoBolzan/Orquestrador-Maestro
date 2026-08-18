@@ -245,47 +245,136 @@ test("T9: conditional activation — questions activate after batch answers", as
   assert.ok(allShownIds.includes("q2"), "q2 must be shown after q1 activates it");
 });
 
-// T10: same-state same-question — M2_CLARIFICATION_LOOP still protects
-test("T10: same-state same-question — loop guard via legacy path", async () => {
+// T10: discovery structured consumption — blocking unknown + candidate
+// requirement + candidate constraint must reach the coordinator, and a
+// synthesized question must resolve the unknown (review PR#6 item 28).
+test("T10: discovery structured result reaches coordinator and resolves the unknown", async () => {
+  const provider = {
+    detect: () => true,
+    execute: async () => ({
+      pid: "fake",
+      cancel: () => {},
+      result: Promise.resolve({
+        stdout: JSON.stringify({
+          questions: [{
+            id: "q1", unknownId: "u1", dimension: "scope", group: "scope",
+            text: "Qual escopo?", answerType: "single-choice",
+            options: [
+              { value: "fullstack", label: "Fullstack", recommended: true },
+              { value: "backend", label: "Backend" }
+            ],
+            blocking: true, priority: 1, reason: "define escopo",
+            decisionRequired: "HUMAN_REQUIRED"
+          }],
+          detectedUnknowns: [{ id: "u1", dimension: "scope", description: "Escopo indefinido", status: "OPEN", blocking: true }],
+          requirementsToAdd: [{ id: "r1", description: "Suporte a auth" }],
+          constraintsToAdd: [{ id: "c1", description: "Manter Node 18" }]
+        }),
+        stderr: "",
+        exitCode: 0
+      })
+    })
+  };
+  const discoverer = new BatchIntentDiscoverer({ provider });
+  let seenCandidates = null;
+  const reconciler = {
+    reconcile: async (intentSpec, confirmed, context, candidates) => {
+      seenCandidates = candidates;
+      return { success: true, error: null, proposal: { objective: "x", addRequirements: [], addConstraints: [], detectedUnknowns: [], question: null } };
+    },
+    get aiCalls() { return 1; }
+  };
+  const adapter = {
+    collectBatch: async () => ({ action: "confirm", answers: { q1: "fullstack" } })
+  };
+  const coord = new BatchRefinementCoordinator({ discoverer, reconciler, adapter });
+  const result = await coord.run(
+    { objective: "vago", requirements: [], constraints: [], userDecisions: [], unknowns: [], status: "CREATED" },
+    {}, [], { batchSize: 4 }
+  );
+
+  assert.equal(result.success, true);
+  assert.ok(
+    seenCandidates && seenCandidates.candidateRequirements.some((r) => r.id === "r1"),
+    "requirement from discovery must reach the reconciler"
+  );
+  assert.ok(
+    seenCandidates && seenCandidates.candidateConstraints.some((c) => c.id === "c1"),
+    "constraint from discovery must reach the reconciler"
+  );
+  const resolved = result.intentSpec.unknowns.find((u) => u.id === "u1");
+  assert.equal(resolved && resolved.status, "RESOLVED", "synthesized question must resolve the blocking unknown");
+});
+
+// T10b: invalid decisionRequired must not be dropped silently — discovery
+// becomes invalid and retries are accounted (review PR#6 item 30).
+test("T10b: invalid decisionRequired makes discovery invalid instead of silent drop", async () => {
+  const provider = {
+    detect: () => true,
+    execute: async () => ({
+      pid: "fake",
+      cancel: () => {},
+      result: Promise.resolve({
+        stdout: JSON.stringify({
+          questions: [
+            { id: "q1", unknownId: "u1", dimension: "scope", group: "scope", text: "Ok?", answerType: "single-choice", options: [{ value: "a", label: "A" }], blocking: true, decisionRequired: "HUMAN_REQUIRED" },
+            { id: "q2", dimension: "stack", group: "stack", text: "Stack?", answerType: "boolean", decisionRequired: "human_required" }
+          ],
+          detectedUnknowns: [],
+          requirementsToAdd: [],
+          constraintsToAdd: []
+        }),
+        stderr: "",
+        exitCode: 0
+      })
+    })
+  };
+  const discoverer = new BatchIntentDiscoverer({ provider });
+  const result = await discoverer.discover("vago", { objective: "vago" }, [], {});
+  assert.equal(result.valid, false, "invalid question must invalidate the discovery");
+  assert.ok(result.validationErrors.length > 0, "validation errors must be surfaced");
+});
+
+// T10c: cancel during batch must stop the flow (review PR#6 item 25).
+test("T10c: interviewer batch cancel returns cancelled spec and stops planning", async () => {
   const { AiInterviewer } = require("../runtime/planner/ai-interviewer.js");
-  let round = 0;
   const app = {
     providers: {
       get: () => ({
         detect: async () => ({ installed: true }),
-        execute: async () => {
-          round++;
-          return {
-            pid: "fake", cancel: () => {},
-            result: Promise.resolve({
-              stdout: JSON.stringify({
-                addRequirements: [], addConstraints: [],
-                detectedUnknowns: [{ id: "u1", dimension: "coverage", description: "x", status: "OPEN", blocking: true }]
-              }),
-              stderr: "", exitCode: 0
-            })
-          };
-        }
+        execute: async () => ({
+          pid: "fake",
+          cancel: () => {},
+          result: Promise.resolve({
+            stdout: JSON.stringify({
+              questions: [],
+              detectedUnknowns: [{ id: "u1", dimension: "coverage", description: "x", status: "OPEN", blocking: true }],
+              requirementsToAdd: [],
+              constraintsToAdd: []
+            }),
+            stderr: "",
+            exitCode: 0
+          })
+        })
       })
     }
   };
   const interviewer = new AiInterviewer({
-    resolvedSkills: [], preflightFacts: {},
-    application: app, intent: "vago",
+    resolvedSkills: [],
+    preflightFacts: {},
+    application: app,
+    intent: "vago",
     prompts: {
-      text: async () => "same answer",
       spinner: () => ({ start() {}, stop() {} }),
       note: () => {},
-      log: { error: () => {}, warning: () => {} },
+      log: { info: () => {}, error: () => {}, success: () => {} },
+      text: async () => "qualquer resposta",
+      select: async () => "cancel",
       isCancel: () => false
     }
   });
-  try {
-    await interviewer.runInteractive();
-    assert.fail("Expected M2_CLARIFICATION_LOOP");
-  } catch (err) {
-    assert.ok(err.message.includes("M2_CLARIFICATION_LOOP"));
-  }
+  const spec = await interviewer.runInteractive();
+  assert.equal(spec.cancelled, true, "cancelled must propagate from the batch flow");
 });
 
 // T11: --auto — no interactive prompts

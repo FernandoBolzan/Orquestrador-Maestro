@@ -122,13 +122,14 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "optionalDependencies": {
-    "@opentui/core": "^0.5.1"
-  },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
+    "@opentui/core": "^0.5.1",
     "@xterm/headless": "^5.5.0",
-    "node-notifier": "^10.0.1",
+    "node-notifier": "^10.0.1"
+  },
+  "optionalDependencies": {
+    "bun": "^1.3.14",
     "node-pty": "^1.1.0"
   }
 }

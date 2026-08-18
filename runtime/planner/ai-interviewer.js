@@ -124,7 +124,11 @@ class AiInterviewer {
 
       if (result.cancelled) {
         this.p.log.info("Operacao cancelada pelo usuario.");
-        return this.buildSpec();
+        return Object.freeze({
+          ...this._buildAutoStatus("CANCELLED", []),
+          cancelled: true,
+          unanswered: this.intentSpec
+        });
       }
 
       if (result.blocked) {

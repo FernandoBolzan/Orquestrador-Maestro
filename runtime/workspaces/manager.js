@@ -71,6 +71,18 @@ class WorkspaceManager {
     }
   }
 
+  async removeSessionWorktree({ repositoryPath, projectId, sessionId }) {
+    assertSafeSegment(projectId, "projectId"); assertSafeSegment(sessionId, "sessionId");
+    const repositoryRoot = path.resolve((await runGit(["rev-parse", "--show-toplevel"], repositoryPath)).trim());
+    const directory = path.resolve(this.sessionRootDirectory, projectId, sessionId);
+    const relative = path.relative(this.sessionRootDirectory, directory);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("workspace path escaped the runtime worktree root");
+    if (!fs.existsSync(directory)) return false;
+    await runGit(["worktree", "remove", "--force", directory], repositoryRoot);
+    fs.rmSync(directory, { recursive: true, force: true });
+    return true;
+  }
+
   async copyWorkingTreeState(repositoryRoot, worktreePath) {
     const patch = await runGit(["diff", "--binary", "HEAD"], repositoryRoot, { encoding: null });
     if (patch.length > 0) await runGit(["apply", "--binary", "--whitespace=nowarn", "-"], worktreePath, { input: patch });
@@ -78,6 +90,7 @@ class WorkspaceManager {
     for (const relativePath of untracked.toString("utf8").split("\0").filter(Boolean)) {
       const source = path.resolve(repositoryRoot, relativePath); const target = path.resolve(worktreePath, relativePath);
       if (!source.startsWith(`${repositoryRoot}${path.sep}`) || !target.startsWith(`${worktreePath}${path.sep}`)) throw new Error("untracked path escaped workspace");
+      if (source === worktreePath || source.startsWith(`${worktreePath}${path.sep}`)) continue;
       fs.mkdirSync(path.dirname(target), { recursive: true }); fs.cpSync(source, target, { recursive: true, dereference: false });
     }
   }

@@ -44,13 +44,21 @@ class LaneExecutor extends EventEmitter {
       const checkNext = () => {
         if (pending.length === 0 && running.size === 0) return resolve(results);
 
-        for (let i = pending.length - 1; i >= 0; i--) {
-          const task = pending[i];
-          const deps = task.dependsOn || [];
-          const blockingFailures = deps.filter((dep) => failed.has(dep));
-          if (blockingFailures.length === 0) continue;
-          pending.splice(i, 1);
-          markFailed(task, `blocked by failed dependency: ${blockingFailures.join(", ")}`);
+        // Fixpoint sweep: a failed dependency must block its dependents
+        // transitively (B depends on A depends on X, X fails -> A and B fail).
+        let changed = true;
+        while (changed && pending.length > 0) {
+          changed = false;
+          for (let i = 0; i < pending.length; i++) {
+            const task = pending[i];
+            const deps = task.dependsOn || [];
+            const blockingFailures = deps.filter((dep) => failed.has(dep));
+            if (blockingFailures.length === 0) continue;
+            pending.splice(i, 1);
+            markFailed(task, `blocked by failed dependency: ${blockingFailures.join(", ")}`);
+            changed = true;
+            i--;
+          }
         }
 
         while (running.size < this.maxParallel) {
@@ -86,6 +94,18 @@ class LaneExecutor extends EventEmitter {
               running.delete(task.id);
               checkNext();
             });
+        }
+
+        // Closing state: if nothing is running and nothing is pending the
+        // run is settled. If pending remains (missing or cyclic deps),
+        // fail the remainder and settle — never hold the promise open.
+        if (running.size === 0) {
+          for (const task of pending.splice(0)) {
+            markFailed(task, "no runnable task (missing or cyclic dependencies)");
+          }
+          if (Object.keys(results).length === tasks.length) {
+            resolve(results);
+          }
         }
       };
 
