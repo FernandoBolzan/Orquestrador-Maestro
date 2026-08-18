@@ -60,6 +60,15 @@ export function deriveWhichKeyContext(options: {
     );
   }
 
+  const registered = options.registry?.getActiveKeys?.(null, options.state || {});
+  if (Array.isArray(registered)) {
+    for (const command of registered) {
+      if (command?.shortcut && !actions.some((a) => a.key === command.shortcut)) {
+        actions.push({ key: command.shortcut, description: command.title, category: "Actions" });
+      }
+    }
+  }
+
   return {
     surfaceTitle,
     actions,

@@ -1,4 +1,5 @@
 import path from "node:path"
+import os from "node:os"
 import fs from "node:fs"
 import {
   createCliRenderer, BoxRenderable, InputRenderable, InputRenderableEvents,
@@ -453,9 +454,12 @@ async function main() {
     const action = resolveKeyAction(norm, inputStack)
 
     if (process.env.MAESTRO_TUI_INPUT_DEBUG === "1") {
+      const debugPath = process.env.MAESTRO_TUI_DEBUG_LOG ?? path.join(os.tmpdir(), `maestro-tui-input-debug-${process.pid}.log`)
       try {
-        fs.appendFileSync("/tmp/maestro-tui-input-debug.log", `[INPUT_DEBUG] key=${norm.chord} raw=${rawKey.name} layer=${inputStack.currentLayer()} action=${action.type}\n`)
-      } catch {}
+        fs.appendFileSync(debugPath, `[INPUT_DEBUG] key=${norm.chord} raw=${rawKey.name} layer=${inputStack.currentLayer()} action=${action.type}\n`)
+      } catch (error) {
+        console.error(`[INPUT_DEBUG] falha ao escrever ${debugPath}: ${error.message}`)
+      }
     }
 
     if (action.type === "pty.detach") {

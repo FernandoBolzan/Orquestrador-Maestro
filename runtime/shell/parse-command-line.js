@@ -29,7 +29,7 @@ function parseCommandLine(input) {
     current += char; hasToken = true;
   }
 
-  if (escaped) { current += "\\"; hasToken = true; }
+  if (escaped) throw new Error("unterminated escape in command line");
   if (quote) throw new Error("unterminated quote in command line");
   if (hasToken) tokens.push(current);
   return tokens;

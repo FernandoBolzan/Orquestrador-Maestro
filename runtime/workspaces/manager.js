@@ -78,7 +78,7 @@ class WorkspaceManager {
     const relative = path.relative(this.sessionRootDirectory, directory);
     if (relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("workspace path escaped the runtime worktree root");
     if (!fs.existsSync(directory)) return false;
-    await runGit(["worktree", "remove", "--force", directory], repositoryRoot);
+    try { await runGit(["worktree", "remove", "--force", directory], repositoryRoot); } catch { /* Best-effort git cleanup. */ }
     fs.rmSync(directory, { recursive: true, force: true });
     return true;
   }

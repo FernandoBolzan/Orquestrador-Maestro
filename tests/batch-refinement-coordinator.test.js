@@ -169,6 +169,24 @@ test("BatchRefinementCoordinator: --auto with autoPolicy authorizing HUMAN_REQUI
   assert.equal(result.batchesProcessed, 1);
 });
 
+test("BatchRefinementCoordinator: --auto blocked by policy yields DECISION_CLASS_NOT_AUTHORIZED", async () => {
+  const q1 = createBatchQuestion({ id: "q1", dimension: "auth", text: "Tipo de auth?", answerType: "single-choice", options: [{ value: "public", label: "Publica", recommended: true }], blocking: true, decisionRequired: "CONTEXT_CONFIRMABLE" });
+  const discoverer = makeFakeDiscoverer([q1]);
+  const reconciler = makeFakeReconciler({ objective: "x", addRequirements: ["Req"], addConstraints: [], detectedUnknowns: [], question: null });
+  let adapterCalled = false;
+  const adapter = { collectBatch: async () => { adapterCalled = true; return { action: "confirm", answers: {} }; } };
+
+  const coordinator = new BatchRefinementCoordinator({ discoverer, reconciler, adapter });
+  const intentSpec = { objective: "x", requirements: [], constraints: [], userDecisions: [], unknowns: [], status: "CREATED" };
+  const result = await coordinator.run(intentSpec, {}, [], { auto: true, autoPolicy: { decisionClasses: ["HUMAN_REQUIRED"] } });
+
+  assert.equal(result.success, false);
+  assert.equal(result.blocked, true);
+  assert.equal(adapterCalled, false);
+  assert.equal(result.autoBlocked.type, "DECISION_CLASS_NOT_AUTHORIZED");
+  assert.deepEqual(result.autoBlocked.dimensions, ["auth"]);
+});
+
 test("BatchRefinementCoordinator: adapter confirming without answers cannot spin the local loop", async () => {
   const q1 = createBatchQuestion({ id: "q1", dimension: "scope", text: "x", answerType: "boolean", blocking: true });
   const discoverer = makeFakeDiscoverer([q1]);

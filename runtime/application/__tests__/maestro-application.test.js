@@ -94,6 +94,31 @@ test("agents receive distinct automatic worktrees so providers can run concurren
   assert.equal(created.every((request) => request.sourceWorkspacePath === root), true);
 });
 
+test("closeTerminalSession limpa worktree isolado via integração", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "maestro-worktree-close-"));
+  const store = new JsonFileRunStore({ filePath: path.join(root, "runs.json") });
+  const removed = [];
+  const sessions = new Map();
+  const app = new MaestroApplication({
+    projectRoot: root, store,
+    workspaces: {
+      createSessionWorktree: async ({ sessionId }) => ({ id: sessionId, path: path.join(root, "worktrees", sessionId), isolated: true }),
+      removeSessionWorktree: async ({ projectId, sessionId }) => { removed.push({ projectId, sessionId }); return true; }
+    },
+    terminalSessions: {
+      create: async (request) => { const session = { id: request.sessionId, ...request, status: "active" }; sessions.set(request.sessionId, session); return session; },
+      get: async (id) => sessions.get(id) || null,
+      close: async (id) => { sessions.get(id).status = "closed"; return true; }
+    }
+  });
+
+  const session = await app.createTerminalSession({ workspacePath: root, kind: "agent", providerId: "codex", backend: "pty" });
+  const closed = await app.closeTerminalSession(session.id);
+  assert.equal(closed, true);
+  assert.equal(removed.length, 1);
+  assert.equal(removed[0].sessionId, session.id);
+});
+
 test("application orchestrates the intent session and creates a mission brief", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "maestro-app-intent-"));
   const store = new JsonFileRunStore({ filePath: path.join(root, "runs.json") });

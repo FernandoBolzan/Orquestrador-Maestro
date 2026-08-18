@@ -134,8 +134,9 @@ function activate(context) {
     await client.call("terminals.close", { terminalId }); provider.refresh();
   }));
   context.subscriptions.push(vscode.window.onDidCloseTerminal((terminal) => {
-    const entry = terminals.get(terminal.name); if (!entry) return;
-    terminals.delete(terminal.name);
+    const entry = [...terminals.values()].find((item) => item.sessionId === terminal.name.split(" · ").pop());
+    if (!entry) return;
+    terminals.delete(entry.sessionId);
     client.call("terminals.updateClientStatus", { terminalId: entry.sessionId, clientId: terminals.clientId, status: "closed" }).catch(() => {});
     provider.refresh();
   }));

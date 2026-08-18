@@ -43,4 +43,33 @@ describe("Project Activity Rail (Level 2 Navigation)", () => {
     expect(wideOutput).toContain("◈ Plan / Graph");
     expect(wideOutput).toContain("⚠ Attention (1)");
   });
+
+  it("assigns badges for attention count and running agents", () => {
+    const rail = createActivityRailModel({ attentionCount: 5, runningAgentCount: 3 });
+    const attention = rail.tools.find((t) => t.id === "attention");
+    const agents = rail.tools.find((t) => t.id === "agents");
+    expect(attention?.badge).toBe("5");
+    expect(agents?.badge).toBe("3");
+  });
+
+  it("does not assign badges when counts are zero or absent", () => {
+    const rail = createActivityRailModel({});
+    const attention = rail.tools.find((t) => t.id === "attention");
+    const agents = rail.tools.find((t) => t.id === "agents");
+    expect(attention?.badge).toBeUndefined();
+    expect(agents?.badge).toBeUndefined();
+  });
+
+  it("selects a specific tool via selectTool", () => {
+    let rail = createActivityRailModel({ activeTool: "overview" });
+    rail = rail.selectTool("verify");
+    expect(rail.activeTool).toBe("verify");
+    expect(rail.tools.find((t) => t.id === "verify")?.label).toBe("Verify");
+  });
+
+  it("wraps around when selecting next at the end of the rail", () => {
+    let rail = createActivityRailModel({ activeTool: "verify" });
+    rail = rail.selectNext();
+    expect(rail.activeTool).toBe("overview");
+  });
 });

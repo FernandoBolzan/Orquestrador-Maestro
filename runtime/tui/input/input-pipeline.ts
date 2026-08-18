@@ -4,6 +4,7 @@ export enum InputLayer {
   PTY_ATTACHED = "PTY_ATTACHED",
   CRITICAL_MODAL = "CRITICAL_MODAL",
   OVERLAY_PALETTE = "OVERLAY_PALETTE",
+  /** Ponto de extensão planejado: switcher de projetos em overlay modal. */
   OVERLAY_SWITCHER = "OVERLAY_SWITCHER",
   TEXT_INPUT = "TEXT_INPUT",
   WINDOW_CONTENT = "WINDOW_CONTENT",

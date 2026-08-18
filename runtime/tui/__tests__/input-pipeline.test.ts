@@ -106,4 +106,94 @@ describe("Canonical Input Pipeline & Context Stack", () => {
     // 3. At Cockpit root -> 'q' is available for quit
     expect(resolveKeyAction(normalizeKeyEvent({ name: "q" }), stack).type).toBe("system.quit");
   });
+
+  it("routes OVERLAY_PALETTE actions: navigate, select, input, close", () => {
+    const stack = new InputContextStack();
+    stack.push(InputLayer.GLOBAL);
+    stack.push(InputLayer.WORKSPACE);
+    stack.push(InputLayer.OVERLAY_PALETTE);
+
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "down" }), stack).type).toBe("overlay.navigate");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "up" }), stack).type).toBe("overlay.navigate");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "return" }), stack).type).toBe("overlay.select");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "escape" }), stack).type).toBe("overlay.close");
+
+    const typeKey = resolveKeyAction(normalizeKeyEvent({ name: "r", sequence: "r" }), stack);
+    expect(typeKey.type).toBe("overlay.input");
+    expect(typeKey.data).toBe("r");
+  });
+
+  it("routes OVERLAY_SWITCHER actions identically to palette", () => {
+    const stack = new InputContextStack();
+    stack.push(InputLayer.GLOBAL);
+    stack.push(InputLayer.WORKSPACE);
+    stack.push(InputLayer.OVERLAY_SWITCHER);
+
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "down" }), stack).type).toBe("overlay.navigate");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "return" }), stack).type).toBe("overlay.select");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "escape" }), stack).type).toBe("overlay.close");
+  });
+
+  it("routes TEXT_INPUT layer: submit, cancel, and character input", () => {
+    const stack = new InputContextStack();
+    stack.push(InputLayer.GLOBAL);
+    stack.push(InputLayer.WORKSPACE);
+    stack.push(InputLayer.TEXT_INPUT);
+
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "return" }), stack).type).toBe("input.submit");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "escape" }), stack).type).toBe("input.cancel");
+
+    const charKey = resolveKeyAction(normalizeKeyEvent({ name: "m", sequence: "m" }), stack);
+    expect(charKey.type).toBe("input.character");
+    expect(charKey.data).toBe("m");
+  });
+
+  it("routes workspace actions: terminal, skills, attention, mission, run_mission", () => {
+    const stack = new InputContextStack();
+    stack.push(InputLayer.GLOBAL);
+    stack.push(InputLayer.WORKSPACE);
+
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "t" }), stack).type).toBe("workspace.terminal");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "s" }), stack).type).toBe("workspace.skills");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "a" }), stack).type).toBe("workspace.attention");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "m" }), stack).type).toBe("workspace.mission");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "r" }), stack).type).toBe("workspace.run_mission");
+  });
+
+  it("routes workspace maximize via Ctrl+F", () => {
+    const stack = new InputContextStack();
+    stack.push(InputLayer.GLOBAL);
+    stack.push(InputLayer.WORKSPACE);
+
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "f", ctrl: true }), stack).type).toBe("workspace.maximize");
+  });
+
+  it("routes workspace navigation: arrows, j/k/h/l, slots, activate", () => {
+    const stack = new InputContextStack();
+    stack.push(InputLayer.GLOBAL);
+    stack.push(InputLayer.WORKSPACE);
+
+    for (const key of ["up", "down", "left", "right", "j", "k", "h", "l"]) {
+      expect(resolveKeyAction(normalizeKeyEvent({ name: key }), stack).type).toBe("workspace.navigate");
+    }
+
+    for (const slot of ["1", "2", "3", "4", "5", "6", "7", "8", "9"]) {
+      const action = resolveKeyAction(normalizeKeyEvent({ name: slot }), stack);
+      expect(action.type).toBe("workspace.slot");
+      expect(action.data).toBe(Number(slot));
+    }
+
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "return" }), stack).type).toBe("workspace.activate");
+  });
+
+  it("normalizes Tab and Shift+Tab chords", () => {
+    expect(normalizeKeyEvent({ name: "tab" }).chord).toBe("Tab");
+    expect(normalizeKeyEvent({ name: "tab", shift: true }).chord).toBe("Shift+Tab");
+
+    const stack = new InputContextStack();
+    stack.push(InputLayer.GLOBAL);
+    stack.push(InputLayer.WORKSPACE);
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "tab" }), stack).type).toBe("focus.next");
+    expect(resolveKeyAction(normalizeKeyEvent({ name: "tab", shift: true }), stack).type).toBe("focus.previous");
+  });
 });

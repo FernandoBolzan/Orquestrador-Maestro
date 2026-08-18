@@ -40,6 +40,7 @@ test("parseCommandLine separa argumentos preservando aspas (#18)", () => {
   assert.deepEqual(parseCommandLine("   "), []);
   assert.deepEqual(parseCommandLine("git log --format='%H %s'"), ["git", "log", "--format=%H %s"]);
   assert.throws(() => parseCommandLine("echo 'unterminated"), /unterminated quote/u);
+  assert.throws(() => parseCommandLine("npm test\\"), /unterminated escape/u);
 });
 
 test("shellQuote embrulha aspas simples sem quebrar o shell (#10)", () => {
@@ -166,6 +167,54 @@ test("socket-client happy path e subscribe (#9)", async (t) => {
   assert.equal(events[1]?.type, "runtime.disconnected");
 });
 
+test("socket-client settle guard: error+close não duplica rejeição (#9)", async (t) => {
+  const dir = tmpdir(t);
+  const socketPath = path.join(dir, "maestro.sock");
+  const tokenPath = path.join(dir, "maestro.token");
+  fs.writeFileSync(tokenPath, "sekret\n", { mode: 0o600 });
+  const server = net.createServer((socket) => {
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk) => {
+      if (chunk.toString().includes("sekret")) { socket.write('{"ok":true}\n'); socket.destroy(); }
+    });
+    socket.on("error", () => {});
+  });
+  await new Promise((resolve) => server.listen(socketPath, resolve));
+  t.after(() => server.close());
+  const client = new SocketBridgeClient({ projectRoot: dir });
+  client.paths = { ...client.paths, socketPath, tokenPath };
+  let rejections = 0;
+  await client.call("missions.list").catch(() => { rejections += 1; });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(rejections, 1, "settled guard must prevent double rejection");
+});
+
+test("socket-client subscribe emite disconnected em JSON malformado (#9)", async (t) => {
+  const dir = tmpdir(t);
+  const socketPath = path.join(dir, "maestro.sock");
+  const tokenPath = path.join(dir, "maestro.token");
+  fs.writeFileSync(tokenPath, "sekret\n", { mode: 0o600 });
+  const server = net.createServer((socket) => {
+    socket.setEncoding("utf8"); let authed = false;
+    socket.on("data", (chunk) => {
+      const line = chunk.toString().trim();
+      if (!authed && line.includes("sekret")) { authed = true; socket.write('{"ok":true}\n'); return; }
+      if (!authed) return;
+      socket.write("not-json\n");
+    });
+  });
+  await new Promise((resolve) => server.listen(socketPath, resolve));
+  t.after(() => server.close());
+  const client = new SocketBridgeClient({ projectRoot: dir });
+  client.paths = { ...client.paths, socketPath, tokenPath };
+  const events = [];
+  const unsubscribe = client.subscribe((event) => events.push(event));
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  unsubscribe();
+  assert.equal(events[0]?.type, "runtime.disconnected");
+  assert.match(events[0]?.data?.message, /malformada/u);
+});
+
 test("WorkspaceManager removeSessionWorktree limpa worktree e registro git (#15)", { skip: !gitAvailable() }, async (t) => {
   const dir = tmpdir(t);
   initRepo(t, dir);
@@ -263,4 +312,24 @@ test("PtySessionManager close preserva status closed (#12)", { skip: !ptyAvailab
   await new Promise((resolve) => setTimeout(resolve, 400));
   const after = await manager.get(created.id);
   assert.equal(after.status, "closed");
+});
+
+test("PtySessionManager onExit não sobrescreve status closed (#12)", { skip: !ptyAvailable }, async (t) => {
+  const records = new Map();
+  const store = {
+    saveTerminal: async (record) => records.set(record.id, record),
+    getTerminal: async (id) => records.get(id) || null,
+    listTerminals: async () => [...records.values()]
+  };
+  const manager = new PtySessionManager({ store, ptyModule: require("node-pty") });
+  const created = await manager.create({
+    projectId: "p1", workspacePath: os.tmpdir(), command: process.execPath,
+    args: ["-e", "setInterval(() => {}, 10000)"], sessionId: "agent-session-pty-exit"
+  });
+  assert.equal(created.status, "active");
+  await manager.close(created.id);
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  const after = await manager.get(created.id);
+  assert.equal(after.status, "closed", "user-initiated close must win over onExit completed/failed");
+  assert.ok(manager.closing.size === 0, "closing set must be drained after exit");
 });

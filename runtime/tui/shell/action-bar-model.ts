@@ -49,6 +49,15 @@ export function deriveActionBar(options: {
     );
   }
 
+  const registered = options.registry?.getActiveKeys?.(null, options.state || {});
+  if (Array.isArray(registered)) {
+    for (const command of registered) {
+      if (command?.shortcut && !actions.some((a) => a.key === command.shortcut)) {
+        actions.push({ key: command.shortcut, label: command.title, actionId: command.id });
+      }
+    }
+  }
+
   return { actions: actions.slice(0, 6) };
 }
 
