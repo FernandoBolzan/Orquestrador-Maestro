@@ -2,9 +2,13 @@
 
 const { buildSnapshot, eventsSince } = require("../events/epoch-sequencer");
 const { familyOf } = require("../events/event-families");
+const { IdempotencyManager } = require("./idempotency");
 
 const PROTOCOL_VERSION = 2;
-const REJECTION_REASONS = new Set(["gate.required", "not_running", "double_confirm", "offline", "invalid_payload", "deprecated"]);
+const REJECTION_REASONS = new Set([
+  "gate.required", "not_running", "double_confirm", "offline", "invalid_payload",
+  "deprecated", "fenced", "lease_expired", "stalled", "no_progress", "unknown"
+]);
 
 function protocolMismatchError(supported = [PROTOCOL_VERSION]) {
   const error = new Error(`Unsupported Maestro protocol version; supported: ${supported.join(", ")}`);
@@ -20,7 +24,7 @@ function parseLine(line) {
   return message;
 }
 
-function createProtocolV2Server({ runtime, store = runtime?.store, epoch = 1, serverInfo = {} } = {}) {
+function createProtocolV2Server({ runtime, store = runtime?.store, epoch = 1, serverInfo = {}, idempotencyManager = new IdempotencyManager() } = {}) {
   if (!store || typeof store.listEvents !== "function") throw new TypeError("A runtime store is required");
   const listeners = new Set();
   let closed = false;
@@ -45,43 +49,133 @@ function createProtocolV2Server({ runtime, store = runtime?.store, epoch = 1, se
     return { kind: "snapshot", ...result };
   }
 
+  async function performAction(message) {
+    if (typeof runtime?.action === "function") {
+      return runtime.action({ type: message.type, payload: message.payload, requestId: message.requestId, idempotencyKey: message.idempotencyKey });
+    }
+
+    const methodByType = {
+      "project.inspect": "inspectProject", "projects.list": "listProjects", "projects.register": "registerProject", "projects.get": "getProject",
+      "missions.list": "listMissions", "missions.get": "getMission", "mission.create": "createMission", "mission.update": "updateMission",
+      "runs.list": "listRuns", "run.create": "createRun", "run.execute": "executeRun", "run.cancel": "cancelRun", "run.inspect": "inspectRun", "runs.inspect": "inspectRun", "run.get": "getRun",
+      "tasks.list": "listTasks", "task.get": "getTask",
+      "artifacts.list": "listArtifacts", "artifacts.get": "getArtifact", "verification.get": "getVerification",
+      "providers.list": "listProviders",
+      "terminals.list": "listTerminalSessions", "terminal.create": "createTerminalSession",
+      "terminal.close": "closeTerminalSession", "terminal.attach": "attachTerminalSession", "terminal.focus": "focusTerminalSession",
+      "terminal.input": "inputTerminalSession", "terminal.resize": "resizeTerminalSession", "terminal.snapshot": "snapshotTerminalSession",
+      "terminal.start": "startTerminal", "terminal.stop": "stopTerminal", "terminal.wait": "waitTerminal",
+      "intentSession.start": "startIntentSession", "intentSession.update": "updateIntentSession", "missionBrief.approve": "approveMissionBrief"
+    };
+
+    if (message.type === "skills.list" && typeof runtime?.skills?.list === "function") {
+      return runtime.skills.list();
+    }
+    if (message.type === "attention.list") {
+      return runtime?.attention?.list ? runtime.attention.list(message.payload) : store.listAttention(message.payload);
+    }
+    if (message.type === "attention.get") {
+      return runtime?.attention?.get ? runtime.attention.get(message.payload?.id || message.payload?.attentionId) : store.getAttention(message.payload?.id || message.payload?.attentionId);
+    }
+    if (message.type === "attention.create" && typeof runtime?.attention?.add === "function") {
+      return runtime.attention.add(message.payload);
+    }
+    if (message.type === "attention.resolve" && typeof runtime?.attention?.resolve === "function") {
+      const { attentionId, decision, ...options } = message.payload;
+      return runtime.attention.resolve(attentionId, { decision, ...options });
+    }
+
+    const method = methodByType[message.type];
+    if (!method || typeof runtime?.[method] !== "function") {
+      throw Object.assign(new Error(`Action ${message.type} is not supported`), { reason: "deprecated" });
+    }
+
+    if (message.type === "mission.update") {
+      const { missionId, ...patch } = message.payload;
+      return runtime[method](missionId, patch);
+    }
+    if (message.type === "intentSession.update") {
+      const { sessionId, ...updates } = message.payload;
+      return runtime[method](sessionId, updates);
+    }
+    if (message.type === "missionBrief.approve") {
+      const { sessionId, ...briefInput } = message.payload;
+      return runtime[method](sessionId, briefInput);
+    }
+    if (["run.cancel", "run.inspect", "run.get"].includes(message.type)) {
+      return runtime[method](message.payload.runId || message.payload.id);
+    }
+    if (["missions.get"].includes(message.type)) {
+      return runtime[method](message.payload.missionId || message.payload.id);
+    }
+    if (["projects.get"].includes(message.type)) {
+      return runtime[method](message.payload.projectId || message.payload.id);
+    }
+    if (["task.get"].includes(message.type)) {
+      return runtime[method](message.payload.taskId || message.payload.id);
+    }
+    if (["terminal.close", "terminal.attach", "terminal.focus", "terminal.stop", "terminal.wait"].includes(message.type)) {
+      return runtime[method](message.payload.terminalId || message.payload.id);
+    }
+    if (message.type === "terminal.input") {
+      return runtime[method](message.payload.terminalId || message.payload.id, message.payload.input);
+    }
+    if (message.type === "terminal.resize") {
+      return runtime[method](message.payload.terminalId || message.payload.id, message.payload.columns, message.payload.rows);
+    }
+    if (message.type === "terminal.snapshot") {
+      return runtime[method](message.payload.terminalId || message.payload.id, message.payload.afterSequence || 0);
+    }
+
+    return runtime[method](message.payload);
+  }
+
   async function action(message) {
     if (!message.requestId || typeof message.type !== "string" || !message.payload || typeof message.payload !== "object") {
       return { kind: "action.rejected", requestId: message.requestId, ok: false, reason: "invalid_payload" };
     }
+
+    const idempotencyKey = message.idempotencyKey;
     try {
-      let result;
-      if (typeof runtime?.action === "function") result = await runtime.action({ type: message.type, payload: message.payload, requestId: message.requestId });
-      else {
-        const methodByType = {
-          "project.inspect": "inspectProject", "projects.list": "listProjects", "missions.list": "listMissions", "mission.create": "createMission", "mission.update": "updateMission",
-          "runs.list": "listRuns", "run.create": "createRun", "run.execute": "executeRun", "run.cancel": "cancelRun",
-          "providers.list": "listProviders", "terminals.list": "listTerminalSessions", "terminal.create": "createTerminalSession",
-          "terminal.close": "closeTerminalSession", "terminal.attach": "attachTerminalSession", "terminal.focus": "focusTerminalSession",
-          "terminal.input": "inputTerminalSession", "terminal.resize": "resizeTerminalSession", "terminal.snapshot": "snapshotTerminalSession"
+      const executionResult = await idempotencyManager.execute(idempotencyKey, async () => {
+        const result = await performAction(message);
+        return result;
+      });
+
+      const deduplicated = Boolean(executionResult?.deduplicated);
+      const ok = executionResult?.ok !== false;
+      const result = executionResult?.result !== undefined ? executionResult.result : executionResult;
+      const reason = executionResult?.reason;
+
+      if (!ok) {
+        return {
+          kind: "action.rejected",
+          requestId: message.requestId,
+          ...(idempotencyKey ? { idempotencyKey } : {}),
+          ok: false,
+          reason: REJECTION_REASONS.has(reason) ? reason : "invalid_payload",
+          deduplicated
         };
-        if (message.type === "skills.list" && typeof runtime?.skills?.list === "function") result = runtime.skills.list();
-        else if (message.type === "attention.resolve" && typeof runtime?.attention?.resolve === "function") {
-          const { attentionId, decision, ...options } = message.payload; result = await runtime.attention.resolve(attentionId, { decision, ...options });
-        }
-        else {
-          const method = methodByType[message.type];
-          if (!method || typeof runtime?.[method] !== "function") throw Object.assign(new Error("Action is deprecated"), { reason: "deprecated" });
-          if (message.type === "mission.update") {
-            const { missionId, ...patch } = message.payload; result = await runtime[method](missionId, patch);
-          } else if (["run.cancel"].includes(message.type)) result = await runtime[method](message.payload.runId);
-          else if (["terminal.close", "terminal.attach", "terminal.focus"].includes(message.type)) result = await runtime[method](message.payload.terminalId);
-          else if (message.type === "terminal.input") result = await runtime[method](message.payload.terminalId, message.payload.input);
-          else if (message.type === "terminal.resize") result = await runtime[method](message.payload.terminalId, message.payload.columns, message.payload.rows);
-          else if (message.type === "terminal.snapshot") result = await runtime[method](message.payload.terminalId, message.payload.afterSequence || 0);
-          else result = await runtime[method](message.payload);
-        }
       }
-      if (result?.ok === false) return { kind: "action.rejected", requestId: message.requestId, ok: false, reason: REJECTION_REASONS.has(result.reason) ? result.reason : "invalid_payload" };
-      return { kind: "action.validated", requestId: message.requestId, ok: true, result: result?.result ?? result };
+
+      return {
+        kind: "action.validated",
+        requestId: message.requestId,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
+        ok: true,
+        result,
+        deduplicated
+      };
     } catch (error) {
       const reason = REJECTION_REASONS.has(error?.reason) ? error.reason : "invalid_payload";
-      return { kind: "action.rejected", requestId: message.requestId, ok: false, reason };
+      return {
+        kind: "action.rejected",
+        requestId: message.requestId,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
+        ok: false,
+        reason,
+        error: error.message
+      };
     }
   }
 

@@ -1,6 +1,8 @@
 .local/
 .playwright-mcp/
 .omx/
+.compozy/
+.deep-review/
 DEV/
 output/
 .env

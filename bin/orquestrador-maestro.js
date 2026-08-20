@@ -15,7 +15,10 @@ const contextBrief = require(path.join(rootDir, "orquestrador", "bin", "context-
 const { MaestroApplication } = require(path.join(rootDir, "runtime", "application"));
 const { createBridge, createStdioServer, runtimePaths, startSocketRuntime } = require(path.join(rootDir, "runtime", "bridge"));
 const { SocketMaestroClient } = require(path.join(rootDir, "runtime", "client", "socket-maestro-client"));
+const { ensureDaemonClient } = require(path.join(rootDir, "runtime", "client", "daemon-client"));
 const { createProtocolV2Server } = require(path.join(rootDir, "runtime", "protocol", "protocol-v2"));
+const { SkillCatalog } = require(path.join(rootDir, "runtime", "skills", "intelligence", "catalog"));
+const { OutputRenderer } = require(path.join(rootDir, "runtime", "cli", "output-renderer"));
 const { startTui } = require(path.join(rootDir, "runtime", "tui"));
 const telemetryTimeoutMs = 1200;
 const telemetryConsentVersion = 1;
@@ -345,13 +348,21 @@ function runToolAdapters(args) {
 }
 
 function parseRuntimeArgs(args, allowed = [], booleanFlags = []) {
-  const options = { projectPath: process.cwd(), values: [] };
+  const options = { projectPath: process.cwd(), values: [], output: "json" };
   const normalized = normalizeArgs(args);
+  const effectiveAllowed = [...allowed, "--project-path", "--output", "-o", "--format"];
   for (let index = 0; index < normalized.length; index += 1) {
     const arg = normalized[index];
-    if (!arg.startsWith("--")) { options.values.push(arg); continue; }
-    if (!allowed.includes(arg) && !booleanFlags.includes(arg)) throw new Error(`Parametro desconhecido: ${arg}`);
-    const key = arg.slice(2).replace(/-([a-z])/gu, (_, letter) => letter.toUpperCase());
+    if (!arg.startsWith("-")) { options.values.push(arg); continue; }
+    if (!effectiveAllowed.includes(arg) && !booleanFlags.includes(arg)) throw new Error(`Parametro desconhecido: ${arg}`);
+    if (arg === "-o" || arg === "--output" || arg === "--format") {
+      const value = normalized[index + 1];
+      if (!value || value.startsWith("-")) throw new Error(`Parametro ${arg} exige um valor (human, json, jsonl, toon).`);
+      options.output = value;
+      index += 1;
+      continue;
+    }
+    const key = arg.replace(/^--?/, "").replace(/-([a-z])/gu, (_, letter) => letter.toUpperCase());
     if (booleanFlags.includes(arg)) {
       options[key] = true;
       continue;
@@ -384,40 +395,50 @@ async function handleRunCommand(args) {
   if (subcommand === "show" || subcommand === "inspect") {
     const options = parseRuntimeArgs(rest, ["--project-path"]);
     const runId = options.values[0];
-    if (!runId || options.values.length !== 1) throw new Error("Uso: maestro run inspect <id> [--project-path PATH]");
-    const inspection = await (await createRuntimeApplication(options.projectPath)).inspectRun(runId);
+    if (!runId || options.values.length !== 1) throw new Error("Uso: maestro run inspect <id> [--project-path PATH] [-o FORMAT]");
+    const client = await ensureDaemonClient({ projectPath: options.projectPath });
+    const inspection = await client.inspectRun(runId);
     if (!inspection) throw new Error(`Run nao encontrado: ${runId}`);
-    console.log(JSON.stringify(inspection, null, 2)); return 0;
+    OutputRenderer.output(inspection, { format: options.output || "json" });
+    return 0;
   }
   if (subcommand === "cancel") {
     const options = parseRuntimeArgs(rest, ["--project-path"]);
     const runId = options.values[0];
     if (!runId || options.values.length !== 1) throw new Error("Uso: maestro run cancel <id> [--project-path PATH]");
-    const cancelled = await (await createRuntimeApplication(options.projectPath)).cancelRun(runId);
+    const client = await ensureDaemonClient({ projectPath: options.projectPath });
+    const cancelled = await client.cancelRun(runId);
     if (!cancelled) throw new Error(`Run ativo nao encontrado: ${runId}`);
-    console.log(`Cancelamento solicitado para ${runId}.`); return 0;
+    OutputRenderer.output({ cancelled: true, runId }, { format: options.output || "human" });
+    return 0;
   }
   const options = parseRuntimeArgs(args, ["--provider", "--profile", "--policy", "--workspace", "--project-path", "--model", "--mode", "--agent", "--sandbox"]);
   const description = options.values.join(" ").trim();
   if (!description) throw new Error("Informe a tarefa: maestro run [opcoes] \"tarefa\"");
-  const outcome = await (await createRuntimeApplication(options.projectPath)).executeRun({
+  const client = await ensureDaemonClient({ projectPath: options.projectPath });
+  const outcome = await client.executeRun({
     description, providerId: options.provider, profileId: options.profile, policyId: options.policy,
     workspacePath: options.workspace || options.projectPath, model: options.model, mode: options.mode, agent: options.agent, sandbox: options.sandbox
   });
-  console.log(JSON.stringify({ run: outcome.run, verification: outcome.verification, changes: outcome.changes }, null, 2));
-  return outcome.run.status === "completed" ? 0 : 1;
+  OutputRenderer.output({ run: outcome.run, verification: outcome.verification, changes: outcome.changes }, { format: options.output || "json" });
+  return outcome.run?.status === "completed" ? 0 : 1;
 }
 
 async function handleRunsCommand(args) {
   const options = parseRuntimeArgs(args, ["--project-path"]);
-  if (options.values.length > 0) throw new Error("Uso: maestro runs [--project-path PATH]");
-  console.log(JSON.stringify(await (await createRuntimeApplication(options.projectPath)).listRuns({ projectPath: options.projectPath }), null, 2));
+  if (options.values.length > 0) throw new Error("Uso: maestro runs [--project-path PATH] [-o FORMAT]");
+  const client = await ensureDaemonClient({ projectPath: options.projectPath });
+  const runs = await client.listRuns({ projectPath: options.projectPath });
+  OutputRenderer.output(runs, { format: options.output || "json" });
   return 0;
 }
 
 async function handleProjectsCommand(args) {
-  if (args.length !== 0) throw new Error("Uso: maestro projects");
-  console.log(JSON.stringify(await (await createRuntimeApplication(process.cwd())).listProjects(), null, 2));
+  const options = parseRuntimeArgs(args, ["--project-path"]);
+  if (args.length !== 0 && options.values.length !== 0) throw new Error("Uso: maestro projects [-o FORMAT]");
+  const client = await ensureDaemonClient({ projectPath: process.cwd() });
+  const projects = await client.listProjects();
+  OutputRenderer.output(projects, { format: options.output || "json" });
   return 0;
 }
 
@@ -429,44 +450,51 @@ async function handleProjectCommand(args) {
     const targetPath = options.projectPath || process.cwd();
     const { inspectProject } = require(path.join(rootDir, "runtime", "inspector", "project-inspector"));
     const snapshot = await inspectProject(targetPath, "local");
-    console.log(JSON.stringify(snapshot, null, 2));
+    OutputRenderer.output(snapshot, { format: options.output || "json" });
     return 0;
   }
 
   if (subcommand === "add") {
     if (rest.length !== 1 || rest[0].startsWith("--")) throw new Error("Uso: maestro project add <caminho>");
-    console.log(JSON.stringify(await (await createRuntimeApplication(process.cwd())).registerProject({ projectPath: rest[0] }), null, 2)); return 0;
+    const client = await ensureDaemonClient({ projectPath: process.cwd() });
+    const reg = await client.registerProject({ projectPath: rest[0] });
+    OutputRenderer.output(reg, { format: "json" });
+    return 0;
   }
   if (subcommand !== "show") throw new Error("Uso: maestro project show <id> [--project-path PATH] ou maestro project inspect [--project-path PATH]");
   const options = parseRuntimeArgs(rest, ["--project-path"]);
   if (options.values.length > 1) throw new Error("Uso: maestro project show <id> [--project-path PATH]");
-  const project = await (await createRuntimeApplication(options.projectPath)).inspectProject({ projectId: options.values[0], projectPath: options.projectPath });
-  console.log(JSON.stringify(project, null, 2)); return 0;
+  const client = await ensureDaemonClient({ projectPath: options.projectPath });
+  const project = await client.inspectProject({ projectId: options.values[0], projectPath: options.projectPath });
+  OutputRenderer.output(project, { format: options.output || "json" });
+  return 0;
 }
 
 async function handleMissionsCommand(args) {
   const options = parseRuntimeArgs(args, ["--project-path"]);
-  if (options.values.length) throw new Error("Uso: maestro missions [--project-path PATH]");
-  const app = await createRuntimeApplication(options.projectPath);
-  const project = await app.inspectProject({ projectPath: options.projectPath });
-  console.log(JSON.stringify(await app.listMissions({ projectId: project.id }), null, 2));
+  if (options.values.length) throw new Error("Uso: maestro missions [--project-path PATH] [-o FORMAT]");
+  const client = await ensureDaemonClient({ projectPath: options.projectPath });
+  const project = await client.inspectProject({ projectPath: options.projectPath });
+  const missions = await client.listMissions({ projectId: project.id });
+  OutputRenderer.output(missions, { format: options.output || "json" });
   return 0;
 }
 
 async function handleMissionCommand(args) {
   const [subcommand, ...rest] = args;
   const options = parseRuntimeArgs(rest, ["--project-path"]);
+  const client = await ensureDaemonClient({ projectPath: options.projectPath });
   if (subcommand === "create") {
-    if (options.values.length !== 1) throw new Error('Uso: maestro mission create [--project-path PATH] "objetivo"');
-    const mission = await (await createRuntimeApplication(options.projectPath)).createMission({ workspacePath: options.projectPath, objective: options.values[0] });
-    console.log(JSON.stringify(mission, null, 2));
+    if (options.values.length !== 1) throw new Error('Uso: maestro mission create [--project-path PATH] "objetivo" [-o FORMAT]');
+    const mission = await client.createMission({ workspacePath: options.projectPath, objective: options.values[0] });
+    OutputRenderer.output(mission, { format: options.output || "json" });
     return 0;
   }
   if (subcommand === "show") {
-    if (options.values.length !== 1) throw new Error("Uso: maestro mission show <id> [--project-path PATH]");
-    const mission = await (await createRuntimeApplication(options.projectPath)).getMission(options.values[0]);
+    if (options.values.length !== 1) throw new Error("Uso: maestro mission show <id> [--project-path PATH] [-o FORMAT]");
+    const mission = await client.getMission(options.values[0]);
     if (!mission) throw new Error(`Missão não encontrada: ${options.values[0]}`);
-    console.log(JSON.stringify(mission, null, 2));
+    OutputRenderer.output(mission, { format: options.output || "json" });
     return 0;
   }
   throw new Error("Uso: maestro mission <create|show>");
@@ -476,40 +504,47 @@ async function handleTerminalCommand(args) {
   const [subcommand, ...rest] = args;
   if (subcommand === "list") {
     const options = parseRuntimeArgs(rest, ["--project-path"]);
-    if (options.values.length) throw new Error("Uso: maestro terminal list [--project-path PATH]");
-    const app = await createRuntimeApplication(options.projectPath);
-    const project = await app.inspectProject({ projectPath: options.projectPath });
-    console.log(JSON.stringify(await app.listTerminalSessions({ projectId: project.id }), null, 2)); return 0;
+    if (options.values.length) throw new Error("Uso: maestro terminal list [--project-path PATH] [-o FORMAT]");
+    const client = await ensureDaemonClient({ projectPath: options.projectPath });
+    const project = await client.inspectProject({ projectPath: options.projectPath });
+    const list = await client.listTerminalSessions({ projectId: project.id });
+    OutputRenderer.output(list, { format: options.output || "json" });
+    return 0;
   }
   if (subcommand === "agent" || subcommand === "shell") {
     const separator = rest.indexOf("--");
     const options = parseRuntimeArgs(separator === -1 ? rest : rest.slice(0, separator), ["--project-path"]);
     const values = options.values;
+    const client = await ensureDaemonClient({ projectPath: options.projectPath });
     if (subcommand === "agent") {
       const providerId = values[0];
-      if (!providerId || values.length !== 1 || separator !== -1) throw new Error("Uso: maestro terminal agent <codex|claude|opencode|agy> [--project-path PATH]");
-      const session = await (await createRuntimeApplication(options.projectPath)).createTerminalSession({ workspacePath: options.projectPath, kind: "agent", providerId, backend: "pty" });
-      console.log(JSON.stringify(session, null, 2)); return 0;
+      if (!providerId || values.length !== 1 || separator !== -1) throw new Error("Uso: maestro terminal agent <codex|claude|opencode|agy> [--project-path PATH] [-o FORMAT]");
+      const session = await client.createTerminalSession({ workspacePath: options.projectPath, kind: "agent", providerId, backend: "pty" });
+      OutputRenderer.output(session, { format: options.output || "json" });
+      return 0;
     }
     if (separator === -1 || separator === rest.length - 1 || values.length) throw new Error("Uso: maestro terminal shell [--project-path PATH] -- <comando> [argumentos]");
     const [command, ...commandArgs] = rest.slice(separator + 1);
-    const session = await (await createRuntimeApplication(options.projectPath)).createTerminalSession({ workspacePath: options.projectPath, kind: "shell", command, args: commandArgs, backend: "pty" });
-    console.log(JSON.stringify(session, null, 2)); return 0;
+    const session = await client.createTerminalSession({ workspacePath: options.projectPath, kind: "shell", command, args: commandArgs, backend: "pty" });
+    OutputRenderer.output(session, { format: options.output || "json" });
+    return 0;
   }
   if (subcommand === "attach" || subcommand === "close") {
     const options = parseRuntimeArgs(rest, ["--project-path"]); const terminalId = options.values[0];
     if (!terminalId || options.values.length !== 1) throw new Error(`Uso: maestro terminal ${subcommand} <id> [--project-path PATH]`);
-    const app = await createRuntimeApplication(options.projectPath);
-    const successful = subcommand === "attach" ? await app.attachTerminalSession(terminalId) : await app.closeTerminalSession(terminalId);
+    const client = await ensureDaemonClient({ projectPath: options.projectPath });
+    const successful = subcommand === "attach" ? await client.attachTerminalSession(terminalId) : await client.closeTerminalSession(terminalId);
     if (!successful) throw new Error(`Sessão não encontrada ou não está disponível: ${terminalId}`);
-    if (subcommand === "close") console.log(`Sessão encerrada: ${terminalId}.`);
+    if (subcommand === "close") OutputRenderer.output({ closed: true, terminalId }, { format: options.output || "human" });
     return 0;
   }
   if (subcommand === "stop") {
     const options = parseRuntimeArgs(rest, ["--project-path"]); const terminalId = options.values[0];
     if (!terminalId || options.values.length !== 1) throw new Error("Uso: maestro terminal stop <id> [--project-path PATH]");
-    if (!await (await createRuntimeApplication(options.projectPath)).stopTerminal(terminalId)) throw new Error(`Terminal ativo nao encontrado: ${terminalId}`);
-    console.log(`Encerramento solicitado para ${terminalId}.`); return 0;
+    const client = await ensureDaemonClient({ projectPath: options.projectPath });
+    if (!await client.stopTerminal(terminalId)) throw new Error(`Terminal ativo nao encontrado: ${terminalId}`);
+    OutputRenderer.output({ stopped: true, terminalId }, { format: options.output || "human" });
+    return 0;
   }
   if (subcommand === "start") {
     const separator = rest.indexOf("--");
@@ -517,21 +552,23 @@ async function handleTerminalCommand(args) {
     const options = parseRuntimeArgs(rest.slice(0, separator), ["--project-path"]);
     const [command, ...commandArgs] = rest.slice(separator + 1);
     if (options.values.length) throw new Error("Uso: maestro terminal start [--project-path PATH] -- <comando> [argumentos]");
-    const app = await createRuntimeApplication(options.projectPath);
-    const terminal = await app.startTerminal({ workspacePath: options.projectPath, command, args: commandArgs });
+    const client = await ensureDaemonClient({ projectPath: options.projectPath });
+    const terminal = await client.startTerminal({ workspacePath: options.projectPath, command, args: commandArgs });
     console.log(`Comando gerenciado iniciado: ${terminal.id}. Aguarde a conclusão; para sessão ao vivo, use \`maestro tui\` ou a extensão VS Code.`);
-    const completed = await app.waitTerminal(terminal.id);
-    console.log(JSON.stringify(completed, null, 2)); return completed?.status === "completed" ? 0 : 1;
+    const completed = await client.waitTerminal(terminal.id);
+    OutputRenderer.output(completed, { format: options.output || "json" });
+    return completed?.status === "completed" ? 0 : 1;
   }
   throw new Error("Uso: maestro terminal <list|agent|shell|attach|close|start|stop>");
 }
 
 async function handleTerminalsCommand(args) {
   const options = parseRuntimeArgs(args, ["--project-path"]);
-  if (options.values.length) throw new Error("Uso: maestro terminals [--project-path PATH]");
-  const app = await createRuntimeApplication(options.projectPath);
-  const project = await app.inspectProject({ projectPath: options.projectPath });
-  console.log(JSON.stringify(await app.listTerminalSessions({ projectId: project.id }), null, 2));
+  if (options.values.length) throw new Error("Uso: maestro terminals [--project-path PATH] [-o FORMAT]");
+  const client = await ensureDaemonClient({ projectPath: options.projectPath });
+  const project = await client.inspectProject({ projectPath: options.projectPath });
+  const list = await client.listTerminalSessions({ projectId: project.id });
+  OutputRenderer.output(list, { format: options.output || "json" });
   return 0;
 }
 
@@ -575,16 +612,92 @@ function createRuntimeBridge(app, projectRoot) {
 }
 
 async function handleSkillsCommand(args) {
-  const options = parseRuntimeArgs(args.slice(1), ["--project-path"]);
-  if (args[0] !== "list" || options.values.length > 0) throw new Error("Uso: maestro skills list [--project-path PATH]");
-  console.log(JSON.stringify((await createRuntimeApplication(options.projectPath)).skills.list(), null, 2));
-  return 0;
+  const [subcommand = "list", ...rest] = args;
+  const options = parseRuntimeArgs(rest, ["--project-path", "--global", "-g"], ["--global", "-g"]);
+  const catalog = new SkillCatalog({ projectRoot: options.projectPath });
+  const format = options.output || "json";
+
+  if (subcommand === "list") {
+    const list = catalog.list();
+    OutputRenderer.output(list, { format });
+    return 0;
+  }
+  if (subcommand === "active") {
+    const active = catalog.active();
+    OutputRenderer.output(active, { format });
+    return 0;
+  }
+  if (subcommand === "search") {
+    const query = options.values.join(" ");
+    if (!query) throw new Error("Uso: maestro skills search <termo> [-o FORMAT]");
+    const results = catalog.list({ query });
+    OutputRenderer.output(results, { format });
+    return 0;
+  }
+  if (subcommand === "recommend") {
+    const recs = catalog.recommend();
+    OutputRenderer.output(recs, { format });
+    return 0;
+  }
+  if (subcommand === "show") {
+    const id = options.values[0];
+    if (!id) throw new Error("Uso: maestro skills show <id> [-o FORMAT]");
+    const skill = catalog.get(id);
+    if (!skill) throw new Error(`Skill não encontrada: ${id}`);
+    OutputRenderer.output(skill, { format });
+    return 0;
+  }
+  if (subcommand === "where") {
+    const id = options.values[0];
+    if (!id) throw new Error("Uso: maestro skills where <id> [-o FORMAT]");
+    const skill = catalog.get(id);
+    if (!skill) throw new Error(`Skill não encontrada: ${id}`);
+    OutputRenderer.output({ id: skill.id, path: skill.path, source: skill.source }, { format });
+    return 0;
+  }
+  if (subcommand === "pin") {
+    const id = options.values[0];
+    if (!id) throw new Error("Uso: maestro skills pin <id> [--global]");
+    catalog.pin(id, { global: Boolean(options.global || options.g) });
+    OutputRenderer.output({ pinned: true, id, global: Boolean(options.global || options.g) }, { format });
+    return 0;
+  }
+  if (subcommand === "unpin") {
+    const id = options.values[0];
+    if (!id) throw new Error("Uso: maestro skills unpin <id> [--global]");
+    catalog.unpin(id, { global: Boolean(options.global || options.g) });
+    OutputRenderer.output({ unpinned: true, id, global: Boolean(options.global || options.g) }, { format });
+    return 0;
+  }
+  if (subcommand === "doctor") {
+    const all = catalog.getAll();
+    const community = catalog.availableCommunity();
+    OutputRenderer.output({
+      totalInstalled: all.length,
+      bySource: all.reduce((acc, s) => { acc[s.source] = (acc[s.source] || 0) + 1; return acc; }, {}),
+      availableCommunity: community.length,
+      status: "ok"
+    }, { format });
+    return 0;
+  }
+  if (subcommand === "sync") {
+    const script = path.join(rootDir, "orquestrador", "sync-skills.sh");
+    if (fs.existsSync(script)) {
+      return run("bash", [script], { cwd: options.projectPath });
+    }
+    OutputRenderer.output({ synced: true }, { format });
+    return 0;
+  }
+
+  throw new Error(`Subcomando de skills desconhecido: ${subcommand}. Uso: maestro skills <list|active|search|recommend|show|where|pin|unpin|doctor|sync>`);
 }
 
 async function handleProvidersCommand(args) {
   const options = parseRuntimeArgs(args.slice(1), ["--project-path"]);
-  if (args[0] !== "list" || options.values.length > 0) throw new Error("Uso: maestro providers list [--project-path PATH]");
-  console.log(JSON.stringify(await (await createRuntimeApplication(options.projectPath)).listProviders(), null, 2));
+  if (args[0] !== "list" && args[0] !== undefined && options.values.length > 0) throw new Error("Uso: maestro providers list [--project-path PATH] [-o FORMAT]");
+  const client = await ensureDaemonClient({ projectPath: options.projectPath });
+  const providers = await client.listProviders();
+  OutputRenderer.output(providers, { format: options.output || "json" });
   return 0;
 }
 

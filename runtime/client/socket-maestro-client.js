@@ -110,7 +110,14 @@ class SocketMaestroClient {
   async action(act) {
     if (this.phase !== "connected") throw new MaestroClientError("offline");
     const requestId = act?.requestId || crypto.randomUUID();
-    const response = await this._request({ kind: "action", requestId, type: act?.type, payload: act?.payload }, ["action.validated", "action.rejected"]);
+    const idempotencyKey = act?.idempotencyKey;
+    const response = await this._request({
+      kind: "action",
+      requestId,
+      type: act?.type,
+      payload: act?.payload,
+      ...(idempotencyKey ? { idempotencyKey } : {})
+    }, ["action.validated", "action.rejected"]);
     if (!response.ok) throw new MaestroClientError(response.reason, response.reason, response);
     return response.result;
   }
@@ -149,22 +156,39 @@ class SocketMaestroClient {
 }
 
 const ACTION_TYPE_BY_METHOD = Object.freeze({
-  inspectProject: "project.inspect", listProjects: "projects.list", listMissions: "missions.list", listRuns: "runs.list", createMission: "mission.create", updateMission: "mission.update",
-  createRun: "run.create", executeRun: "run.execute", cancelRun: "run.cancel", listProviders: "providers.list",
-  skillsList: "skills.list", resolveAttention: "attention.resolve", listTerminalSessions: "terminals.list", createTerminalSession: "terminal.create", attachTerminalSession: "terminal.attach", closeTerminalSession: "terminal.close",
-  focusTerminalSession: "terminal.focus", inputTerminalSession: "terminal.input", resizeTerminalSession: "terminal.resize", snapshotTerminalSession: "terminal.snapshot"
+  inspectProject: "project.inspect", listProjects: "projects.list", getProject: "projects.get", registerProject: "projects.register",
+  listMissions: "missions.list", getMission: "missions.get", createMission: "mission.create", updateMission: "mission.update",
+  listRuns: "runs.list", getRun: "run.get", inspectRun: "run.inspect", createRun: "run.create", executeRun: "run.execute", cancelRun: "run.cancel",
+  listTasks: "tasks.list", getTask: "task.get",
+  listArtifacts: "artifacts.list", getArtifact: "artifacts.get", getVerification: "verification.get",
+  listProviders: "providers.list", skillsList: "skills.list",
+  listAttention: "attention.list", getAttention: "attention.get", createAttention: "attention.create", resolveAttention: "attention.resolve",
+  listTerminalSessions: "terminals.list", createTerminalSession: "terminal.create", attachTerminalSession: "terminal.attach", closeTerminalSession: "terminal.close",
+  focusTerminalSession: "terminal.focus", inputTerminalSession: "terminal.input", resizeTerminalSession: "terminal.resize", snapshotTerminalSession: "terminal.snapshot",
+  startTerminal: "terminal.start", stopTerminal: "terminal.stop", waitTerminal: "terminal.wait",
+  startIntentSession: "intentSession.start", updateIntentSession: "intentSession.update", approveMissionBrief: "missionBrief.approve"
 });
+
 for (const [name, type] of Object.entries(MAESTRO_CLIENT_INTERFACE)) {
   if (type !== "method" || SocketMaestroClient.prototype[name]) continue;
   SocketMaestroClient.prototype[name] = function forwarded(...args) {
     const payload = name === "cancelRun" ? { runId: args[0], run: args[1]?.run }
+      : name === "inspectRun" || name === "getRun" ? { runId: args[0] }
+      : name === "getMission" ? { missionId: args[0] }
+      : name === "getProject" ? { projectId: args[0] }
+      : name === "getTask" ? { taskId: args[0] }
+      : name === "getArtifact" ? { artifactId: args[0] }
+      : name === "getVerification" ? { runId: args[0] }
+      : name === "getAttention" ? { attentionId: args[0] }
       : name === "resolveAttention" ? { attentionId: args[0], decision: args[1], ...(args[2] || {}) }
       : name === "updateMission" ? { missionId: args[0], ...(args[1] || {}) }
-        : ["closeTerminalSession", "attachTerminalSession", "focusTerminalSession"].includes(name) ? { terminalId: args[0] }
-          : name === "inputTerminalSession" ? { terminalId: args[0], input: args[1] }
-            : name === "resizeTerminalSession" ? { terminalId: args[0], columns: args[1], rows: args[2] }
-              : name === "snapshotTerminalSession" ? { terminalId: args[0], afterSequence: typeof args[1] === "object" ? args[1]?.afterSequence : args[1] || 0 }
-                : args[0] || {};
+      : name === "updateIntentSession" ? { sessionId: args[0], ...(args[1] || {}) }
+      : name === "approveMissionBrief" ? { sessionId: args[0], ...(args[1] || {}) }
+      : ["closeTerminalSession", "attachTerminalSession", "focusTerminalSession", "stopTerminal", "waitTerminal"].includes(name) ? { terminalId: args[0] }
+      : name === "inputTerminalSession" ? { terminalId: args[0], input: args[1] }
+      : name === "resizeTerminalSession" ? { terminalId: args[0], columns: args[1], rows: args[2] }
+      : name === "snapshotTerminalSession" ? { terminalId: args[0], afterSequence: typeof args[1] === "object" ? args[1]?.afterSequence : args[1] || 0 }
+      : args[0] || {};
     return this.action({ type: ACTION_TYPE_BY_METHOD[name], payload });
   };
 }

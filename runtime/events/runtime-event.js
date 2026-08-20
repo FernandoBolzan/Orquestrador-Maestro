@@ -15,7 +15,7 @@ function validateRuntimeEvent(event) {
   familyOf(event.type);
   field(typeof event.timestamp === "string" && !Number.isNaN(Date.parse(event.timestamp)), "timestamp");
   field(event.payload && typeof event.payload === "object" && !Array.isArray(event.payload), "payload");
-  for (const name of ["projectId", "missionId", "taskId"]) {
+  for (const name of ["projectId", "missionId", "taskId", "runId", "sessionId", "actor"]) {
     field(event[name] === undefined || (typeof event[name] === "string" && event[name].length > 0), name);
   }
   return event;
@@ -37,6 +37,10 @@ async function toRuntimeEvent(legacy, options = {}) {
   const projectId = context?.projectId || data.projectId;
   const missionId = context?.missionId || data.missionId;
   const taskId = context?.taskId || data.taskId;
+  const runId = legacy.runId || data.runId;
+  const sessionId = data.sessionId || data.terminalId;
+  const actor = data.actor;
+
   return freezeRuntimeEvent({
     version: 2,
     epoch: options.epoch,
@@ -45,7 +49,10 @@ async function toRuntimeEvent(legacy, options = {}) {
     ...(projectId ? { projectId } : {}),
     ...(missionId ? { missionId } : {}),
     ...(taskId ? { taskId } : {}),
-    timestamp: legacy.occurredAt,
+    ...(runId ? { runId } : {}),
+    ...(sessionId ? { sessionId } : {}),
+    ...(actor ? { actor } : {}),
+    timestamp: legacy.occurredAt || new Date().toISOString(),
     payload: { data: legacy.data, legacyId: legacy.id }
   });
 }
