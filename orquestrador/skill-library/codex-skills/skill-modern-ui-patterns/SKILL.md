@@ -10,6 +10,23 @@ source: local-saas-ui-patterns
 
 Use this skill when building or improving operational SaaS screens. Favor product clarity, compact density, accessibility, and maintainable components over decorative novelty.
 
+## Impeccable Product Vocabulary
+
+Use [Impeccable](https://impeccable.style/) as a design-thinking layer, not as a replacement for the existing component system:
+
+- Start from product context: audience, task, product voice, and visual defaults to avoid. Reuse `PRODUCT.md` and `DESIGN.md` when present.
+- For new work, use `shape` (brief) -> `craft` (implementation) -> `critique` (design review) -> `polish` (final refinement). For existing work, begin with `critique` or a named pass such as `typeset`, `layout`, `colorize`, `quieter`, or `bolder`.
+- Separate product mode from brand mode: dashboards and admin screens need semantic states, repeatable components, and fluent density; landing pages can carry stronger type, imagery, and brand expression.
+- Prefer purposeful hierarchy and restraint over AI-default decoration. Avoid generic gradients, excessive roundness, glass cards, nested cards, oversized icon containers, repetitive section kickers, and a single undifferentiated font unless the design system has a reason for them.
+- Finish with `audit` and `harden` when the change affects production UI, then verify realistic content, responsive states, accessibility, and existing analytics.
+
+## Symptom Routing
+
+- Generic or interchangeable -> `critique`, `distill`, then `bolder` or `shape`.
+- Busy or overdecorated -> `quieter`, `distill`, and remove redundant copy or containers.
+- Broken on small screens -> `adapt`, `layout`, and `harden` with long localized values.
+- Hard to scan -> `typeset`, `layout`, and strengthen primary-action hierarchy.
+
 ## Workflow
 
 1. Reuse the app shell, component library, tokens, icons, form helpers, table patterns, and data-loading conventions already in the repository.
@@ -60,4 +77,3 @@ Use this skill when building or improving operational SaaS screens. Favor produc
 - Loading, empty, error, and success states are implemented where relevant.
 - Responsive behavior is verified.
 - Lint, typecheck, build, or targeted tests run when available.
-

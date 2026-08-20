@@ -37,6 +37,7 @@ function Test-ExcludedScanPath {
   param([string]$RelativePath)
   $rel = $RelativePath.Replace("\", "/")
   if ($rel -match "(^|/)(\.git|\.local|\.omx|DEV|node_modules|dist|build)(/|$)") { return $true }
+  if ($rel -match "^orquestrador/runtime/worktrees(/|$)") { return $true }
   return $false
 }
 
@@ -219,6 +220,7 @@ if (-not $SkipJsonValidation) {
   $node = Get-Command node -ErrorAction SilentlyContinue
   foreach ($json in Get-ChildItem -LiteralPath (Join-Path $repoRootFull "orquestrador") -Recurse -Filter "*.json" -File -ErrorAction SilentlyContinue) {
     $relative = Get-RelativePath -BasePath $repoRootFull -Path $json.FullName
+    if (Test-ExcludedScanPath -RelativePath $relative) { continue }
     if ($node) {
       & $node.Source -e "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'))" $json.FullName 2>$null
       if ($LASTEXITCODE -ne 0) {

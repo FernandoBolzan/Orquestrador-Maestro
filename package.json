@@ -1,6 +1,6 @@
 {
   "name": "@iapro/orquestrador-maestro-cli",
-  "version": "0.1.24",
+  "version": "0.1.25",
   "description": "CLI npm para instalar, atualizar, verificar e remover o Orquestrador Maestro no usuário atual, com skills nativas enxutas e biblioteca externa para reduzir tokens.",
   "bin": {
     "orquestrador-maestro": "bin/orquestrador-maestro.js"
@@ -32,6 +32,7 @@
     "codex/skills/security-review/",
     "codex/skills/skill-abacatepay-integration/",
     "codex/skills/skill-ai-orchestration/",
+    "codex/skills/skill-doublecheck/",
     "codex/skills/skill-aionui-cowork-orchestration/",
     "codex/skills/skill-elevenlabs-voice-cloning/",
     "codex/skills/skill-evolution-api/",
@@ -48,10 +49,13 @@
     "codex/skills/skill-saas-dast-recon/",
     "codex/skills/skill-saas-factory/",
     "codex/skills/skill-saas-security-scan/",
+    "codex/skills/skill-scope-control/",
     "codex/skills/skill-security-hooks/",
+    "codex/skills/skill-skill-development/",
     "codex/skills/skill-smart-clip-detection/",
     "codex/skills/skill-stripe-integration/",
     "codex/skills/skill-supabase-rls/",
+    "codex/skills/skill-threat-modeling/",
     "codex/skills/skill-unified-analytics/",
     "codex/skills/skill/",
     "codex/skills/team/",

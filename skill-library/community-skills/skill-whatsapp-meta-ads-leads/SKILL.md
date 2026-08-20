@@ -1,108 +1,65 @@
 ---
 name: skill-whatsapp-meta-ads-leads
-description: Configurar campanhas de WhatsApp no Meta Ads para gerar leads qualificados para negócios locais, baseado nas melhores práticas de 2026.
+description: Configurar campanhas de WhatsApp no Meta Ads para gerar leads qualificados para negócios locais, baseado nas melhores práticas atuais.
 category: marketing
-risk: low
-source: filipe-detrey-campanha-whatsapp-2026
+risk: medium
+source: meta-ads-and-whatsapp-patterns
+last_verified: 2026-08-06
 ---
 
-# Campanha de WhatsApp para Leads Qualificados no Meta Ads
+# Campanhas de WhatsApp para Leads no Meta Ads
 
-Skill baseada no vídeo **"A melhor Campanha de WhatsApp 2026 | SÓ LEAD QUALIFICADO! | Meta Ads | Negócios Locais"** por Filipe Detrey.
+Use esta skill para planejar campanhas, instrumentar aquisição e devolver sinais de qualidade de lead ao Meta. A interface e os nomes de objetivos podem mudar; confirme o fluxo disponível no Ads Manager da conta antes de publicar.
 
-## Contexto
+## Estratégia
 
-Para negócios locais, campanhas de WhatsApp no Meta Ads são as que mais geram resultado. Diferente de landing pages ou formulários, o WhatsApp permite alto volume de leads com orçamento baixo.
+1. Defina o resultado de negócio: conversa iniciada, lead capturado, lead qualificado ou venda.
+2. Escolha o objetivo e o local de conversão exibidos atualmente para a conta; não trate “Leads” como universalmente superior a “Engajamento” ou “Vendas”.
+3. Conecte um número do WhatsApp Business elegível e confirme permissões, horário de atendimento, responsáveis e política de opt-in.
+4. Use criativos, perguntas iniciais e segmentação local coerentes com o serviço real.
+5. Registre `campaign_id`, `adset_id`, `ad_id`, UTMs, timestamp, consentimento e telefone normalizado no CRM.
 
-## Objetivos de Campanha
+## Integração de API
 
-O Meta Ads oferece 3 objetivos principais para WhatsApp:
+- Para eventos de site ou CRM, prefira a Meta Conversions API pelo backend, com token e pixel/dataset ID fora do navegador.
+- Envie somente eventos necessários, como `Lead`, um evento interno de qualificação mapeado para o esquema aceito pela conta, e `Purchase` quando houver compra confirmada.
+- Use `event_id` estável para deduplicar eventos enviados pelo Pixel e pela Conversions API.
+- Valide o consentimento e minimize PII; aplique hash somente conforme o formato exigido pela documentação da Meta e nunca faça hash de dados que não deveriam ser coletados.
+- Fixe a versão da Graph/Marketing API no cliente do servidor e registre a data de revisão. Não copie uma versão encontrada em exemplo antigo.
+- Ao usar WhatsApp Cloud API diretamente, trate webhook de mensagens, janela de atendimento, templates aprovados, limites e qualidade como contratos separados da campanha. Para Evolution API, encaminhe para `skill-evolution-api`.
 
-| Objetivo | Qualidade do Lead | Volume | Ideal Para |
-|----------|-------------------|--------|------------|
-| **Vendas** | Média | Médio | E-commerce, produtos |
-| **Leads** | **Alta** | Alto | **Negócios locais, serviços** |
-| **Engajamento** | Baixa | Muito alto | Branding, alcance |
+## Operação e Métricas
 
-### Por que escolher **Leads**?
+| Métrica | Uso |
+|---|---|
+| CPL | Custo por lead capturado |
+| Taxa de qualificação | Qualidade real do tráfego |
+| Tempo de primeira resposta | Velocidade do atendimento |
+| Conversão em venda | Resultado de negócio |
+| ROAS | Retorno sobre mídia quando a receita é confiável |
 
-O objetivo **Leads** é o melhor para WhatsApp porque:
-- A plataforma otimiza para pessoas com intenção real de conversar
-- Menos curiosos e mais pessoas prontas para comprar
-- Custo por lead mais previsível
-- Integração direta com CRM via webhook
+Compare campanhas por coortes e janela de atribuição. Não use metas fixas como “>10%” ou “<5 min” sem contexto de setor, horário e capacidade de atendimento.
 
-Engajamento gera volume mas trás pessoas desqualificadas que interagem uma vez e somem. Vendas funciona bem para e-commerce mas não é ideal para WhatsApp de negócio local.
+## Segurança e Conformidade
 
-## Passo a Passo: Configuração no Gerenciador de Anúncios
+- Nunca coloque tokens da Meta, segredos de webhook ou chaves do WhatsApp em `VITE_`, bundles ou mensagens do cliente.
+- Valide assinatura de webhook quando disponível, responda rapidamente e processe eventos de forma idempotente.
+- Respeite opt-out, finalidade, retenção e direitos do titular; encaminhe análise de dados pessoais para `skill-lgpd-brasil`.
 
-### 1. Criar Campanha
-- Nível: **Campanha**
-- Objetivo: **Leads** (não Vendas, não Engajamento)
-- Nomeie a campanha (ex: "WhatsApp Leads - Negócio Local")
+## Verificação
 
-### 2. Configurar Conjunto de Anúncios
-- Conversão: **WhatsApp**
-- Defina o público-alvo (segmentação local)
-- Orçamento: diário ou total
-- Programação: conforme necessário
+- Teste evento duplicado, evento fora de ordem, token expirado, permissão insuficiente, falha de entrega e reconciliação no CRM.
+- Confirme no Events Manager a deduplicação e a qualidade dos eventos antes de otimizar orçamento.
+- Revalide versões e parâmetros na documentação oficial antes de cada mudança de integração.
 
-### 3. Criar Anúncio
-- Formato: imagem, vídeo ou carrossel
-- Texto: foco no problema que o lead quer resolver
-- CTA: "Enviar mensagem no WhatsApp"
-- Conecte seu número do WhatsApp Business
+## Referências Oficiais
 
-### 4. Publicar e Monitorar
-- Acompanhe métricas: leads, CPL (custo por lead), taxa de conversão
-- Teste diferentes criativos e segmentações
-
-## Otimização para Leads Qualificados
-
-### Estrutura de Campanha Inteligente
-
-Para leads realmente qualificados, implemente:
-
-1. **Campanha de Leads** (não engajamento)
-2. **Pixel do Meta** instalado no site/CRM
-3. **Eventos de conversão** enviados de volta ao Meta:
-   - `Lead` - quando um lead é capturado
-   - `Qualified Lead` - quando o lead é qualificado
-   - `Purchase` - quando o lead compra
-4. **Otimização reversa**: o CRM envia eventos de volta ao Meta para treinar o algoritmo
-
-### Dicas Práticas
-
-- Comece com orçamento baixo e aumente conforme os resultados
-- Teste criativos diferentes (vídeo curto vs imagem estática)
-- Use perguntas no criativo para qualificar antes do clique
-- Responda rapidamente no WhatsApp para não perder o lead
-- Acompanhe o CPL (custo por lead) diariamente
-
-## Métricas para Acompanhar
-
-| Métrica | O que Mede | Meta |
-|---------|------------|------|
-| CPL | Custo por lead | Diminuir continuamente |
-| Taxa de Conversão | % que vira cliente | > 10% |
-| Tempo de Resposta | Velocidade do atendimento | < 5 min |
-| ROAS | Retorno sobre gasto | > 3x |
-
-## Erros Comuns
-
-- Usar **Vendas** para WhatsApp de negócio local (sub-ótimo)
-- Usar **Engajamento** achando que trará leads qualificados (traz volume baixo)
-- Não ter estrutura de atendimento no WhatsApp
-- Não segmentar corretamente o público local
-- Ignorar os eventos de conversão do pixel
-
-## Referência
-
-- **Vídeo original**: YouTube - Filipe Detrey
-- **Título**: "A melhor Campanha de WhatsApp 2026 | SÓ LEAD QUALIFICADO! | Meta Ads | Negócios Locais"
-- **Canal**: @FilipeDetrey
+- https://developers.facebook.com/docs/marketing-api/conversions-api
+- https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks
+- https://developers.facebook.com/docs/graph-api/changelog
 
 ## Skills Relacionadas
 
-- `skill-evolution-api` - Para integrar WhatsApp API com CRM
-- `skill-cobranca-automatizada-saas-abacatepay` - Para cobrança via WhatsApp
+- `skill-evolution-api` — integração WhatsApp via Evolution API
+- `skill-lgpd-brasil` — dados pessoais e conformidade
+- `skill-unified-analytics` — taxonomia e métricas de produto

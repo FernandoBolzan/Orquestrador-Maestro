@@ -10,6 +10,18 @@ source: https://github.com/nexu-io/open-design
 
 Use this skill when a screen needs a real visual upgrade, a cohesive product direction, or a reduction in generic AI-looking UI. Build the improvement in code, not as a mockup-only recommendation.
 
+## Impeccable Workflow
+
+This skill adopts the design vocabulary from [Impeccable](https://impeccable.style/):
+
+1. Set context before styling: capture audience, product/brand lane, voice, anti-references, and existing tokens in `PRODUCT.md` and `DESIGN.md` when supported.
+2. Choose the smallest named intervention: `typeset`, `layout`, `colorize`, `animate`, `clarify`, `adapt`, `distill`, `quieter`, or `bolder`. Avoid vague beautification requests.
+3. For greenfield work, use `shape` -> `craft`; for existing screens, use `critique` -> `polish`. Treat generated variants as options to evaluate, not authority.
+4. Review with `audit` and `harden`, including accessibility, performance, theming, responsive behavior, internationalization, overflow, error states, and messy real data.
+5. Use the anti-pattern catalog as a negative checklist: no decorative gradient text, default purple/cyan palette, gratuitous glassmorphism/glows, side-tab borders, card-in-card nesting, extreme radii, flat typography, or motion without meaning.
+
+When the CLI is available, `npx impeccable detect <target>` can add a deterministic anti-pattern check. It is a supplement to visual inspection, not a substitute for it.
+
 ## Workflow
 
 1. Read the existing interface: brand cues, typography, tokens, spacing, component rules, icon library, imagery, routes, and analytics boundaries.
@@ -57,4 +69,3 @@ Use this skill when a screen needs a real visual upgrade, a cohesive product dir
 - The primary action and status are clear within three seconds.
 - Responsive layouts, interaction states, and copy quality are verified.
 - The result is distinctive without copying another product or adding unnecessary dependencies.
-

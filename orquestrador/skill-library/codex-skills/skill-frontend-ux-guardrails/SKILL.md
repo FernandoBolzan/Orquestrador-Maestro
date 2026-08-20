@@ -10,6 +10,20 @@ source: local-product-ux-guardrails
 
 Use this skill to harden visible product UI before delivery. Treat it as a quality gate for responsive behavior, readability, visual integrity, and interaction states.
 
+## Impeccable Design Pass
+
+Use the [Impeccable](https://impeccable.style/) vocabulary when the interface needs more than a bug fix:
+
+- Establish context before changing visuals: audience, product versus brand surface, voice, visual direction, and anti-references. If the repository uses them, read `PRODUCT.md` and `DESIGN.md`.
+- Route by symptom: `typeset` for typography, `layout` for rhythm and space, `colorize` for palette and contrast, `animate` for purposeful motion, `clarify` for copy, and `adapt` for responsive behavior.
+- Run the pre-ship loop on a narrow target: `audit` for accessibility, performance, theming, responsive quality, and anti-patterns; `clarify` for confusing copy; `harden` for edge cases, internationalization, errors, and overflow.
+- Check for generated-UI tells: generic gradients, gratuitous glassmorphism or glow, side-accent cards, card nesting, flat type hierarchy, one-font-everywhere, giant icon tiles, redundant helper copy, and modal abuse. Keep an intentional pattern only with a product rationale.
+- When available, run `npx impeccable detect <target>` as an additional deterministic signal. It complements, but does not replace, browser QA and accessibility checks.
+
+## Quality Rubric
+
+Score the target from 0 to 4 for hierarchy, contrast, responsiveness, accessibility, performance, and visual distinctiveness. Record P0/P1 issues before polish; defer P2/P3 refinements when they do not affect the primary task.
+
 ## Workflow
 
 1. Inspect the existing product surface first: routes, components, design tokens, layout primitives, and current breakpoints.
@@ -52,4 +66,3 @@ Use this skill to harden visible product UI before delivery. Treat it as a quali
 - User actions and system states are clear.
 - Text is spelled correctly and UTF-8 safe.
 - Existing routes, form behavior, and analytics are preserved unless the task explicitly changes them.
-

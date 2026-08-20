@@ -4,6 +4,7 @@ description: Use for Google Workspace integrations with OAuth, Calendar, Meet, F
 category: integrations
 risk: high
 source: google-workspace-api-patterns
+last_verified: 2026-08-06
 ---
 
 # Google Workspace Sync
@@ -22,6 +23,12 @@ Use this skill when a product connects Google accounts, syncs calendars or files
 8. Queue bulk sync and retryable writes. Keep user-facing requests short and return job status for long operations.
 9. Validate dates, timezones, attendees, file permissions, sheet ranges, and ownership before writing remote or local state.
 10. Keep audit events for connect, scope change, create, update, delete, sync conflict, token refresh failure, and disconnect.
+
+## API Maintenance Boundary
+
+- Treat Calendar, Drive, Sheets, and Meet as separate APIs with separate enablement and scope review; do not grant a broad Workspace scope because one feature needs only one resource.
+- Use the official Google client libraries or REST discovery documents and pin dependency versions through the host project's normal lockfile process.
+- Re-check OAuth consent, verification, incremental authorization, push notification channels, and resource-specific quotas when adding a new Workspace surface.
 
 ## Guardrails
 
@@ -54,8 +61,13 @@ type WorkspaceResource = {
 - Test OAuth callback, token refresh, missing scope, revoked consent, Calendar create/update/delete, Meet `requestId` dedupe, FreeBusy timezone handling, duplicate webhook, and reconciliation after missed webhook.
 - Confirm no OAuth secret or token appears in browser bundles, logs, analytics, or error responses.
 
+## Official References
+
+- https://developers.google.com/workspace/guides/enable-apis
+- https://developers.google.com/workspace/calendar/api/auth
+- https://developers.google.com/workspace
+
 ## Related Skills
 
 - `skill-unified-analytics`
 - `skill-security-hooks`
-

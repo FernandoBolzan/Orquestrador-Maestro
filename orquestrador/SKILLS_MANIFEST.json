@@ -655,22 +655,290 @@
       ],
       "status": "canonical"
     },
-    "skill-quality-gate": {"description":"Avalia skills, plugins e MCPs antes da adoção.","category":"governance","risk":"high","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["quality gate","skill gate","avaliar skill","auditar plugin"],"aliases":["quality gate","skill gate"],"status":"canonical"},
-    "skill-repo-health": {"description":"Diagnóstico de saúde, stack, verificação e riscos de repositórios.","category":"engineering","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["repo health","saúde do repositorio","inspecionar repositorio"],"aliases":["repo health","health check repositorio"],"status":"canonical"},
-    "skill-preflight": {"description":"Preflight de escopo, baseline, riscos, ownership e testes.","category":"workflow","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["preflight","pre-flight","antes de implementar"],"aliases":["preflight"],"status":"canonical","workflow":{"entry":"SKILL.md","kind":"workflow","validation":"standard","referencesOptional":true,"legacyCompatible":true,"notes":"Explicit workflow schema for operator-style preflight execution."}},
-    "skill-systematic-debugging": {"description":"Debugging sistemático orientado por evidência e causa raiz.","category":"engineering","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["debug sistematico","causa raiz","investigar bug"],"aliases":["debug sistematico"],"status":"canonical"},
-    "skill-verification-before-completion": {"description":"Verificação proporcional antes de declarar conclusão.","category":"quality","risk":"low","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["verificar conclusão","verification before completion","validar antes de concluir"],"aliases":["verificação final"],"status":"canonical","workflow":{"entry":"SKILL.md","kind":"workflow","validation":"strict","referencesOptional":true,"legacyCompatible":true,"notes":"Verification-oriented workflow override with stricter validation."}},
-    "skill-webapp-testing": {"description":"Testes web E2E, acessibilidade, estados e regressão visual.","category":"testing","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["webapp testing","teste e2e","playwright","teste de aplicação web"],"aliases":["teste web","teste e2e"],"status":"canonical"},
-    "skill-web-clone": {"description":"Clonagem de uma página web por URL com extração de estrutura, reprodução visual, interações essenciais e verificação no navegador.","category":"frontend","risk":"medium","source":"codex-native-web-clone","mirrorEverywhere":true,"triggers":["web clone","web-clone","clone site","clone website","clonar site","clonar website","copiar pagina","copiar página"],"aliases":["clone site","clonar site","web clone"],"status":"canonical"},
-    "skill-mcp-builder": {"description":"Construção segura de MCP servers tipados e testáveis.","category":"integrations","risk":"high","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["mcp builder","criar mcp","servidor mcp"],"aliases":["mcp builder"],"status":"canonical"},
-    "skill-deep-wiki": {"description":"Documentação técnica navegável com arquitetura, Mermaid e onboarding.","category":"documentation","risk":"low","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["deep wiki","wiki tecnica","documentar repositorio"],"aliases":["deep wiki"],"status":"canonical"},
-    "skill-agent-observability": {"description":"Observabilidade de agentes, custos, latência, qualidade e regressões.","category":"observability","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["agent observability","observabilidade de agente","tracing agente"],"aliases":["agent observability"],"status":"canonical"},
-    "skill-release-engineering": {"description":"Engenharia de release, smoke tests, rollback e checklist operacional.","category":"delivery","risk":"high","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["release engineering","preparar release","rollback"],"aliases":["release engineering"],"status":"canonical"},
-    "skill-database-migrations": {"description":"Migrações de banco seguras, compatíveis, idempotentes e verificáveis.","category":"database","risk":"high","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["database migration","migração de banco","migration sql"],"aliases":["migração de banco"],"status":"canonical"},
-    "skill-dependency-upgrade": {"description":"Atualização controlada de dependências e lockfiles.","category":"maintenance","risk":"medium","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["dependency upgrade","atualizar dependencias","upgrade dependencias"],"aliases":["upgrade dependências"],"status":"canonical"},
-    "skill-incident-response": {"description":"Resposta a incidentes, contenção, recuperação e postmortem.","category":"operations","risk":"high","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["incident response","incidente","postmortem"],"aliases":["resposta a incidente"],"status":"canonical"},
-    "skill-adr": {"description":"Registros de decisões arquiteturais com alternativas e consequências.","category":"architecture","risk":"low","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["adr","decisão arquitetural","architecture decision"],"aliases":["adr"],"status":"canonical"},
-    "skill-research-and-synthesis": {"description":"Pesquisa web rastreável, comparável e baseada em fontes primárias.","category":"research","risk":"low","source":"orquestrador-native","mirrorEverywhere":true,"triggers":["research and synthesis","pesquisa web","pesquisar e sintetizar"],"aliases":["pesquisa com fontes"],"status":"canonical"},
+    "skill-quality-gate": {
+      "description": "Avalia skills, plugins e MCPs antes da adoção.",
+      "category": "governance",
+      "risk": "high",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "quality gate",
+        "skill gate",
+        "avaliar skill",
+        "auditar plugin"
+      ],
+      "aliases": [
+        "quality gate",
+        "skill gate"
+      ],
+      "status": "canonical"
+    },
+    "skill-repo-health": {
+      "description": "Diagnóstico de saúde, stack, verificação e riscos de repositórios.",
+      "category": "engineering",
+      "risk": "medium",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "repo health",
+        "saúde do repositorio",
+        "inspecionar repositorio"
+      ],
+      "aliases": [
+        "repo health",
+        "health check repositorio"
+      ],
+      "status": "canonical"
+    },
+    "skill-preflight": {
+      "description": "Preflight de escopo, baseline, riscos, ownership e testes.",
+      "category": "workflow",
+      "risk": "medium",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "preflight",
+        "pre-flight",
+        "antes de implementar"
+      ],
+      "aliases": [
+        "preflight"
+      ],
+      "status": "canonical",
+      "workflow": {
+        "entry": "SKILL.md",
+        "kind": "workflow",
+        "validation": "standard",
+        "referencesOptional": true,
+        "legacyCompatible": true,
+        "notes": "Explicit workflow schema for operator-style preflight execution."
+      }
+    },
+    "skill-systematic-debugging": {
+      "description": "Debugging sistemático orientado por evidência e causa raiz.",
+      "category": "engineering",
+      "risk": "medium",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "debug sistematico",
+        "causa raiz",
+        "investigar bug"
+      ],
+      "aliases": [
+        "debug sistematico"
+      ],
+      "status": "canonical"
+    },
+    "skill-verification-before-completion": {
+      "description": "Verificação proporcional antes de declarar conclusão.",
+      "category": "quality",
+      "risk": "low",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "verificar conclusão",
+        "verification before completion",
+        "validar antes de concluir"
+      ],
+      "aliases": [
+        "verificação final"
+      ],
+      "status": "canonical",
+      "workflow": {
+        "entry": "SKILL.md",
+        "kind": "workflow",
+        "validation": "strict",
+        "referencesOptional": true,
+        "legacyCompatible": true,
+        "notes": "Verification-oriented workflow override with stricter validation."
+      }
+    },
+    "skill-webapp-testing": {
+      "description": "Testes web E2E, acessibilidade, estados e regressão visual.",
+      "category": "testing",
+      "risk": "medium",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "webapp testing",
+        "teste e2e",
+        "playwright",
+        "teste de aplicação web"
+      ],
+      "aliases": [
+        "teste web",
+        "teste e2e"
+      ],
+      "status": "canonical"
+    },
+    "skill-web-clone": {
+      "description": "Clonagem de uma página web por URL com extração de estrutura, reprodução visual, interações essenciais e verificação no navegador.",
+      "category": "frontend",
+      "risk": "medium",
+      "source": "codex-native-web-clone",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "web clone",
+        "web-clone",
+        "clone site",
+        "clone website",
+        "clonar site",
+        "clonar website",
+        "copiar pagina",
+        "copiar página"
+      ],
+      "aliases": [
+        "clone site",
+        "clonar site",
+        "web clone"
+      ],
+      "status": "canonical"
+    },
+    "skill-mcp-builder": {
+      "description": "Construção segura de MCP servers tipados e testáveis.",
+      "category": "integrations",
+      "risk": "high",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "mcp builder",
+        "criar mcp",
+        "servidor mcp"
+      ],
+      "aliases": [
+        "mcp builder"
+      ],
+      "status": "canonical"
+    },
+    "skill-deep-wiki": {
+      "description": "Documentação técnica navegável com arquitetura, Mermaid e onboarding.",
+      "category": "documentation",
+      "risk": "low",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "deep wiki",
+        "wiki tecnica",
+        "documentar repositorio"
+      ],
+      "aliases": [
+        "deep wiki"
+      ],
+      "status": "canonical"
+    },
+    "skill-agent-observability": {
+      "description": "Observabilidade de agentes, custos, latência, qualidade e regressões.",
+      "category": "observability",
+      "risk": "medium",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "agent observability",
+        "observabilidade de agente",
+        "tracing agente"
+      ],
+      "aliases": [
+        "agent observability"
+      ],
+      "status": "canonical"
+    },
+    "skill-release-engineering": {
+      "description": "Engenharia de release, smoke tests, rollback e checklist operacional.",
+      "category": "delivery",
+      "risk": "high",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "release engineering",
+        "preparar release",
+        "rollback"
+      ],
+      "aliases": [
+        "release engineering"
+      ],
+      "status": "canonical"
+    },
+    "skill-database-migrations": {
+      "description": "Migrações de banco seguras, compatíveis, idempotentes e verificáveis.",
+      "category": "database",
+      "risk": "high",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "database migration",
+        "migração de banco",
+        "migration sql"
+      ],
+      "aliases": [
+        "migração de banco"
+      ],
+      "status": "canonical"
+    },
+    "skill-dependency-upgrade": {
+      "description": "Atualização controlada de dependências e lockfiles.",
+      "category": "maintenance",
+      "risk": "medium",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "dependency upgrade",
+        "atualizar dependencias",
+        "upgrade dependencias"
+      ],
+      "aliases": [
+        "upgrade dependências"
+      ],
+      "status": "canonical"
+    },
+    "skill-incident-response": {
+      "description": "Resposta a incidentes, contenção, recuperação e postmortem.",
+      "category": "operations",
+      "risk": "high",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "incident response",
+        "incidente",
+        "postmortem"
+      ],
+      "aliases": [
+        "resposta a incidente"
+      ],
+      "status": "canonical"
+    },
+    "skill-adr": {
+      "description": "Registros de decisões arquiteturais com alternativas e consequências.",
+      "category": "architecture",
+      "risk": "low",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "adr",
+        "decisão arquitetural",
+        "architecture decision"
+      ],
+      "aliases": [
+        "adr"
+      ],
+      "status": "canonical"
+    },
+    "skill-research-and-synthesis": {
+      "description": "Pesquisa web rastreável, comparável e baseada em fontes primárias.",
+      "category": "research",
+      "risk": "low",
+      "source": "orquestrador-native",
+      "mirrorEverywhere": true,
+      "triggers": [
+        "research and synthesis",
+        "pesquisa web",
+        "pesquisar e sintetizar"
+      ],
+      "aliases": [
+        "pesquisa com fontes"
+      ],
+      "status": "canonical"
+    },
     "skill-optimize-images": {
       "description": "Otimiza imagens para blogs e sites, incluindo conversão de formato, redimensionamento, compressão, responsividade, acessibilidade e validação visual. Use quando pedirem para otimizar, reduzir, preparar, converter ou melhorar imagens para web.",
       "category": "media",
@@ -696,6 +964,98 @@
         "compressão de imagens",
         "webp",
         "avif"
+      ],
+      "status": "canonical"
+    },
+    "skill-impeccable": {
+      "description": "Orquestra melhorias de frontend inspiradas no Impeccable a partir de pedidos conversacionais de design, UX, acessibilidade, responsividade, tipografia, layout, cor, motion, clareza, hardening e polish.",
+      "category": "frontend",
+      "risk": "medium",
+      "source": "https://github.com/pbakaus/impeccable",
+      "mirrorEverywhere": false,
+      "triggers": [
+        "impeccable"
+      ],
+      "aliases": [
+        "impeccable"
+      ],
+      "status": "canonical"
+    },
+    "skill-scope-control": {
+      "description": "Analisa se alterações, diffs e PRs continuam alinhados ao objetivo declarado, identificando escopo extra e propondo manter, separar ou justificar.",
+      "category": "governance",
+      "risk": "medium",
+      "source": "https://github.com/shubhamsaboo/awesome-llm-apps/tree/main/scope-creep-detector",
+      "mirrorEverywhere": false,
+      "triggers": [
+        "escopo da mudança",
+        "o diff saiu do escopo",
+        "alteração grande demais",
+        "essa alteração ficou grande demais",
+        "o pr está misturado",
+        "revisar escopo",
+        "o que não deveria estar aqui"
+      ],
+      "aliases": [
+        "escopo"
+      ],
+      "status": "canonical"
+    },
+    "skill-doublecheck": {
+      "description": "Verifica afirmações, fontes e risco de alucinação em respostas, pesquisas e documentos, com modo pontual ou contínuo.",
+      "category": "verification",
+      "risk": "medium",
+      "source": "https://www.getclaudeskills.com/skills/doublecheck-github",
+      "mirrorEverywhere": false,
+      "triggers": [
+        "verificar fontes",
+        "confira as fontes",
+        "isso está correto",
+        "verifique essa resposta",
+        "checagem factual",
+        "faça um doublecheck"
+      ],
+      "aliases": [
+        "doublecheck"
+      ],
+      "status": "canonical"
+    },
+    "skill-threat-modeling": {
+      "description": "Conduz threat modeling estruturado com STRIDE-A, fluxos de dados, fronteiras de confiança, riscos priorizados e comparação incremental.",
+      "category": "security",
+      "risk": "high",
+      "source": "https://github.com/awesome-copilot/threat-model-analyst",
+      "mirrorEverywhere": false,
+      "triggers": [
+        "threat model",
+        "modelo de ameaça",
+        "modele as ameaças",
+        "analisar ameaças",
+        "stride",
+        "fronteiras de confiança",
+        "o que pode dar errado de segurança"
+      ],
+      "aliases": [
+        "modelo de ameaça"
+      ],
+      "status": "canonical"
+    },
+    "skill-skill-development": {
+      "description": "Cria, revisa e melhora skills do Orquestrador com gatilhos claros, divulgação progressiva, referências focadas, validação e testes de comportamento.",
+      "category": "governance",
+      "risk": "medium",
+      "source": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-development",
+      "mirrorEverywhere": false,
+      "triggers": [
+        "criar uma skill",
+        "melhorar uma skill",
+        "avaliar uma skill",
+        "organizar skill",
+        "escrever skill.md",
+        "publicar skill"
+      ],
+      "aliases": [
+        "desenvolver skill"
       ],
       "status": "canonical"
     }

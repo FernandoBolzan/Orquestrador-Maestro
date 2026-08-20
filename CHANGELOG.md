@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.1.25 - 2026-08-20
+
+### Skills conversacionais selecionadas
+
+- Adicionada `skill-impeccable`, uma adaptação conversacional para pedidos de melhoria visual, UX, acessibilidade, responsividade e polish de frontend.
+- Adicionada `skill-scope-control` para identificar expansão de escopo em diffs, PRs e alterações misturadas, sempre em modo somente leitura por padrão.
+- Adicionada `skill-doublecheck` para checagem de afirmações, fontes, atualidade e risco de alucinação, com modo pontual por padrão e modo contínuo somente sob pedido explícito.
+- Adicionada `skill-threat-modeling` para threat modeling defensivo com STRIDE-A, ativos, fluxos de dados, fronteiras de confiança e priorização de riscos.
+- Adicionada `skill-skill-development` para criar, revisar e manter skills com gatilhos naturais, divulgação progressiva, metadados, aliases e validação.
+- Adicionados gatilhos em linguagem natural, aliases em português e cadeias controladas para uso sem comandos técnicos.
+- Mantidos os artefatos externos como referências/adaptações opt-in; nenhum hook, CLI, modo persistente ou instalação externa é ativado silenciosamente.
+
+### Catálogo, sincronização e segurança
+
+- O catálogo canônico passou a validar 48 skills, com manifests, router, aliases, chains, índice e espelhos sincronizados.
+- A validação pública passou a excluir corretamente worktrees temporários de `orquestrador/runtime/worktrees` das varreduras públicas, sem apagar nem publicar estado local.
+- Atualizados `DEV/WORKLOG.md`, `DEV/VERIFY.md` e `DEV/HANDOFF.md` com o resultado, limites e evidências da entrega.
+
+### Verificação da release
+
+- `scripts/validate-public.ps1`: aprovado.
+- `scripts/validate-skills.ps1`: aprovado; 48 skills.
+- `scripts/check-dev-gates.ps1 -Strict`: aprovado.
+- `npm test -- --runInBand`: 26 testes aprovados.
+- Roteamento conversacional testado para escopo, fontes, threat modeling, criação de skills e melhoria de interface.
+
 ## 0.1.24 - 2026-08-17
 
 ### Workflows retomáveis e seguros

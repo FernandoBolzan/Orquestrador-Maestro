@@ -4,6 +4,7 @@ description: Use for WhatsApp automation with Evolution API, including instance 
 category: communication
 risk: medium
 source: evolution-api-local-patterns
+last_verified: 2026-08-06
 ---
 
 # Evolution API
@@ -21,6 +22,12 @@ Use this skill when integrating WhatsApp through Evolution API. Treat every mess
 7. Persist delivery, read, inbound, disconnect, reconnect, and pairing events as append-only state transitions.
 8. Redact message bodies in logs unless a support or audit policy explicitly requires short-lived encrypted retention.
 9. Surface recoverable admin states: QR expired, disconnected, webhook failing, send queued, send failed, rate limited, and consent missing.
+
+## Current API Boundary
+
+- Target Evolution API v2+ and use the instance's documented base URL plus the `apikey` header.
+- Common v2 routes include `POST /instance/create` and `POST /message/sendText/{instanceName}`; verify the exact route in the deployed instance's OpenAPI/docs before coding because route shapes can differ between v1 and v2.
+- Starting with Evolution API v2.4.0, self-hosted instances require activation/licensing before business endpoints serve traffic. Add license status/activation to deployment readiness checks and surface `503` activation failures distinctly from WhatsApp failures.
 
 ## Consent and Compliance
 
@@ -42,9 +49,14 @@ Use this skill when integrating WhatsApp through Evolution API. Treat every mess
 - Confirm API keys and message bodies are absent from client bundles and normal logs.
 - Replay the same webhook payload twice and verify only one business effect occurs.
 
+## Official References
+
+- https://docs.evolutionfoundation.com.br/en/evolution-api/create-instance
+- https://docs.evolutionfoundation.com.br/evolution-api/send-text-message
+- https://github.com/evolution-foundation/evolution-api/releases
+
 ## Related Skills
 
 - `skill-saas-admin-dashboard`
 - `skill-unified-analytics`
 - `skill-security-hooks`
-

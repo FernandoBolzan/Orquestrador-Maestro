@@ -4,6 +4,7 @@ description: Automatic SaaS billing engine with AbacatePay (PIX + credit card), 
 category: saas
 risk: high
 source: nina-saas-production-code
+last_verified: 2026-08-06
 ---
 
 # skill-cobranca-automatizada-saas-abacatepay
@@ -123,10 +124,10 @@ Full details in `billing-tables.md`.
 6. If all eventos fired and still overdue, marks as cancelled
 
 ### Webhook Flow
-1. POST /api/abacatepay-webhook receives event
+1. POST /api/abacatepay-webhook receives an AbacatePay v2 event
 2. HMAC-SHA256 signature verification (replay + timing-safe compare)
 3. Rate limited: 100 req/min per IP
-4. On `billing.paid`: processPaymentWithTransaction updates cobranca + cobranca_tracking
+4. On `checkout.completed` or `subscription.renewed`: processPaymentWithTransaction updates cobranca + cobranca_tracking
 5. On failure: processRollback reverts state
 6. Raw event stored in abacatepay_events
 
@@ -155,6 +156,12 @@ billing_config stores encrypted credentials per owner (AES-256-GCM):
 
 See `billing-config.md` for full schema and setup.
 
+## Provider API Boundary
+
+- AbacatePay: new code uses API v2 and the webhook events `checkout.completed`, `checkout.refunded`, `checkout.disputed`, `subscription.completed`, `subscription.renewed`, and `subscription.cancelled`. The legacy v1 `billing.*` events belong behind a migration adapter.
+- Resend: keep the key server-side and send through the official SDK or `POST https://api.resend.com/emails` with `Authorization: Bearer <key>` and a `User-Agent`; use `Idempotency-Key` for retryable sends, record provider request IDs, and redact message content from logs.
+- Evolution API: use the deployed v2 documentation and `apikey` header; keep instance credentials server-side and account for v2.4.0 activation/licensing before diagnosing business-endpoint failures.
+
 ## Guardrails
 
 1. Keep ALL payment provider secrets server-side. Never expose AbacatePay API keys in browser bundles.
@@ -165,6 +172,7 @@ See `billing-config.md` for full schema and setup.
 6. Dunning notifications must respect channel preference (email, whatsapp, or ambos).
 7. Trial expiration is irreversible: set status = blocked, do not auto-unblock without payment.
 8. Metrics queries (MRR, faturamento) should use aggregateBillingMetrics(), not ad-hoc SQL.
+9. New integrations must use `https://api.abacatepay.com/v2`, `/checkouts/create`, `/subscriptions/create`, and `/transparents/create` as appropriate. Keep `/v1/billing/*` and `billing.*` only inside an explicit legacy adapter.
 
 ## Local Reference (Nina)
 
@@ -205,7 +213,7 @@ This skill is extracted from the Nina SaaS billing system. The production codeba
 ## Validation
 
 - After changes, run build and typecheck (npm run build, npm run typecheck or equivalent)
-- Simulate webhook: POST billing.paid event and verify idempotent processing
+- Simulate webhook: POST `checkout.completed` and `subscription.renewed` events and verify idempotent processing
 - Test dunning: create overdue cobranca with regua de 0/3/7 dias and confirm notification dispatch
 - Test trial: set trial_duration_days=1, create user, wait for pre-expiration and expiration
 - Verify no AbacatePay/Resend/Evolution keys leak to browser bundles
@@ -213,7 +221,7 @@ This skill is extracted from the Nina SaaS billing system. The production codeba
 
 ## Related Skills
 
-- `skill-abacatepay-integration` — AbacatePay API specifics (billing create, list, webhook)
+- `skill-abacatepay-integration` — AbacatePay v2 API specifics and legacy v1 migration boundary
 - `skill-saas-core-limits` — plan limits, entitlements, feature flags after payment
 - `skill-evolution-api` — WhatsApp notification channel
 - `skill-supabase-rls` — RLS policies for billing tables

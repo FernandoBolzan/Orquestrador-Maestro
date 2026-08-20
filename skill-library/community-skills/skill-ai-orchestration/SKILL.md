@@ -4,6 +4,7 @@ description: Use for server-side AI orchestration in SaaS products, including Op
 category: ai
 risk: medium
 source: local-ai-orchestration-patterns
+last_verified: 2026-08-06
 ---
 
 # AI Orchestration
@@ -22,6 +23,13 @@ Use this skill to design or modify AI provider integrations. Keep this file as t
 8. Minimize tokens: send only task-relevant fields, summarize or chunk long context, cache stable inputs, and store reusable embeddings or transcripts.
 9. Require explicit user consent before generating, cloning, publishing, or sending content that uses personal data, voice, likeness, customer messages, or third-party media.
 10. Emit sanitized observability: feature, tenant, model, token estimate, cost estimate, latency, retry count, queue age, and failure class.
+
+## Provider API Selection
+
+- OpenAI: use the Responses API for new integrations; keep Chat Completions only for existing compatibility paths and verify model availability from the Models API.
+- Gemini: use the Interactions API for new projects; `generateContent` remains a supported legacy path. Use provider-specific response-format settings and still validate semantics locally.
+- Claude and other providers: use their current official SDK/API reference, pin versions in the host project, and isolate provider-specific request/response adapters behind the common service contract below.
+- Never copy model IDs, endpoint versions, or parameter names across providers. Verify them at implementation time and record the verification date in the integration code or ADR.
 
 ## Service Contract
 
@@ -46,10 +54,15 @@ Use this skill to design or modify AI provider integrations. Keep this file as t
 - Validate token reduction with a representative long input and confirm the schema validator rejects invalid output.
 - Confirm audit events and cost records are written for both synchronous and queued calls.
 
+## Official References
+
+- https://platform.openai.com/docs/quickstart
+- https://ai.google.dev/gemini-api/docs/interactions-overview
+- https://ai.google.dev/gemini-api/docs/models
+
 ## Related Skills
 
 - `skill-live-processing`
 - `skill-smart-clip-detection`
 - `skill-elevenlabs-voice-cloning`
 - `skill-unified-analytics`
-

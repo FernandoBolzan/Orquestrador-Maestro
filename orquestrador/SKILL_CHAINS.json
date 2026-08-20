@@ -125,6 +125,68 @@
         "skill-modern-ui-patterns"
       ]
     },
+    "skill-impeccable": {
+      "loadFirst": true,
+      "mayInvoke": [
+        "skill-frontend-ux-guardrails",
+        "skill-modern-ui-patterns",
+        "skill-open-design-ui",
+        "skill-webapp-testing"
+      ],
+      "rules": [
+        "Interpret natural-language design requests before selecting a focused intervention.",
+        "Load at most two downstream frontend skills for a standard task unless the user requests a deep audit.",
+        "Use the external Impeccable CLI only when it is already available or the user explicitly authorizes installation."
+      ]
+    },
+    "skill-scope-control": {
+      "loadFirst": true,
+      "mayInvoke": [
+        "skill-preflight",
+        "skill-release-engineering"
+      ],
+      "rules": [
+        "Capture one-line intent before classifying scope.",
+        "Keep the default analysis read-only: do not edit, revert, stage, commit or push.",
+        "Recommend keep, split or justify with evidence from the diff."
+      ]
+    },
+    "skill-doublecheck": {
+      "mayInvoke": [
+        "skill-research-and-synthesis",
+        "skill-verification-before-completion"
+      ],
+      "rules": [
+        "Use one-shot verification by default; persistent mode requires an explicit request.",
+        "Use web research for unstable or current claims and cite the supporting sources.",
+        "Never invent citations or claim verification without evidence."
+      ]
+    },
+    "skill-threat-modeling": {
+      "loadFirst": true,
+      "mayInvoke": [
+        "skill-saas-security-scan",
+        "skill-supabase-rls",
+        "skill-incident-response"
+      ],
+      "rules": [
+        "Keep the work defensive, authorized and read-only by default.",
+        "Do not perform active exploitation or broaden the target scope.",
+        "Use incremental mode only when a baseline is available."
+      ]
+    },
+    "skill-skill-development": {
+      "loadFirst": true,
+      "mayInvoke": [
+        "skill-quality-gate",
+        "skill-verification-before-completion"
+      ],
+      "rules": [
+        "Inspect the existing router, aliases, manifest and chains before creating a new pattern.",
+        "Keep the skill focused and validate natural-language routing with examples.",
+        "Do not install an external artifact without a quality and permission review."
+      ]
+    },
     "skill-whatsapp-meta-ads-leads": {
       "mayInvoke": [
         "skill-evolution-api",

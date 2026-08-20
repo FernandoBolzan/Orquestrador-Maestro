@@ -103,6 +103,27 @@
     "clone site": "skill-web-clone",
     "clonar site": "skill-web-clone",
     "web clone": "skill-web-clone",
-    "web-clone": "skill-web-clone"
+    "web-clone": "skill-web-clone",
+    "impeccable": "skill-impeccable",
+    "melhorar interface": "skill-impeccable",
+    "melhorar visual": "skill-impeccable",
+    "deixar profissional": "skill-impeccable",
+    "auditar interface": "skill-impeccable",
+    "polir interface": "skill-impeccable",
+    "corrigir ux": "skill-impeccable",
+    "escopo": "skill-scope-control",
+    "controle de escopo": "skill-scope-control",
+    "scope creep": "skill-scope-control",
+    "revisar diff": "skill-scope-control",
+    "doublecheck": "skill-doublecheck",
+    "verificar fontes": "skill-doublecheck",
+    "checagem factual": "skill-doublecheck",
+    "modelo de ameaça": "skill-threat-modeling",
+    "threat modeling": "skill-threat-modeling",
+    "stride": "skill-threat-modeling",
+    "desenvolver skill": "skill-skill-development",
+    "criar skill": "skill-skill-development",
+    "melhorar skill": "skill-skill-development",
+    "avaliar skill": "skill-skill-development"
   }
 }
