@@ -29,7 +29,8 @@ O envio de uma tag `vX.Y.Z` dispara [`.github/workflows/release.yml`](../.github
 - executa os gates de validação e `npm pack --dry-run`;
 - publica no canal estável `latest` do npm com provenance.
 
-Antes de usar o fluxo, configure o secret `NPM_TOKEN` no ambiente protegido `npm-release`, com permissão de publicação para `@iapro/orquestrador-maestro-cli`. Nunca reutilize uma versão já existente no npm.
+Antes de usar o fluxo, configure o secret `NPM_TOKEN` no ambiente protegido `npm-release`, com permissão de publicação para `@iapro/orquestrador-maestro-cli` e bypass de 2FA para publicação automatizada. Como alternativa, configure trusted publishing do npm para este repositório e workflow, usando o token OIDC já declarado (`id-token: write`).
+O workflow consulta o npm antes de publicar. Se a versão da tag já existir, ele registra a versão como já publicada e encerra com sucesso, evitando falha por republicação ou tentativa desnecessária de OTP.
 
 ## Rollback
 

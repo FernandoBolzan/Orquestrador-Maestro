@@ -25,6 +25,7 @@
 - `scripts/check-dev-gates.ps1 -Strict`: aprovado.
 - `npm test -- --runInBand`: 26 testes aprovados.
 - Roteamento conversacional testado para escopo, fontes, threat modeling, criação de skills e melhoria de interface.
+- Workflow de release tornado idempotente para não tentar republicar uma versão já existente no npm; actions de checkout/setup-node atualizadas e requisito de autenticação 2FA documentado.
 
 ## 0.1.24 - 2026-08-17
 

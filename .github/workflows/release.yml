@@ -22,15 +22,15 @@ jobs:
     environment: npm-release
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org
           cache: npm
 
@@ -58,6 +58,15 @@ jobs:
           npm pack --dry-run
 
       - name: Publish stable package
-        run: npm publish --access public --provenance
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $package = node -p "require('./package.json').name"
+          $published = npm view "$package@$version" version --registry https://registry.npmjs.org 2>$null
+          if ($LASTEXITCODE -eq 0 -and $published.Trim() -eq $version) {
+            Write-Host "Package $package@$version is already published; skipping duplicate publish."
+            exit 0
+          }
+          npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
