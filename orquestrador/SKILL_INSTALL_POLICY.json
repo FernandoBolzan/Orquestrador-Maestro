@@ -31,38 +31,38 @@
     },
     "opencode": {
       "path": ".opencode/skills",
-      "maxDirectories": 48,
-      "allowDirectories": ["orquestrador-maestro", "code-review"]
+      "maxDirectories": 64,
+      "allowDirectories": ["orquestrador-maestro", "code-review", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker"]
     },
     "agents": {
       "path": ".agents/skills",
-      "maxDirectories": 48,
-      "allowDirectories": ["orquestrador-maestro"]
+      "maxDirectories": 64,
+      "allowDirectories": ["orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker"]
     },
     "claude": {
       "path": ".claude/skills",
-      "maxDirectories": 48,
-      "allowDirectories": ["orquestrador-maestro"]
+      "maxDirectories": 64,
+      "allowDirectories": ["orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker"]
     },
     "cursor": {
       "path": ".cursor/skills",
-      "maxDirectories": 48,
-      "allowDirectories": ["orquestrador-maestro"]
+      "maxDirectories": 64,
+      "allowDirectories": ["orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker"]
     },
     "gemini": {
       "path": ".gemini/skills",
-      "maxDirectories": 48,
-      "allowDirectories": ["orquestrador-maestro"]
+      "maxDirectories": 64,
+      "allowDirectories": ["orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker"]
     },
     "windsurf": {
       "path": ".windsurf/skills",
-      "maxDirectories": 48,
-      "allowDirectories": ["orquestrador-maestro"]
+      "maxDirectories": 64,
+      "allowDirectories": ["orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker"]
     },
     "antigravity": {
       "path": ".antigravity-skills/skills",
-      "maxDirectories": 48,
-      "allowDirectories": ["orquestrador-maestro"]
+      "maxDirectories": 64,
+      "allowDirectories": ["orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker"]
     }
   }
 }

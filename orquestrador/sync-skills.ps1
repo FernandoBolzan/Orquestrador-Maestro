@@ -42,13 +42,13 @@ function Get-DefaultInstallPolicy {
           "worker"
         )
       }
-      opencode = [pscustomobject]@{ path = ".opencode/skills"; maxDirectories = 48; allowDirectories = @() }
-      agents = [pscustomobject]@{ path = ".agents/skills"; maxDirectories = 48; allowDirectories = @() }
-      claude = [pscustomobject]@{ path = ".claude/skills"; maxDirectories = 48; allowDirectories = @() }
-      cursor = [pscustomobject]@{ path = ".cursor/skills"; maxDirectories = 48; allowDirectories = @() }
-      gemini = [pscustomobject]@{ path = ".gemini/skills"; maxDirectories = 48; allowDirectories = @() }
-      windsurf = [pscustomobject]@{ path = ".windsurf/skills"; maxDirectories = 48; allowDirectories = @() }
-      antigravity = [pscustomobject]@{ path = ".antigravity-skills/skills"; maxDirectories = 48; allowDirectories = @() }
+      opencode = [pscustomobject]@{ path = ".opencode/skills"; maxDirectories = 64; allowDirectories = @("orquestrador-maestro", "code-review", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker") }
+      agents = [pscustomobject]@{ path = ".agents/skills"; maxDirectories = 64; allowDirectories = @("orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker") }
+      claude = [pscustomobject]@{ path = ".claude/skills"; maxDirectories = 64; allowDirectories = @("orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker") }
+      cursor = [pscustomobject]@{ path = ".cursor/skills"; maxDirectories = 64; allowDirectories = @("orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker") }
+      gemini = [pscustomobject]@{ path = ".gemini/skills"; maxDirectories = 64; allowDirectories = @("orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker") }
+      windsurf = [pscustomobject]@{ path = ".windsurf/skills"; maxDirectories = 64; allowDirectories = @("orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker") }
+      antigravity = [pscustomobject]@{ path = ".antigravity-skills/skills"; maxDirectories = 64; allowDirectories = @("orquestrador-maestro", "plan", "ralplan", "ralph", "team", "ultrawork", "deep-interview", "security-review", "web-clone", "worker") }
     }
   }
 }
