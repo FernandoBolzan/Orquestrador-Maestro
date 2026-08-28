@@ -29,7 +29,10 @@
 - `git diff --check`: aprovado.
 - Os dois espelhos da `autopilot` têm hashes SHA-256 idênticos.
 - Nenhum artefato não rastreado existente (`orquestrador/runtime/` e `skill-showcase.html`) foi incluído nesta release.
-- A publicação npm será confirmada separadamente após a autenticação do registry.
+- GitHub: commit `bf87856` e tag `v0.1.26` publicados em `main`.
+- npm: publicação tentada pelo workflow `33209366051`, mas bloqueada com `E404` no registry porque o token do ambiente `npm-release` não tem permissão efetiva para publicar no escopo `@iapro`.
+- Estado npm confirmado: `latest` permanece em `0.1.25`; nenhuma versão `0.1.26` foi publicada.
+- Ação necessária para concluir: conceder ao token do ambiente `npm-release` acesso de publicação ao escopo `@iapro` e reexecutar o workflow da tag `v0.1.26`.
 
 ## 0.1.25 - 2026-08-20
 
