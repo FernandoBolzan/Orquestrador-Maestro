@@ -60,13 +60,23 @@ jobs:
       - name: Publish stable package
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $version = node -p "require('./package.json').version"
           $package = node -p "require('./package.json').name"
+          $publisher = npm whoami --registry https://registry.npmjs.org 2>$null
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($publisher)) {
+            throw "NPM_TOKEN não autenticado no registry. Gere um token npm com permissão de publicação e atualize o secret NPM_TOKEN no ambiente npm-release."
+          }
+          Write-Host "Authenticated npm publisher: $($publisher.Trim())"
           $published = npm view "$package@$version" version --registry https://registry.npmjs.org 2>$null
           if ($LASTEXITCODE -eq 0 -and $published.Trim() -eq $version) {
             Write-Host "Package $package@$version is already published; skipping duplicate publish."
             exit 0
           }
-          npm publish --access public --provenance
+          $publishOutput = npm publish --access public --provenance 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            $details = ($publishOutput | Out-String).Trim()
+            throw "npm recusou a publicação de $package@$version para o usuário $($publisher.Trim()). Confirme que esse usuário é owner/maintainer do escopo @iapro e que NPM_TOKEN tem write access. Detalhes: $details"
+          }
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
