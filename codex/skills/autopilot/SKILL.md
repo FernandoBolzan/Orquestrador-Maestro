@@ -1,10 +1,10 @@
 ---
 name: autopilot
-description: Full autonomous execution from idea to working code
+description: Use when the user explicitly wants an autonomous, end-to-end software delivery workflow from an idea or brief to verified working code.
 ---
 
 <Purpose>
-Autopilot takes a brief product idea and autonomously handles the full lifecycle: requirements analysis, technical design, planning, parallel implementation, QA cycling, and multi-perspective validation. It produces working, verified code from a 2-3 line description.
+Autopilot takes a sufficiently clear software brief and handles the full lifecycle: requirements analysis, technical design, planning, implementation, QA, review, recovery, and evidence-based handoff.
 </Purpose>
 
 <Use_When>
@@ -26,6 +26,15 @@ Autopilot takes a brief product idea and autonomously handles the full lifecycle
 Most non-trivial software tasks require coordinated phases: understanding requirements, designing a solution, implementing in parallel, testing, and validating quality. Autopilot orchestrates all of these phases automatically so the user can describe what they want and receive working code without managing each step.
 </Why_This_Exists>
 
+<Non_Negotiables>
+- User instructions, repository instructions, and existing uncommitted work are binding context. Never overwrite unrelated user changes.
+- Do not commit, push, merge, publish, deploy, delete, reset, or modify external systems unless the user explicitly authorizes that exact action.
+- Inspect repository entrypoints and compact project memory before making assumptions. Prefer evidence from files and commands over remembered conventions.
+- A claim of completion requires fresh evidence. A worker's self-report, a planned command, or code that merely looks right is not verification.
+- Use only tools and skills available in the current runtime. If an optional tool is unavailable, use the closest local path and record the limitation.
+- Every non-trivial automatic decision must be recorded with its evidence, rejected alternative, and cost if wrong.
+</Non_Negotiables>
+
 <Execution_Policy>
 - Each phase must complete before the next begins
 - Default to the lightest mode that can finish the task; do not expand into a heavy workflow unless the task truly needs multiple phases
@@ -46,6 +55,9 @@ Most non-trivial software tasks require coordinated phases: understanding requir
 - Before changing code, define boundaries: files/behaviors that must not break, destructive commands that are forbidden, and the rollback point
 - Every phase must have a gate: required artifact, owner, next action, and verification command; do not advance on vague outputs
 - Prefer task-by-task execution with fresh context from checkpoint artifacts instead of relying on the full conversation history
+- Treat autopilot as a bounded state machine: `intake -> expansion -> planning -> execution -> qa -> validation -> handoff`.
+- A new user message is a local override. Preserve earlier non-conflicting requirements, invalidate affected downstream artifacts, and resume from the earliest invalid phase.
+- Do not claim that unavailable reviewers approved anything. If review tools are missing, perform an adversarial single-agent review and disclose the limitation.
 </Execution_Policy>
 
 ## Operating Modes
@@ -93,11 +105,14 @@ Each phase must pass these gates before advancing:
      - Current phase
      - Next concrete action
      - Validation command
+   - Read applicable `AGENTS.md` files and, when present, compact `DEV/` files in order: `README`/`INDEX`, `HANDOFF`, `CONTEXT`, active spec. Load only task-relevant detail afterward.
+   - Inspect branch/status/diff and record a baseline. Treat pre-existing changes as protected and choose a safe rollback point without destructive commands.
+   - Identify stack, package manager, available test/build/lint/typecheck commands, entrypoints, and deployment/data boundaries.
    - Create or update `.omx/autopilot/{slug}/survival-guide.md` with only the context needed after compaction.
    - Create or update `.omx/autopilot/{slug}/boundaries.md` before code edits when the task is broad, risky, or production-facing.
    - If ambiguity remains high, run `explore` first for brownfield facts, then run `$deep-interview --quick <task>` before proceeding.
    - Carry the snapshot path into autopilot artifacts/state so all phases share grounded context.
-   - Keep the checkpoint short enough to read quickly in a new session.
+   - Keep the checkpoint short enough to read quickly in a new session. The gate passes only when the next action, owner, risk boundary, and verification target are explicit.
 
 1. **Phase 0 - Expansion**: Turn the user's idea into a detailed spec
    - If `.omx/specs/deep-interview-*.md` exists for this task: reuse it and skip redundant expansion work
@@ -105,7 +120,7 @@ Each phase must pass these gates before advancing:
    - Analyst (THOROUGH tier): Extract requirements
    - Architect (THOROUGH tier): Create technical specification
    - Output: `.omx/plans/autopilot-spec.md`
-   - Gate: spec lists acceptance criteria, non-goals, risk boundaries, and validation strategy
+   - Gate: spec lists acceptance criteria, non-goals, risk boundaries, assumptions, and a concrete evidence target for every criterion (or an explicit human-validation dependency)
 
 2. **Phase 1 - Planning**: Create an implementation plan from the spec
    - Architect (THOROUGH tier): Create plan (direct mode, no interview)
@@ -117,56 +132,62 @@ Each phase must pass these gates before advancing:
      - `files/modules`
      - `dependsOn`
      - `parallelSafe: true|false`
-     - `verify`
+      - `verify`
+      - `acceptanceEvidence`
    - Mark independent work with `[P]` and explicit verification work with `[VERIFY]`
-   - Gate: every task has a verification command or evidence target
+   - Before execution, check for contradictory tasks, overlapping ownership, missing dependencies, stale paths, unverifiable criteria, and commands with external side effects; record rulings.
+   - Gate: every task has an owner, dependency decision, acceptance evidence, and verification command or evidence target
 
-3. **Phase 2 - Execution**: Implement the plan using Ralph + Ultrawork
+3. **Phase 2 - Execution**: Implement the plan with available execution workflows
    - LOW-tier executor/search roles: Simple tasks
    - STANDARD-tier executor roles: Standard tasks
    - THOROUGH-tier executor/architect roles: Complex tasks
-   - Run independent tasks in parallel only when write ownership is disjoint
+   - Run independent tasks in parallel only when write ownership is disjoint, the integration point is clear, and each lane has an independent verification target. Shared interfaces, migrations, configuration, lockfiles, and generated files are sequential by default.
    - The lead agent keeps the critical path moving while side agents work
    - Before each long edit or test loop, update the checkpoint with changed files, current hypothesis, next action, and verification command
    - Execute tasks one-by-one unless `[P]` lanes are proven independent
    - For each task, use a fresh compact context: spec summary, relevant files, task definition, boundary notes, and verify command
    - The lead orchestrator should coordinate outputs and integration; avoid filling lead context with full file dumps that belong to specialist lanes
 
-4. **Phase 3 - QA**: Cycle until all tests pass (UltraQA mode)
-   - Build, lint, test, fix failures
+4. **Phase 3 - QA**: Verify in layers, then repair
+   - Start with existence and relevance checks, then focused behavior checks, then integration/regression checks, and finally boundary checks for secrets, private paths, permissions, destructive operations, and generated output.
+   - Build, lint, test, and fix failures when those checks exist; never invent a passing result for an unavailable command.
    - Repeat up to 5 cycles
    - Stop early if the same error repeats 3 times (indicates a fundamental issue)
    - Do not rerun broad tests blindly; after one broad failure, switch to the smallest failing test or command until fixed
+   - For every failure, record root cause, changed hypothesis, smallest safe fix, covering check, and result. After one broad failure, switch to the smallest failing check before rerunning the broad gate.
    - Use layered gates:
      - existence: changed files and expected artifacts exist
      - relevance: changes address the requested behavior
      - root cause: failure explanation maps to code changed
      - regression: focused tests plus broad gate when available
      - momentum: next step is smaller than the previous loop
+   - A gate may pass with an explicitly classified environmental, pre-existing, or unavailable check only when impact and next action are recorded; unresolved failures cannot be silently waived.
 
-5. **Phase 4 - Validation**: Multi-perspective review in parallel
+5. **Phase 4 - Validation**: Evidence-based independent review
    - Architect: Functional completeness
    - Security-reviewer: Vulnerability check
    - Code-reviewer: Quality review
    - Reviewers receive concise artifacts and diffs, not full session history
    - Review findings must include severity, file/path, and required action
-   - All must approve; fix and re-validate on rejection
+   - Review the actual diff and evidence, not only worker reports.
+   - Findings must include severity, path/symbol, evidence, and required action. Critical or important findings require a fix and scoped re-review; use one consolidated fix wave when findings share a cause.
+   - After the validation cap, adjudicate each residual finding as fixed, deferred, or blocked with a reason. Do not silently convert disagreement into approval.
+   - If reviewers or MCP tools are unavailable, perform a single-agent adversarial review and disclose that limitation.
 
-6. **Phase 5 - Cleanup**: Clear all mode state via OMX MCP tools on successful completion
+6. **Phase 5 - Handoff and cleanup**: Clear only state owned by this run
    - `state_clear({mode: "autopilot"})`
    - `state_clear({mode: "ralph"})`
    - `state_clear({mode: "ultrawork"})`
    - `state_clear({mode: "ultraqa"})`
-   - Or run `/cancel` for clean exit
+   - Or run `/cancel` for clean exit. Do not delete project artifacts or user changes as cleanup.
 </Steps>
 
 <Tool_Usage>
-- Use available MCP tools directly when present; do not block on discovery tooling that is unavailable in the current runtime
-- Use `ask_codex` with `agent_role: "architect"` for Phase 4 architecture validation
-- Use `ask_codex` with `agent_role: "security-reviewer"` for Phase 4 security review
-- Use `ask_codex` with `agent_role: "code-reviewer"` for Phase 4 quality review
-- Agents form their own analysis first, then consult Codex for cross-validation
-- If ToolSearch finds no MCP tools or Codex is unavailable, proceed without it -- never block on external tools
+- Use available local tools, subagents, and MCP tools directly when present; do not block on discovery tooling that is unavailable in the current runtime.
+- Give reviewers concise artifacts and the actual diff. Ask for severity, path/symbol, evidence, and required action; never pre-judge findings or ask a reviewer to ignore a risk.
+- Agents form their own analysis first. Cross-validation is additive, not a substitute for tests or direct inspection.
+- If a requested reviewer or MCP tool is unavailable, perform the closest local review and record the limitation instead of assuming approval.
 </Tool_Usage>
 
 ## Token And Compaction Discipline
@@ -199,7 +220,7 @@ Before broad or risky execution, write boundaries:
 
 ## State Management
 
-Use `omx_state` MCP tools for autopilot lifecycle state.
+Use `omx_state` MCP tools for autopilot lifecycle state when available. The filesystem checkpoint and task ledger remain the source of truth when state tools are unavailable or fail.
 
 - **On start**:
   `state_write({mode: "autopilot", active: true, current_phase: "expansion", started_at: "<now>", state: {context_snapshot_path: "<snapshot-path>"}})`
@@ -249,15 +270,21 @@ Why bad: This is an exploration/brainstorming request. Respond conversationally 
 - Stop and report when validation keeps failing after 3 re-validation rounds
 - Stop when the user says "stop", "cancel", or "abort"
 - If requirements were too vague and expansion produces an unclear spec, pause and redirect to `$deep-interview` before proceeding
+- Pause before deploy, publish, push, merge, delete, reset, production-data changes, account/auth changes, paid services, or third-party communication unless explicitly authorized.
+- If a dependency, credential, service, or platform is unavailable, try a local substitute or static verification and report the limitation; never invent success.
+- If the same diagnosis appears twice, change the hypothesis or report the blocker; do not repeat the same investigation loop.
 </Escalation_And_Stop_Conditions>
 
 <Final_Checklist>
-- [ ] All 5 phases completed (Expansion, Planning, Execution, QA, Validation)
-- [ ] All validators approved in Phase 4
-- [ ] Tests pass (verified with fresh test run output)
-- [ ] Build succeeds (verified with fresh build output)
-- [ ] State files cleaned up
-- [ ] User informed of completion with summary of what was built
+- [ ] Request contract and risk boundaries are recorded
+- [ ] Plan tasks have owners, dependencies, disjointness decisions, and verification targets
+- [ ] Every changed behavior has focused evidence where feasible
+- [ ] Required lint/typecheck/tests/build/package checks have fresh results, or limitations are explicit
+- [ ] Review covers completeness, safety, and maintainability
+- [ ] Residual findings and rulings are visible in the handoff
+- [ ] No unauthorized commit, push, merge, publish, deploy, deletion, or external side effect occurred
+- [ ] Checkpoint and applicable durable project memory are current
+- [ ] User informed of outcome, evidence, limitations, and exact next action if needed
 </Final_Checklist>
 
 <Advanced>

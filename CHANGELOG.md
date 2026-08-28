@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.1.26 - 2026-08-28
+
+### Autopilot mais robusta e recuperável
+
+- Reestruturada a skill `autopilot` nos dois espelhos públicos: `codex/skills/autopilot/` e `orquestrador/skill-library/codex-skills/autopilot/`.
+- Adicionado preflight obrigatório com leitura de `AGENTS.md`, memória compacta `DEV/`, baseline de branch/status/diff, stack, comandos disponíveis e limites de dados/produção.
+- Adicionados limites explícitos contra commit, push, merge, publicação, deploy, exclusão, reset e efeitos externos sem autorização específica.
+- Fortalecido o modelo de execução com ledger persistente, checkpoints de recuperação, ownership por tarefa, dependências e regras seguras para paralelismo.
+- Cada critério de aceitação agora precisa de evidência observável ou de uma dependência de validação humana explicitamente registrada.
+- QA reorganizado em camadas: existência, relevância, comportamento focado, regressão/integração e verificação de fronteiras de segurança.
+- Revisão independente agora exige severidade, caminho/símbolo, evidência e ação; achados importantes exigem correção e re-review delimitado.
+- Quando reviewers ou MCPs não estão disponíveis, a skill executa uma revisão adversarial local e registra a limitação, sem presumir aprovação.
+- Handoff final ampliado com resultado, comandos executados, evidências, limitações, decisões, riscos residuais e próxima ação.
+
+### Referências incorporadas
+
+- Padrões de ledger, revisão por tarefa e recuperação inspirados em `obra/superpowers`.
+- Práticas de contexto de repositório e lint/test inspiradas em `Aider-AI/aider`.
+- Configuração declarativa e execução autônoma observadas em `SWE-agent/SWE-agent`.
+- Isolamento e avisos de acesso ao filesystem observados em `OpenHands/OpenHands`.
+
+### Verificação da release
+
+- `quick_validate.py`: aprovado nos dois espelhos da skill.
+- `scripts/validate-skills.ps1`: aprovado; 48 skills.
+- `scripts/validate-public.ps1`: aprovado.
+- `git diff --check`: aprovado.
+- Os dois espelhos da `autopilot` têm hashes SHA-256 idênticos.
+- Nenhum artefato não rastreado existente (`orquestrador/runtime/` e `skill-showcase.html`) foi incluído nesta release.
+- A publicação npm será confirmada separadamente após a autenticação do registry.
+
 ## 0.1.25 - 2026-08-20
 
 ### Skills conversacionais selecionadas
