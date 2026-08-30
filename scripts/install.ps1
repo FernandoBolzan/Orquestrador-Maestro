@@ -51,6 +51,9 @@ $AllowedComponents = @(
   "gemini",
   "windsurf",
   "antigravity",
+  "mimo",
+  "kimi",
+  "grok",
   "tool-profiles",
   "codex-skills",
   "codex-agents",
@@ -335,7 +338,7 @@ $extraTargets = New-Object System.Collections.Generic.List[object]
 $extraFileTargets = New-Object System.Collections.Generic.List[object]
 if (-not $SkipExtraSkills) {
   if (-not $SkipCommunitySkills) {
-    if (Test-SelectedComponent -Names @("skills", "community-skills", "codex", "agents", "claude", "opencode", "cursor", "gemini", "windsurf", "antigravity")) {
+    if (Test-SelectedComponent -Names @("skills", "community-skills", "codex", "agents", "claude", "opencode", "cursor", "gemini", "windsurf", "antigravity", "mimo", "kimi", "grok")) {
       Add-InstallTarget `
         -Targets $extraTargets `
         -Source $SourceCommunitySkills `
@@ -371,7 +374,10 @@ if ($InstallToolProfiles) {
     @{ Source = "windsurf"; Destination = ".windsurf"; Label = ".windsurf"; Component = "windsurf" },
     @{ Source = "windsurf-global"; Destination = ".codeium\windsurf\memories"; Label = ".codeium__windsurf__memories"; Component = "windsurf" },
     @{ Source = "antigravity"; Destination = ".antigravity"; Label = ".antigravity"; Component = "antigravity" },
-    @{ Source = "ai-standards"; Destination = ".ai-standards"; Label = ".ai-standards"; Component = "antigravity" }
+    @{ Source = "ai-standards"; Destination = ".ai-standards"; Label = ".ai-standards"; Component = "antigravity" },
+    @{ Source = "mimo"; Destination = ".mimo"; Label = ".mimo"; Component = "mimo" },
+    @{ Source = "kimi"; Destination = ".kimi-code"; Label = ".kimi-code"; Component = "kimi" },
+    @{ Source = "grok"; Destination = ".grok"; Label = ".grok"; Component = "grok" }
   )
   foreach ($target in $toolProfileTargets) {
     if (Test-SelectedComponent -Names @("tool-profiles", $target.Component)) {

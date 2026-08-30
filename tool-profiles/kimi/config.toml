@@ -1,0 +1,2 @@
+# Kimi Code user configuration. Authentication and sessions remain local to Kimi.
+extra_skill_dirs = ["{{USER_HOME}}/.orquestrador/skill-library/community-skills", "{{USER_HOME}}/.agents/skills"]

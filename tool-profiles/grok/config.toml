@@ -1,0 +1,3 @@
+# Grok Build user configuration. Authentication and sessions remain local to Grok.
+[skills]
+paths = ["{{USER_HOME}}/.orquestrador/skill-library/community-skills", "{{USER_HOME}}/.agents/skills"]

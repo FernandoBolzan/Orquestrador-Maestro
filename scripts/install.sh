@@ -168,7 +168,7 @@ selected_component() {
 
 validate_only_components() {
   local component
-  local allowed=" all core orquestrador global-agents skills community-skills codex agents claude opencode cursor gemini windsurf antigravity tool-profiles codex-skills codex-agents codex-prompts prompts "
+  local allowed=" all core orquestrador global-agents skills community-skills codex agents claude opencode cursor gemini windsurf antigravity mimo kimi grok tool-profiles codex-skills codex-agents codex-prompts prompts "
   for component in "${ONLY_COMPONENTS[@]}"; do
     case "$allowed" in
       *" $component "*) ;;
@@ -438,7 +438,7 @@ fi
 
 if [ "$SKIP_EXTRA_SKILLS" = false ]; then
   if [ "$SKIP_COMMUNITY_SKILLS" = false ]; then
-    if selected_component skills community-skills codex agents claude opencode cursor gemini windsurf antigravity; then
+    if selected_component skills community-skills codex agents claude opencode cursor gemini windsurf antigravity mimo kimi grok; then
       add_target "$SOURCE_COMMUNITY_SKILLS" "$TARGET_SKILL_LIBRARY/community-skills" ".orquestrador__skill-library__community-skills" "community-skills"
     fi
   fi
@@ -466,6 +466,9 @@ if [ "$INSTALL_TOOL_PROFILES" = true ]; then
     "windsurf-global|.codeium/windsurf/memories|.codeium__windsurf__memories|windsurf"
     "antigravity|.antigravity|.antigravity|antigravity"
     "ai-standards|.ai-standards|.ai-standards|antigravity"
+    "mimo|.mimo|.mimo|mimo"
+    "kimi|.kimi-code|.kimi-code|kimi"
+    "grok|.grok|.grok|grok"
   )
   for entry in "${TOOL_PROFILES[@]}"; do
     IFS='|' read -r src_sub dest_sub label component <<EOF

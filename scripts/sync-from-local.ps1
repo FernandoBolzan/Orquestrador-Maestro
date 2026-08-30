@@ -472,6 +472,49 @@ if (-not $SkipToolProfiles) {
     $script:toolProfileFiles++
   }
 
+  Write-ToolProfileTemplateIfMissing -Destination "mimo\AGENTS.md" -Content @'
+# MiMo Code Global Orquestrador
+
+Use the shared Orquestrador Maestro contract for substantive work:
+
+1. Read `{{USER_HOME}}/AGENTS.md`.
+2. Read `{{USER_HOME}}/.orquestrador/rules.md`.
+3. Read `{{USER_HOME}}/.orquestrador/maestro.md`.
+4. Read `{{USER_HOME}}/.orquestrador/PERSISTENCE.md`.
+5. In projects with `DEV/`, read the compact project documentation before task skills.
+6. Use `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json` before loading skills.
+7. Keep durable project notes in `DEV/` and update `DEV/WORKLOG.md` after substantive work.
+
+MiMo Code is responsible for its own login, model selection, sessions, and local runtime data.
+'@
+
+  Write-ToolProfileTemplateIfMissing -Destination "kimi\AGENTS.md" -Content @'
+# Kimi Code Global Orquestrador
+
+Use the shared Orquestrador Maestro contract for substantive work:
+
+1. Read `{{USER_HOME}}/AGENTS.md`.
+2. Read `{{USER_HOME}}/.orquestrador/rules.md`.
+3. Read `{{USER_HOME}}/.orquestrador/maestro.md`.
+4. Read `{{USER_HOME}}/.orquestrador/PERSISTENCE.md`.
+5. In projects with `DEV/`, read the compact project documentation before task skills.
+6. Use `{{USER_HOME}}/.orquestrador/SKILLS_ROUTER.json` before loading skills.
+7. Keep durable project notes in `DEV/` and update `DEV/WORKLOG.md` after substantive work.
+
+Kimi Code is responsible for its own login, model selection, sessions, and local runtime data.
+'@
+
+  Write-ToolProfileTemplateIfMissing -Destination "kimi\config.toml" -Content @'
+# Kimi Code user configuration. Authentication and sessions remain local to Kimi.
+extra_skill_dirs = ["{{USER_HOME}}/.orquestrador/skill-library/community-skills", "{{USER_HOME}}/.agents/skills"]
+'@
+
+  Write-ToolProfileTemplateIfMissing -Destination "grok\config.toml" -Content @'
+# Grok Build user configuration. Authentication and sessions remain local to Grok.
+[skills]
+paths = ["{{USER_HOME}}/.orquestrador/skill-library/community-skills", "{{USER_HOME}}/.agents/skills"]
+'@
+
   Write-ToolProfileTemplateIfMissing -Destination "opencode-global\AGENTS.md" -Content @'
 # OpenCode Global Orquestrador
 

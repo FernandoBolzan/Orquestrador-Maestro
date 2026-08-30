@@ -9,6 +9,16 @@ The Grok CLI reads the Orquestrador through the same portable `AGENTS.md` and sk
 
 The installer writes `~/.grok/config.toml` and points Grok at `~/.orquestrador/skills` and `~/.agents/skills`. Verify discovery with `grok inspect`.
 
+## MiMo Code e Kimi Code
+
+O instalador também prepara os pontos de entrada globais de MiMo Code e Kimi Code:
+
+- MiMo Code: `~/.mimo/AGENTS.md`, executável `mimo`.
+- Kimi Code: `~/.kimi-code/AGENTS.md` e `config.toml`, executável `kimi`.
+- Grok Build: `~/.grok/config.toml`, executável `grok`.
+
+Use `--only mimo,kimi,grok` para instalar somente esses perfis. O instalador não instala os CLIs nem gerencia login, credenciais, sessões ou caches. MiMo Code e Kimi Code usam as skills compartilhadas em `~/.agents/skills`; Kimi também recebe diretórios extras apontando para o snapshot do Orquestrador.
+
 `tool-profiles/` guarda hooks e perfis textuais selecionados para reaproveitar o comportamento do Orquestrador em outras ferramentas sem publicar o diretório completo de cada uma.
 
 ## Catálogo de adaptadores
@@ -39,6 +49,9 @@ Os hooks e entrypoints estão detalhados em [orquestrador-reference.md](orquestr
 - `tool-profiles/windsurf-global/`: `global_rules.md` para Windsurf/Cascade.
 - `tool-profiles/antigravity-home/`: `antigravity-rules.json` instalado no home do usuário.
 - `tool-profiles/antigravity/`: `antigravity.json` e `settings.json`.
+- `tool-profiles/mimo/`: `AGENTS.md` global para MiMo Code.
+- `tool-profiles/kimi/`: `AGENTS.md` e `config.toml` globais para Kimi Code.
+- `tool-profiles/grok/`: `config.toml` global para Grok Build.
 - `tool-profiles/ai-standards/`: standards portáteis instalados em `~/.ai-standards`.
 - `orquestrador/blueprints/project/`: bootstrap de workspace para VS Code, GitHub Copilot, Continue, JetBrains AI Assistant, Aider, Cline e Windsurf.
 
@@ -107,6 +120,9 @@ O pacote instala arquivos nos locais que as ferramentas costumam ler como regra,
 | Cursor | `%USERPROFILE%\.cursor\rules\orquestrador-maestro.mdc`, `%USERPROFILE%\.cursor\AGENTS.md` e `%USERPROFILE%\.cursor\commands\maestro.md` |
 | Windsurf/Cascade | `%USERPROFILE%\.codeium\windsurf\memories\global_rules.md` |
 | Antigravity | `%USERPROFILE%\antigravity-rules.json`, `%USERPROFILE%\.antigravity\antigravity.json`, `%USERPROFILE%\.antigravity\settings.json` e `%USERPROFILE%\.ai-standards` |
+| MiMo Code | `%USERPROFILE%\.mimo\AGENTS.md` |
+| Kimi Code | `%USERPROFILE%\.kimi-code\AGENTS.md` e `%USERPROFILE%\.kimi-code\config.toml` |
+| Grok Build | `%USERPROFILE%\.grok\config.toml` |
 | VS Code + GitHub Copilot | projeto aberto: `.github\copilot-instructions.md` e `.vscode\extensions.json` |
 | Continue | projeto aberto: `.continue\rules\00-orquestrador-maestro.md` |
 | JetBrains AI Assistant | projeto aberto: `.aiassistant\rules\orquestrador-maestro.md` |
@@ -147,6 +163,9 @@ A fonte estruturada da matriz é `orquestrador/PROGRAM_ENTRYPOINTS.json`. A tabe
 | Gemini CLI | `gemini` | Sim | `GEMINI.md`, hooks e skills | Não |
 | Windsurf | `windsurf` | Sim | `global_rules.md`, hooks e skills | Não |
 | Antigravity | `antigravity` | Sim | `antigravity-rules.json`, `.antigravity`, `.ai-standards` e skills | Não |
+| MiMo Code | `mimo` | Sim | `AGENTS.md` e skills compartilhadas | Não |
+| Kimi Code | `kimi` | Sim | `AGENTS.md`, `config.toml` e skills compartilhadas | Não |
+| Grok Build | `grok` | Sim | `config.toml` e skills compartilhadas | Não |
 | VS Code + Copilot | `workspace` | Sim, via bootstrap do projeto | `.github/copilot-instructions.md`, `.vscode/extensions.json` | Não |
 | Continue | `workspace` | Sim, via bootstrap do projeto | `.continue/rules/00-orquestrador-maestro.md` | Não |
 | JetBrains AI Assistant | `workspace` | Sim, via bootstrap do projeto | `.aiassistant/rules/orquestrador-maestro.md` | Não |

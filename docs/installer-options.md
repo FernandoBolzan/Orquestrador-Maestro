@@ -88,6 +88,9 @@ cursor
 gemini
 windsurf
 antigravity
+mimo
+kimi
+grok
 tool-profiles
 codex-skills
 codex-agents

@@ -71,7 +71,7 @@ Opcoes de install/update/uninstall:
   --core-only                 Instala somente .orquestrador e AGENTS.md
   --only <component>          Limita a um componente: core, codex, agents,
                               claude, opencode, cursor, gemini, windsurf,
-                              antigravity
+                              antigravity, mimo, kimi, grok
   --no-tool-profiles          Nao instala perfis globais das ferramentas
   --skip-community-skills     Nao copia a biblioteca comunitaria offload
   --skip-skill-sync           Nao roda o sync de skills

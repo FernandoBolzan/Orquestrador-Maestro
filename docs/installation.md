@@ -6,7 +6,7 @@ Este guia é para quem baixou o repositório e quer instalar o Orquestrador no p
 
 - Windows com PowerShell ou Linux/macOS com Bash.
 - Git instalado para clonar o repositório.
-- Codex, Claude, Gemini, Grok CLI, Cursor, OpenCode, Windsurf ou Antigravity são opcionais. O instalador prepara as pastas e os arquivos; cada ferramenta continua responsável pelo próprio login, runtime e credenciais.
+- Codex, Claude, Gemini, Grok CLI, MiMo Code, Kimi Code, Cursor, OpenCode, Windsurf ou Antigravity são opcionais. O instalador prepara as pastas e os arquivos; cada ferramenta continua responsável pelo próprio login, runtime e credenciais.
 
 ## Instalação Completa Recomendada
 

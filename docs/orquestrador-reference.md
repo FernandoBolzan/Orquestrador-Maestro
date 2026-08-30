@@ -79,7 +79,7 @@ No repositorio, "hook" significa uma regra operacional que dispara antes, durant
 | DEV compaction hook | `orquestrador/bin/dev-context-tools.js` | Mantem `WORKLOG` curto, move historico para `HANDOFFS/WORKLOG_ARCHIVE.md` e atualiza `HANDOFF.md`. |
 | Sync hook | `orquestrador/hooks.md` | Depois de mudar uma skill compartilhada, manda rodar `sync-skills.ps1 -Apply` no Windows ou `sync-skills.sh --apply` no Linux/macOS. |
 | Usage log hook | `SKILL_USAGE_SCHEMA.json` | Define um log JSONL opcional para medir quais skills foram selecionadas e abertas. |
-| Tool entrypoint hook | `PROGRAM_ENTRYPOINTS.json` e `tool-profiles/` | Faz Codex, OpenCode, Claude, Cursor, Gemini, Windsurf e Antigravity chamarem o Orquestrador por padrao; VS Code/GitHub Copilot, Continue, JetBrains AI Assistant, Aider, Cline e Windsurf em nivel de projeto entram via bootstrap de workspace. |
+| Tool entrypoint hook | `PROGRAM_ENTRYPOINTS.json` e `tool-profiles/` | Faz Codex, OpenCode, Claude, Cursor, Gemini, Grok, MiMo Code, Kimi Code, Windsurf e Antigravity chamarem o Orquestrador por padrão; VS Code/GitHub Copilot, Continue, JetBrains AI Assistant, Aider, Cline e Windsurf em nível de projeto entram via bootstrap de workspace. |
 | Security Git hooks | `skill-security-hooks/scripts/install-security-hooks.cmd` | Instala `.githooks/pre-commit` e `.githooks/pre-push` em repositorio autorizado. |
 
 Em outras palavras: o hook da ferramenta nao deve ser a arvore de decisao completa. Ele so precisa lembrar a ordem correta de leitura e apontar para o roteador central. Isso preserva o mesmo comportamento com custo de contexto muito menor.

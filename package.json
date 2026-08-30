@@ -1,6 +1,6 @@
 {
   "name": "@iapro/orquestrador-maestro-cli",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "CLI npm para instalar, atualizar, verificar e remover o Orquestrador Maestro no usuário atual, com skills nativas enxutas e biblioteca externa para reduzir tokens.",
   "bin": {
     "orquestrador-maestro": "bin/orquestrador-maestro.js"
@@ -111,6 +111,8 @@
     "cursor",
     "gemini-cli",
     "grok-cli",
+    "mimo-code",
+    "kimi-code",
     "windsurf",
     "antigravity",
     "skills",

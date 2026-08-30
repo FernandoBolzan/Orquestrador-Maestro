@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.27 - 2026-08-30
+
+### Novos CLIs de programação assistida
+
+- Adicionado suporte de perfil e instalação para MiMo Code (`mimo`), Kimi Code (`kimi`) e Grok Build (`grok`).
+- Incluídos os componentes `mimo`, `kimi` e `grok` no `--only` dos instaladores Windows, Linux e macOS.
+- Adicionados pontos de entrada globais seguros em `.mimo`, `.kimi-code` e `.grok`, sem copiar autenticação, sessões, caches ou histórico.
+- Atualizados README, documentação de perfis, palavras-chave do pacote e matriz de ferramentas suportadas.
+
 ## 0.1.26 - 2026-08-28
 
 ### Autopilot mais robusta e recuperável

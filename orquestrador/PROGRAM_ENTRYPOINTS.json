@@ -162,6 +162,48 @@
       ],
       "skillsRoot": "{{USER_HOME}}/.windsurf/skills",
       "notes": "Windsurf Cascade loads global rules from .codeium/windsurf/memories/global_rules.md."
+    },
+    "mimo": {
+      "component": "mimo",
+      "capabilities": {
+        "autoActivates": true,
+        "hookSupport": "AGENTS.md and shared skill discovery",
+        "commandRewrite": false,
+        "statusline": false,
+        "settingsMerge": "file copy with backup",
+        "verify": "MiMo global AGENTS profile exists"
+      },
+      "primary": ["{{USER_HOME}}/.mimo/AGENTS.md"],
+      "skillsRoot": "{{USER_HOME}}/.agents/skills",
+      "notes": "MiMo Code is installed separately and keeps authentication and runtime state outside the public snapshot."
+    },
+    "kimi": {
+      "component": "kimi",
+      "capabilities": {
+        "autoActivates": true,
+        "hookSupport": "AGENTS.md, config.toml and shared skill discovery",
+        "commandRewrite": false,
+        "statusline": false,
+        "settingsMerge": "file copy with backup",
+        "verify": "Kimi Code AGENTS profile and extra skill directories exist"
+      },
+      "primary": ["{{USER_HOME}}/.kimi-code/AGENTS.md", "{{USER_HOME}}/.kimi-code/config.toml"],
+      "skillsRoot": "{{USER_HOME}}/.agents/skills",
+      "notes": "Kimi Code is installed separately; credentials, sessions, logs and caches remain Kimi-owned."
+    },
+    "grok": {
+      "component": "grok",
+      "capabilities": {
+        "autoActivates": true,
+        "hookSupport": "config.toml, AGENTS.md and shared skill discovery",
+        "commandRewrite": false,
+        "statusline": false,
+        "settingsMerge": "file copy with backup",
+        "verify": "Grok config points to shared skill directories"
+      },
+      "primary": ["{{USER_HOME}}/.grok/config.toml"],
+      "skillsRoot": "{{USER_HOME}}/.agents/skills",
+      "notes": "Grok Build is installed separately and keeps authentication, sessions and runtime state outside the public snapshot."
     }
   }
 }
