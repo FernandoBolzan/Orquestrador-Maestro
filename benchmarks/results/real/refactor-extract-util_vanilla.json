@@ -1,0 +1,45 @@
+{
+  "benchmark": "refactor-extract-util",
+  "condition": "vanilla",
+  "run": 1,
+  "model": "none (measurement only)",
+  "provider": "none",
+  "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+  "promptHash": "da4495176dbf26fa3d29f6b2e2eeb0aa48bbc8635783c2d337fa8f853cfbcd93",
+  "environment": {
+    "os": "Linux 6.17.0-23-generic",
+    "nodeVersion": "v22.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "timestamp": "2026-09-02T18:00:44.479Z"
+  },
+  "usage": {
+    "inputTokens": null,
+    "outputTokens": null,
+    "cachedTokens": null,
+    "reasoningTokens": null,
+    "totalTokens": null,
+    "tokenSource": "not-applicable"
+  },
+  "context": {
+    "chars": 848,
+    "bytes": 848,
+    "lines": 31
+  },
+  "tools": {
+    "calls": 0,
+    "filesRead": 3,
+    "filesModified": 0
+  },
+  "validation": {
+    "passed": false,
+    "testsPassed": 0,
+    "testsFailed": 1
+  },
+  "metadata": {
+    "durationMs": 4,
+    "scenarioType": "refactor",
+    "fixtureFiles": 3,
+    "notes": "Real measurement - no AI model execution"
+  }
+}

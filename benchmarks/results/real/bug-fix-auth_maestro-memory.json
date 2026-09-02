@@ -1,0 +1,45 @@
+{
+  "benchmark": "bug-fix-auth",
+  "condition": "maestro-memory",
+  "run": 1,
+  "model": "none (measurement only)",
+  "provider": "none",
+  "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+  "promptHash": "d3376dcb5c21ec9fd8d5cc0d641996b10232a26901f7d8518887f871023d93be",
+  "environment": {
+    "os": "Linux 6.17.0-23-generic",
+    "nodeVersion": "v22.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "timestamp": "2026-09-02T18:00:35.434Z"
+  },
+  "usage": {
+    "inputTokens": null,
+    "outputTokens": null,
+    "cachedTokens": null,
+    "reasoningTokens": null,
+    "totalTokens": null,
+    "tokenSource": "not-applicable"
+  },
+  "context": {
+    "chars": 2378,
+    "bytes": 2388,
+    "lines": 67
+  },
+  "tools": {
+    "calls": 0,
+    "filesRead": 4,
+    "filesModified": 0
+  },
+  "validation": {
+    "passed": false,
+    "testsPassed": 0,
+    "testsFailed": 1
+  },
+  "metadata": {
+    "durationMs": 3757,
+    "scenarioType": "bug",
+    "fixtureFiles": 4,
+    "notes": "Real measurement - no AI model execution"
+  }
+}

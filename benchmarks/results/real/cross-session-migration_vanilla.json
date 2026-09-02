@@ -1,0 +1,45 @@
+{
+  "benchmark": "cross-session-migration",
+  "condition": "vanilla",
+  "run": 1,
+  "model": "none (measurement only)",
+  "provider": "none",
+  "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+  "promptHash": "6fbb0f8259b0ec6412c0cf80af0f7f04b6769a20777c34a888aab683b4f36979",
+  "environment": {
+    "os": "Linux 6.17.0-23-generic",
+    "nodeVersion": "v22.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "timestamp": "2026-09-02T18:00:35.447Z"
+  },
+  "usage": {
+    "inputTokens": null,
+    "outputTokens": null,
+    "cachedTokens": null,
+    "reasoningTokens": null,
+    "totalTokens": null,
+    "tokenSource": "not-applicable"
+  },
+  "context": {
+    "chars": 1429,
+    "bytes": 1429,
+    "lines": 48
+  },
+  "tools": {
+    "calls": 0,
+    "filesRead": 4,
+    "filesModified": 0
+  },
+  "validation": {
+    "passed": false,
+    "testsPassed": 0,
+    "testsFailed": 1
+  },
+  "metadata": {
+    "durationMs": 7,
+    "scenarioType": "cross-session",
+    "fixtureFiles": 4,
+    "notes": "Real measurement - no AI model execution"
+  }
+}

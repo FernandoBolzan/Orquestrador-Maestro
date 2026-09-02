@@ -1,0 +1,1188 @@
+{
+  "metadata": {
+    "timestamp": "2026-09-02T18:00:54.385Z",
+    "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+    "environment": {
+      "os": "Linux 6.17.0-23-generic",
+      "nodeVersion": "v22.17.0",
+      "platform": "linux",
+      "arch": "x64",
+      "timestamp": "2026-09-02T18:00:54.385Z"
+    },
+    "totalRuns": 18
+  },
+  "summary": {
+    "bug-fix-auth_vanilla": {
+      "runs": 1,
+      "contextChars": {
+        "min": 2235,
+        "max": 2235,
+        "median": 2235
+      },
+      "contextBytes": {
+        "min": 2235,
+        "max": 2235,
+        "median": 2235
+      },
+      "durationMs": {
+        "min": 3896,
+        "max": 3896,
+        "median": 3896
+      }
+    },
+    "bug-fix-auth_maestro-core": {
+      "runs": 1,
+      "contextChars": {
+        "min": 2378,
+        "max": 2378,
+        "median": 2378
+      },
+      "contextBytes": {
+        "min": 2388,
+        "max": 2388,
+        "median": 2388
+      },
+      "durationMs": {
+        "min": 3624,
+        "max": 3624,
+        "median": 3624
+      }
+    },
+    "bug-fix-auth_maestro-memory": {
+      "runs": 1,
+      "contextChars": {
+        "min": 2378,
+        "max": 2378,
+        "median": 2378
+      },
+      "contextBytes": {
+        "min": 2388,
+        "max": 2388,
+        "median": 2388
+      },
+      "durationMs": {
+        "min": 3757,
+        "max": 3757,
+        "median": 3757
+      }
+    },
+    "cross-session-migration_vanilla": {
+      "runs": 1,
+      "contextChars": {
+        "min": 1429,
+        "max": 1429,
+        "median": 1429
+      },
+      "contextBytes": {
+        "min": 1429,
+        "max": 1429,
+        "median": 1429
+      },
+      "durationMs": {
+        "min": 7,
+        "max": 7,
+        "median": 7
+      }
+    },
+    "cross-session-migration_maestro-core": {
+      "runs": 1,
+      "contextChars": {
+        "min": 1572,
+        "max": 1572,
+        "median": 1572
+      },
+      "contextBytes": {
+        "min": 1582,
+        "max": 1582,
+        "median": 1582
+      },
+      "durationMs": {
+        "min": 3,
+        "max": 3,
+        "median": 3
+      }
+    },
+    "cross-session-migration_maestro-memory": {
+      "runs": 1,
+      "contextChars": {
+        "min": 1572,
+        "max": 1572,
+        "median": 1572
+      },
+      "contextBytes": {
+        "min": 1582,
+        "max": 1582,
+        "median": 1582
+      },
+      "durationMs": {
+        "min": 3,
+        "max": 3,
+        "median": 3
+      }
+    },
+    "feature-add-button_vanilla": {
+      "runs": 1,
+      "contextChars": {
+        "min": 385,
+        "max": 385,
+        "median": 385
+      },
+      "contextBytes": {
+        "min": 385,
+        "max": 385,
+        "median": 385
+      },
+      "durationMs": {
+        "min": 3285,
+        "max": 3285,
+        "median": 3285
+      }
+    },
+    "feature-add-button_maestro-core": {
+      "runs": 1,
+      "contextChars": {
+        "min": 528,
+        "max": 528,
+        "median": 528
+      },
+      "contextBytes": {
+        "min": 538,
+        "max": 538,
+        "median": 538
+      },
+      "durationMs": {
+        "min": 2897,
+        "max": 2897,
+        "median": 2897
+      }
+    },
+    "feature-add-button_maestro-memory": {
+      "runs": 1,
+      "contextChars": {
+        "min": 528,
+        "max": 528,
+        "median": 528
+      },
+      "contextBytes": {
+        "min": 538,
+        "max": 538,
+        "median": 538
+      },
+      "durationMs": {
+        "min": 2816,
+        "max": 2816,
+        "median": 2816
+      }
+    },
+    "investigate-performance_vanilla": {
+      "runs": 1,
+      "contextChars": {
+        "min": 1140,
+        "max": 1140,
+        "median": 1140
+      },
+      "contextBytes": {
+        "min": 1140,
+        "max": 1140,
+        "median": 1140
+      },
+      "durationMs": {
+        "min": 3,
+        "max": 3,
+        "median": 3
+      }
+    },
+    "investigate-performance_maestro-core": {
+      "runs": 1,
+      "contextChars": {
+        "min": 1283,
+        "max": 1283,
+        "median": 1283
+      },
+      "contextBytes": {
+        "min": 1293,
+        "max": 1293,
+        "median": 1293
+      },
+      "durationMs": {
+        "min": 5,
+        "max": 5,
+        "median": 5
+      }
+    },
+    "investigate-performance_maestro-memory": {
+      "runs": 1,
+      "contextChars": {
+        "min": 1283,
+        "max": 1283,
+        "median": 1283
+      },
+      "contextBytes": {
+        "min": 1293,
+        "max": 1293,
+        "median": 1293
+      },
+      "durationMs": {
+        "min": 4,
+        "max": 4,
+        "median": 4
+      }
+    },
+    "refactor-extract-util_vanilla": {
+      "runs": 1,
+      "contextChars": {
+        "min": 848,
+        "max": 848,
+        "median": 848
+      },
+      "contextBytes": {
+        "min": 848,
+        "max": 848,
+        "median": 848
+      },
+      "durationMs": {
+        "min": 4,
+        "max": 4,
+        "median": 4
+      }
+    },
+    "refactor-extract-util_maestro-core": {
+      "runs": 1,
+      "contextChars": {
+        "min": 991,
+        "max": 991,
+        "median": 991
+      },
+      "contextBytes": {
+        "min": 1001,
+        "max": 1001,
+        "median": 1001
+      },
+      "durationMs": {
+        "min": 6,
+        "max": 6,
+        "median": 6
+      }
+    },
+    "refactor-extract-util_maestro-memory": {
+      "runs": 1,
+      "contextChars": {
+        "min": 991,
+        "max": 991,
+        "median": 991
+      },
+      "contextBytes": {
+        "min": 1001,
+        "max": 1001,
+        "median": 1001
+      },
+      "durationMs": {
+        "min": 5,
+        "max": 5,
+        "median": 5
+      }
+    },
+    "resume-auth-feature_vanilla": {
+      "runs": 1,
+      "contextChars": {
+        "min": 1419,
+        "max": 1419,
+        "median": 1419
+      },
+      "contextBytes": {
+        "min": 1419,
+        "max": 1419,
+        "median": 1419
+      },
+      "durationMs": {
+        "min": 3527,
+        "max": 3527,
+        "median": 3527
+      }
+    },
+    "resume-auth-feature_maestro-core": {
+      "runs": 1,
+      "contextChars": {
+        "min": 1562,
+        "max": 1562,
+        "median": 1562
+      },
+      "contextBytes": {
+        "min": 1572,
+        "max": 1572,
+        "median": 1572
+      },
+      "durationMs": {
+        "min": 2982,
+        "max": 2982,
+        "median": 2982
+      }
+    },
+    "resume-auth-feature_maestro-memory": {
+      "runs": 1,
+      "contextChars": {
+        "min": 1562,
+        "max": 1562,
+        "median": 1562
+      },
+      "contextBytes": {
+        "min": 1572,
+        "max": 1572,
+        "median": 1572
+      },
+      "durationMs": {
+        "min": 3375,
+        "max": 3375,
+        "median": 3375
+      }
+    }
+  },
+  "details": {
+    "bug-fix-auth_vanilla": [
+      {
+        "benchmark": "bug-fix-auth",
+        "condition": "vanilla",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "d3376dcb5c21ec9fd8d5cc0d641996b10232a26901f7d8518887f871023d93be",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:28.046Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 2235,
+          "bytes": 2235,
+          "lines": 64
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 4,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 3896,
+          "scenarioType": "bug",
+          "fixtureFiles": 4,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "bug-fix-auth_maestro-core": [
+      {
+        "benchmark": "bug-fix-auth",
+        "condition": "maestro-core",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "d3376dcb5c21ec9fd8d5cc0d641996b10232a26901f7d8518887f871023d93be",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:31.672Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 2378,
+          "bytes": 2388,
+          "lines": 67
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 4,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 3624,
+          "scenarioType": "bug",
+          "fixtureFiles": 4,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "bug-fix-auth_maestro-memory": [
+      {
+        "benchmark": "bug-fix-auth",
+        "condition": "maestro-memory",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "d3376dcb5c21ec9fd8d5cc0d641996b10232a26901f7d8518887f871023d93be",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:35.434Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 2378,
+          "bytes": 2388,
+          "lines": 67
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 4,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 3757,
+          "scenarioType": "bug",
+          "fixtureFiles": 4,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "cross-session-migration_vanilla": [
+      {
+        "benchmark": "cross-session-migration",
+        "condition": "vanilla",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "6fbb0f8259b0ec6412c0cf80af0f7f04b6769a20777c34a888aab683b4f36979",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:35.447Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 1429,
+          "bytes": 1429,
+          "lines": 48
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 4,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 7,
+          "scenarioType": "cross-session",
+          "fixtureFiles": 4,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "cross-session-migration_maestro-core": [
+      {
+        "benchmark": "cross-session-migration",
+        "condition": "maestro-core",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "6fbb0f8259b0ec6412c0cf80af0f7f04b6769a20777c34a888aab683b4f36979",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:35.453Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 1572,
+          "bytes": 1582,
+          "lines": 51
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 4,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 3,
+          "scenarioType": "cross-session",
+          "fixtureFiles": 4,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "cross-session-migration_maestro-memory": [
+      {
+        "benchmark": "cross-session-migration",
+        "condition": "maestro-memory",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "6fbb0f8259b0ec6412c0cf80af0f7f04b6769a20777c34a888aab683b4f36979",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:35.456Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 1572,
+          "bytes": 1582,
+          "lines": 51
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 4,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 3,
+          "scenarioType": "cross-session",
+          "fixtureFiles": 4,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "feature-add-button_vanilla": [
+      {
+        "benchmark": "feature-add-button",
+        "condition": "vanilla",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "0a575db1c4d629f6aee30f6c3f0efce09f9ab5754e0a395d5497c5a4cc7d9ed2",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:38.742Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 385,
+          "bytes": 385,
+          "lines": 9
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 1,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 3285,
+          "scenarioType": "feature",
+          "fixtureFiles": 1,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "feature-add-button_maestro-core": [
+      {
+        "benchmark": "feature-add-button",
+        "condition": "maestro-core",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "0a575db1c4d629f6aee30f6c3f0efce09f9ab5754e0a395d5497c5a4cc7d9ed2",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:41.640Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 528,
+          "bytes": 538,
+          "lines": 12
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 1,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 2897,
+          "scenarioType": "feature",
+          "fixtureFiles": 1,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "feature-add-button_maestro-memory": [
+      {
+        "benchmark": "feature-add-button",
+        "condition": "maestro-memory",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "0a575db1c4d629f6aee30f6c3f0efce09f9ab5754e0a395d5497c5a4cc7d9ed2",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:44.459Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 528,
+          "bytes": 538,
+          "lines": 12
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 1,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 2816,
+          "scenarioType": "feature",
+          "fixtureFiles": 1,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "investigate-performance_vanilla": [
+      {
+        "benchmark": "investigate-performance",
+        "condition": "vanilla",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "fdce97c5f33851ca64b326c2a73e46a50e2e135789c91af77eab8a39e3bb8ff1",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:44.464Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 1140,
+          "bytes": 1140,
+          "lines": 40
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 3,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 3,
+          "scenarioType": "investigation",
+          "fixtureFiles": 3,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "investigate-performance_maestro-core": [
+      {
+        "benchmark": "investigate-performance",
+        "condition": "maestro-core",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "fdce97c5f33851ca64b326c2a73e46a50e2e135789c91af77eab8a39e3bb8ff1",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:44.469Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 1283,
+          "bytes": 1293,
+          "lines": 43
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 3,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 5,
+          "scenarioType": "investigation",
+          "fixtureFiles": 3,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "investigate-performance_maestro-memory": [
+      {
+        "benchmark": "investigate-performance",
+        "condition": "maestro-memory",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "fdce97c5f33851ca64b326c2a73e46a50e2e135789c91af77eab8a39e3bb8ff1",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:44.474Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 1283,
+          "bytes": 1293,
+          "lines": 43
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 3,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 4,
+          "scenarioType": "investigation",
+          "fixtureFiles": 3,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "refactor-extract-util_vanilla": [
+      {
+        "benchmark": "refactor-extract-util",
+        "condition": "vanilla",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "da4495176dbf26fa3d29f6b2e2eeb0aa48bbc8635783c2d337fa8f853cfbcd93",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:44.479Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 848,
+          "bytes": 848,
+          "lines": 31
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 3,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 4,
+          "scenarioType": "refactor",
+          "fixtureFiles": 3,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "refactor-extract-util_maestro-core": [
+      {
+        "benchmark": "refactor-extract-util",
+        "condition": "maestro-core",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "da4495176dbf26fa3d29f6b2e2eeb0aa48bbc8635783c2d337fa8f853cfbcd93",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:44.488Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 991,
+          "bytes": 1001,
+          "lines": 34
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 3,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 6,
+          "scenarioType": "refactor",
+          "fixtureFiles": 3,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "refactor-extract-util_maestro-memory": [
+      {
+        "benchmark": "refactor-extract-util",
+        "condition": "maestro-memory",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "da4495176dbf26fa3d29f6b2e2eeb0aa48bbc8635783c2d337fa8f853cfbcd93",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:44.494Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 991,
+          "bytes": 1001,
+          "lines": 34
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 3,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 5,
+          "scenarioType": "refactor",
+          "fixtureFiles": 3,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "resume-auth-feature_vanilla": [
+      {
+        "benchmark": "resume-auth-feature",
+        "condition": "vanilla",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "8c1d7eaf3cbd13b6b04c417d6efdc6448941cc223da62c38ceba858266f79ac1",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:48.022Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 1419,
+          "bytes": 1419,
+          "lines": 61
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 6,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 3527,
+          "scenarioType": "resume",
+          "fixtureFiles": 6,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "resume-auth-feature_maestro-core": [
+      {
+        "benchmark": "resume-auth-feature",
+        "condition": "maestro-core",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "8c1d7eaf3cbd13b6b04c417d6efdc6448941cc223da62c38ceba858266f79ac1",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:51.006Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 1562,
+          "bytes": 1572,
+          "lines": 64
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 6,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 2982,
+          "scenarioType": "resume",
+          "fixtureFiles": 6,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ],
+    "resume-auth-feature_maestro-memory": [
+      {
+        "benchmark": "resume-auth-feature",
+        "condition": "maestro-memory",
+        "run": 1,
+        "model": "none (measurement only)",
+        "provider": "none",
+        "repoCommit": "693d734196ef654621555f7f1fb1581277cf1ccf",
+        "promptHash": "8c1d7eaf3cbd13b6b04c417d6efdc6448941cc223da62c38ceba858266f79ac1",
+        "environment": {
+          "os": "Linux 6.17.0-23-generic",
+          "nodeVersion": "v22.17.0",
+          "platform": "linux",
+          "arch": "x64",
+          "timestamp": "2026-09-02T18:00:54.384Z"
+        },
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "cachedTokens": null,
+          "reasoningTokens": null,
+          "totalTokens": null,
+          "tokenSource": "not-applicable"
+        },
+        "context": {
+          "chars": 1562,
+          "bytes": 1572,
+          "lines": 64
+        },
+        "tools": {
+          "calls": 0,
+          "filesRead": 6,
+          "filesModified": 0
+        },
+        "validation": {
+          "passed": false,
+          "testsPassed": 0,
+          "testsFailed": 1
+        },
+        "metadata": {
+          "durationMs": 3375,
+          "scenarioType": "resume",
+          "fixtureFiles": 6,
+          "notes": "Real measurement - no AI model execution"
+        }
+      }
+    ]
+  }
+}
