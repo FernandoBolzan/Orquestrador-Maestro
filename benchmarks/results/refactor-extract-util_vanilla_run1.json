@@ -1,0 +1,43 @@
+{
+  "benchmark": "refactor-extract-util",
+  "condition": "vanilla",
+  "run": 1,
+  "model": "simulated",
+  "provider": "simulated",
+  "repoCommit": "c25ce190283f1b860a866f86f96230ad915f268a",
+  "promptHash": "da4495176dbf26fa3d29f6b2e2eeb0aa48bbc8635783c2d337fa8f853cfbcd93",
+  "environment": {
+    "os": "Linux 6.17.0-23-generic",
+    "nodeVersion": "v22.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "timestamp": "2026-09-02T17:31:31.877Z"
+  },
+  "usage": {
+    "inputTokens": 5779,
+    "outputTokens": 1413,
+    "cachedTokens": 0,
+    "reasoningTokens": null,
+    "totalTokens": 7192,
+    "tokenSource": "simulated"
+  },
+  "context": {
+    "chars": 861,
+    "bytes": 861
+  },
+  "tools": {
+    "calls": 12,
+    "filesRead": 9,
+    "filesModified": 3
+  },
+  "validation": {
+    "passed": false,
+    "testsPassed": 0,
+    "testsFailed": 1
+  },
+  "metadata": {
+    "durationMs": 5,
+    "retries": 0,
+    "notes": ""
+  }
+}

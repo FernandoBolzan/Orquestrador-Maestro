@@ -1,0 +1,43 @@
+{
+  "benchmark": "cross-session-migration",
+  "condition": "maestro-core",
+  "run": 3,
+  "model": "simulated",
+  "provider": "simulated",
+  "repoCommit": "c25ce190283f1b860a866f86f96230ad915f268a",
+  "promptHash": "6fbb0f8259b0ec6412c0cf80af0f7f04b6769a20777c34a888aab683b4f36979",
+  "environment": {
+    "os": "Linux 6.17.0-23-generic",
+    "nodeVersion": "v22.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "timestamp": "2026-09-02T17:31:06.422Z"
+  },
+  "usage": {
+    "inputTokens": 2333,
+    "outputTokens": 1648,
+    "cachedTokens": 0,
+    "reasoningTokens": null,
+    "totalTokens": 3981,
+    "tokenSource": "simulated"
+  },
+  "context": {
+    "chars": 1512,
+    "bytes": 1512
+  },
+  "tools": {
+    "calls": 5,
+    "filesRead": 8,
+    "filesModified": 4
+  },
+  "validation": {
+    "passed": false,
+    "testsPassed": 0,
+    "testsFailed": 1
+  },
+  "metadata": {
+    "durationMs": 2,
+    "retries": 0,
+    "notes": ""
+  }
+}

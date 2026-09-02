@@ -296,6 +296,150 @@ class Memory {
 
     return { pruned: initialCount - observations.length, remaining: observations.length };
   }
+
+  dedupe(projectId) {
+    const filePath = this.getObservationsFile(projectId);
+    if (!fs.existsSync(filePath)) {
+      return { deduped: 0, remaining: 0 };
+    }
+
+    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
+    const observations = lines.map(line => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
+
+    const initialCount = observations.length;
+    const seen = new Map();
+    const deduped = [];
+
+    for (const obs of observations) {
+      const key = `${obs.type}:${obs.summary}:${obs.project}`;
+      const existing = seen.get(key);
+      
+      if (!existing) {
+        seen.set(key, obs);
+        deduped.push(obs);
+      } else {
+        if (new Date(obs.timestamp) > new Date(existing.timestamp)) {
+          const index = deduped.findIndex(d => d.id === existing.id);
+          if (index !== -1) {
+            deduped[index] = obs;
+          }
+          seen.set(key, obs);
+        }
+      }
+    }
+
+    const newContent = deduped.map(obs => JSON.stringify(obs)).join("\n") + "\n";
+    fs.writeFileSync(filePath, newContent, "utf8");
+
+    return { deduped: initialCount - deduped.length, remaining: deduped.length };
+  }
+
+  consolidate(projectId, observationIds, consolidatedObs) {
+    const observations = observationIds.map(id => this.show(projectId, id)).filter(Boolean);
+    
+    if (observations.length === 0) {
+      throw new Error("No valid observations found to consolidate");
+    }
+
+    const consolidated = {
+      schemaVersion: this.schemaVersion,
+      id: consolidatedObs.id || this.generateId(),
+      timestamp: consolidatedObs.timestamp || new Date().toISOString(),
+      project: projectId,
+      taskId: consolidatedObs.taskId || observations[0].taskId,
+      type: consolidatedObs.type || "discovery",
+      summary: this.redactContent(consolidatedObs.summary),
+      details: consolidatedObs.details ? this.redactContent(consolidatedObs.details) : null,
+      files: [...new Set(observations.flatMap(obs => obs.files || []))],
+      tags: [...new Set(observations.flatMap(obs => obs.tags || []))],
+      verified: consolidatedObs.verified || false,
+      source: consolidatedObs.source || {},
+      consolidatedFrom: observationIds
+    };
+
+    this.validateObservation(consolidated);
+
+    const filePath = this.getObservationsFile(projectId);
+    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
+    const allObservations = lines.map(line => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
+
+    const filtered = allObservations.filter(obs => !observationIds.includes(obs.id));
+    filtered.push(consolidated);
+
+    const newContent = filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n";
+    fs.writeFileSync(filePath, newContent, "utf8");
+
+    return consolidated;
+  }
+
+  retention(projectId, options = {}) {
+    const filePath = this.getObservationsFile(projectId);
+    if (!fs.existsSync(filePath)) {
+      return { retained: 0, removed: 0 };
+    }
+
+    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
+    const observations = lines.map(line => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
+
+    const initialCount = observations.length;
+    const now = new Date();
+    const maxAgeDays = options.maxAgeDays || 90;
+    const maxCount = options.maxCount || 1000;
+
+    let filtered = observations.filter(obs => {
+      const age = (now - new Date(obs.timestamp)) / (1000 * 60 * 60 * 24);
+      return age <= maxAgeDays;
+    });
+
+    if (filtered.length > maxCount) {
+      filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      filtered = filtered.slice(0, maxCount);
+    }
+
+    if (options.keepVerified !== false) {
+      const verified = observations.filter(obs => obs.verified);
+      const unverified = filtered.filter(obs => !obs.verified);
+      const keepVerified = verified.filter(obs => {
+        const age = (now - new Date(obs.timestamp)) / (1000 * 60 * 60 * 24);
+        return age <= maxAgeDays;
+      });
+      filtered = [...keepVerified, ...unverified];
+    }
+
+    const newContent = filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n";
+    fs.writeFileSync(filePath, newContent, "utf8");
+
+    return { retained: filtered.length, removed: initialCount - filtered.length };
+  }
+
+  cleanup(projectId) {
+    const dedupeResult = this.dedupe(projectId);
+    const retentionResult = this.retention(projectId);
+    
+    return {
+      deduped: dedupeResult.deduped,
+      retained: retentionResult.retained,
+      removed: retentionResult.removed
+    };
+  }
 }
 
 function printHelp() {
@@ -310,6 +454,10 @@ Uso:
   memory stats --project <id>
   memory projects
   memory prune --project <id> [opções]
+  memory dedupe --project <id>
+  memory consolidate --project <id> --ids <id1,id2,...> --type <type> --summary <text>
+  memory retention --project <id> [opções]
+  memory cleanup --project <id>
 
 Tipos de observation:
   ${OBSERVATION_TYPES.join(", ")}
@@ -335,7 +483,7 @@ Opções:
 }
 
 function parseArgs(argv) {
-  const options = { command: null, project: null, type: null, summary: null, details: null, files: [], tags: [], verified: false, task: null, search: null, from: null, to: null, limit: null, id: null, destination: null, keepRecent: null };
+  const options = { command: null, project: null, type: null, summary: null, details: null, files: [], tags: [], verified: false, task: null, search: null, from: null, to: null, limit: null, id: null, ids: null, destination: null, keepRecent: null, maxAgeDays: null, maxCount: null };
   const args = argv.slice(2);
   
   if (args[0] === "--help" || args[0] === "-h" || args.length === 0) {
@@ -387,11 +535,20 @@ function parseArgs(argv) {
     } else if (arg === "--id" && next) {
       options.id = next;
       i++;
+    } else if (arg === "--ids" && next) {
+      options.ids = next.split(",");
+      i++;
     } else if (arg === "--destination" && next) {
       options.destination = next;
       i++;
     } else if (arg === "--keep-recent" && next) {
       options.keepRecent = parseInt(next, 10);
+      i++;
+    } else if (arg === "--max-age-days" && next) {
+      options.maxAgeDays = parseInt(next, 10);
+      i++;
+    } else if (arg === "--max-count" && next) {
+      options.maxCount = parseInt(next, 10);
       i++;
     }
   }
@@ -510,6 +667,55 @@ async function main() {
         const result = memory.prune(options.project, {
           keepRecent: options.keepRecent
         });
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+
+      case "dedupe": {
+        if (!options.project) {
+          console.error("Error: --project is required");
+          process.exit(1);
+        }
+        const result = memory.dedupe(options.project);
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+
+      case "consolidate": {
+        if (!options.project || !options.ids || !options.type || !options.summary) {
+          console.error("Error: --project, --ids, --type, and --summary are required");
+          process.exit(1);
+        }
+        const result = memory.consolidate(options.project, options.ids, {
+          type: options.type,
+          summary: options.summary,
+          details: options.details,
+          verified: options.verified
+        });
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+
+      case "retention": {
+        if (!options.project) {
+          console.error("Error: --project is required");
+          process.exit(1);
+        }
+        const result = memory.retention(options.project, {
+          maxAgeDays: options.maxAgeDays,
+          maxCount: options.maxCount,
+          keepVerified: !options.noKeepVerified
+        });
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+
+      case "cleanup": {
+        if (!options.project) {
+          console.error("Error: --project is required");
+          process.exit(1);
+        }
+        const result = memory.cleanup(options.project);
         console.log(JSON.stringify(result, null, 2));
         break;
       }

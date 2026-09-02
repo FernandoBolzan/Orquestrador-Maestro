@@ -1,0 +1,43 @@
+{
+  "benchmark": "investigate-performance",
+  "condition": "vanilla",
+  "run": 3,
+  "model": "simulated",
+  "provider": "simulated",
+  "repoCommit": "c25ce190283f1b860a866f86f96230ad915f268a",
+  "promptHash": "fdce97c5f33851ca64b326c2a73e46a50e2e135789c91af77eab8a39e3bb8ff1",
+  "environment": {
+    "os": "Linux 6.17.0-23-generic",
+    "nodeVersion": "v22.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "timestamp": "2026-09-02T17:31:31.858Z"
+  },
+  "usage": {
+    "inputTokens": 2156,
+    "outputTokens": 745,
+    "cachedTokens": 0,
+    "reasoningTokens": null,
+    "totalTokens": 2901,
+    "tokenSource": "simulated"
+  },
+  "context": {
+    "chars": 1140,
+    "bytes": 1140
+  },
+  "tools": {
+    "calls": 18,
+    "filesRead": 10,
+    "filesModified": 5
+  },
+  "validation": {
+    "passed": false,
+    "testsPassed": 0,
+    "testsFailed": 1
+  },
+  "metadata": {
+    "durationMs": 2,
+    "retries": 0,
+    "notes": ""
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "benchmark": "feature-add-button",
+  "condition": "vanilla",
+  "run": 1,
+  "model": "simulated",
+  "provider": "simulated",
+  "repoCommit": "c25ce190283f1b860a866f86f96230ad915f268a",
+  "promptHash": "0a575db1c4d629f6aee30f6c3f0efce09f9ab5754e0a395d5497c5a4cc7d9ed2",
+  "environment": {
+    "os": "Linux 6.17.0-23-generic",
+    "nodeVersion": "v22.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "timestamp": "2026-09-02T17:31:06.442Z"
+  },
+  "usage": {
+    "inputTokens": 2480,
+    "outputTokens": 2376,
+    "cachedTokens": 0,
+    "reasoningTokens": null,
+    "totalTokens": 4856,
+    "tokenSource": "simulated"
+  },
+  "context": {
+    "chars": 398,
+    "bytes": 398
+  },
+  "tools": {
+    "calls": 8,
+    "filesRead": 10,
+    "filesModified": 4
+  },
+  "validation": {
+    "passed": false,
+    "testsPassed": 0,
+    "testsFailed": 1
+  },
+  "metadata": {
+    "durationMs": 2788,
+    "retries": 0,
+    "notes": ""
+  }
+}

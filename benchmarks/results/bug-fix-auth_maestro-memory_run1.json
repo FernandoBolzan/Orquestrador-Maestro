@@ -1,0 +1,43 @@
+{
+  "benchmark": "bug-fix-auth",
+  "condition": "maestro-memory",
+  "run": 1,
+  "model": "simulated",
+  "provider": "simulated",
+  "repoCommit": "c25ce190283f1b860a866f86f96230ad915f268a",
+  "promptHash": "d3376dcb5c21ec9fd8d5cc0d641996b10232a26901f7d8518887f871023d93be",
+  "environment": {
+    "os": "Linux 6.17.0-23-generic",
+    "nodeVersion": "v22.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "timestamp": "2026-09-02T17:30:55.892Z"
+  },
+  "usage": {
+    "inputTokens": 3235,
+    "outputTokens": 1362,
+    "cachedTokens": 285,
+    "reasoningTokens": null,
+    "totalTokens": 4597,
+    "tokenSource": "simulated"
+  },
+  "context": {
+    "chars": 2318,
+    "bytes": 2318
+  },
+  "tools": {
+    "calls": 18,
+    "filesRead": 6,
+    "filesModified": 1
+  },
+  "validation": {
+    "passed": false,
+    "testsPassed": 0,
+    "testsFailed": 1
+  },
+  "metadata": {
+    "durationMs": 3253,
+    "retries": 0,
+    "notes": ""
+  }
+}

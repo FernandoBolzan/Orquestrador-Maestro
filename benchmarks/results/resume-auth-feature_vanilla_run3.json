@@ -1,0 +1,43 @@
+{
+  "benchmark": "resume-auth-feature",
+  "condition": "vanilla",
+  "run": 3,
+  "model": "simulated",
+  "provider": "simulated",
+  "repoCommit": "c25ce190283f1b860a866f86f96230ad915f268a",
+  "promptHash": "8c1d7eaf3cbd13b6b04c417d6efdc6448941cc223da62c38ceba858266f79ac1",
+  "environment": {
+    "os": "Linux 6.17.0-23-generic",
+    "nodeVersion": "v22.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "timestamp": "2026-09-02T17:31:38.156Z"
+  },
+  "usage": {
+    "inputTokens": 5216,
+    "outputTokens": 1118,
+    "cachedTokens": 0,
+    "reasoningTokens": null,
+    "totalTokens": 6334,
+    "tokenSource": "simulated"
+  },
+  "context": {
+    "chars": 1419,
+    "bytes": 1419
+  },
+  "tools": {
+    "calls": 20,
+    "filesRead": 3,
+    "filesModified": 5
+  },
+  "validation": {
+    "passed": false,
+    "testsPassed": 0,
+    "testsFailed": 1
+  },
+  "metadata": {
+    "durationMs": 3079,
+    "retries": 0,
+    "notes": ""
+  }
+}
