@@ -6,57 +6,7 @@ O Orquestrador Maestro organiza regras, contexto, skills, hooks, perfis de ferra
 
 > O Orquestrador não é um modelo de IA, não hospeda agentes e não substitui Codex, Claude, OpenCode, Cursor, Gemini, Grok, MiMo Code, Kimi Code, Windsurf, Antigravity ou outras ferramentas. Ele prepara o ambiente para que essas ferramentas trabalhem com um contrato comum.
 
-[GitHub](https://github.com/FernandoBolzan/Orquestrador-Maestro) · [Pacote npm](https://www.npmjs.com/package/@iapro/orquestrador-maestro-cli) · [Changelog](CHANGELOG.md)
-
-## Por que usar o Orquestrador
-
-### O problema
-
-Imagine um projeto com 10 desenvolvedores:
-
-~~~text
-Dev 1: "Qual era a decisão sobre JWT vs Session?"
-Dev 2: "Não sei, pergunta pro Fulano"
-Dev 3: "Fulano saiu, não documentou"
-Dev 4: "Vou implementar com Session então"
-Dev 5: "Mas o outro time usou JWT..."
-~~~
-
-### A solução
-
-~~~bash
-$ memory search --project auth --search "JWT"
-→ obs_abc123: "Decisão: JWT para APIs, Session para webapp"
-  - author: Fulano
-  - date: 2026-08-15
-  - verified: true
-  - files: docs/adr/001-auth.md
-~~~
-
-### Comparação direta
-
-| Aspecto | Sem Orquestrador | Com Orquestrador | Ganho |
-|---------|------------------|------------------|-------|
-| Onboarding | 2-4 semanas | 2-3 dias | 85% mais rápido |
-| Busca de contexto | 10-20h/semana/dev | 1-2h/semana/dev | 90% menos |
-| Bugs por release | 5-10 | 1-3 | 70% menos |
-| Retrabalho | 20-30% | 5-10% | 75% menos |
-
-### Economia estimada (10 devs)
-
-| Item | Economia Anual |
-|------|----------------|
-| Onboarding | 170-370 horas |
-| Busca de contexto | 4.320-8.640 horas |
-| Retrabalho | 15-20% do custo |
-| **Total** | **R$ 50.000 - 200.000** |
-
-### Exemplo real
-
-**Bug no refresh token:**
-
-- **Sem:** "Pergunta pro Fulano" → 4 horas investigando
-- **Com:** `memory search --search "refresh token"` → 30 minutos corrigindo
+[GitHub](https://github.com/IAPro-Community/Orquestrador-Maestro) · [Pacote npm](https://www.npmjs.com/package/@iapro/orquestrador-maestro-cli) · [Changelog](CHANGELOG.md)
 
 ## Para quem este projeto é
 
@@ -114,7 +64,7 @@ orquestrador-maestro workflow-state approve --project-path . --task-id task/minh
 orquestrador-maestro workflow-state advance --project-path . --task-id task/minha-tarefa --to-step plan
 ~~~
 
-## Benchmark: Com vs Sem Orquestrador
+## Benchmark: medição de contexto
 
 ### Como rodar na sua máquina
 
@@ -133,81 +83,21 @@ node benchmarks/real-benchmark.js
 cat benchmarks/results/real/real-benchmark-report.json
 ~~~
 
-### Resultados do benchmark
+### O que esta medição demonstra
 
-| Cenário | Vanilla | Maestro Core | Maestro Memory |
-|---------|---------|--------------|----------------|
-| feature-add-button | 385 chars | 528 chars | 528 chars |
-| bug-fix-auth | 2,235 chars | 2,378 chars | 2,378 chars |
-| investigate-performance | 1,140 chars | 1,283 chars | 1,283 chars |
-| refactor-extract-util | 848 chars | 991 chars | 991 chars |
-| resume-auth-feature | 1,419 chars | 1,562 chars | 1,562 chars |
-| cross-session-migration | 1,429 chars | 1,572 chars | 1,572 chars |
+O runner compara o tamanho do contexto montado para cenários sintéticos e mede a validação local de fixtures. Ele não executa um modelo de IA, não mede qualidade de código, produtividade, custo, tokens consumidos ou redução de bugs. Os resultados variam com o commit, ambiente e cenários; portanto não devem ser usados como promessa geral de desempenho.
 
-### Médias
+Os cenários e o código da medição estão em [`benchmarks/scenarios/`](benchmarks/scenarios/) e [`benchmarks/real-benchmark.js`](benchmarks/real-benchmark.js). Os resultados são gerados localmente em `benchmarks/results/real/` e não fazem parte do pacote público.
 
-| Condição | Contexto Médio | Duração Média |
-|----------|----------------|---------------|
-| vanilla | 1,243 chars | 1,787ms |
-| maestro-core | 1,386 chars | 1,586ms |
-| maestro-memory | 1,386 chars | 1,660ms |
+### Smoke test opcional com xKiro
 
-### Achados principais
+Para validar uma integração OpenAI-compatible sem incluir credenciais no código, configure `XKIRO_API_KEY` no ambiente ou em um `.env` local e execute:
 
-1. **Overhead do Maestro:** +143 chars (11.5%)
-2. **Maestro Core é 11.3% mais rápido** em setup
-3. **Memória adiciona apenas 4.7%** de overhead
+~~~bash
+XKIRO_MODEL=qwen/qwen3-vl-plus:free npm run test:xkiro
+~~~
 
-### Comparação entre IAs
-
-| IA | Tokens Disponíveis | Custo por 1M tokens | Melhor Para |
-|----|-------------------|---------------------|-------------|
-| Claude 3.5 Sonnet | 200K | $3.00/$15.00 | Código, análise, debugging |
-| GPT-4o | 128K | $2.50/$10.00 | Generalista, rápido |
-| GPT-4o-mini | 128K | $0.15/$0.60 | Tarefas simples, econômico |
-| Gemini 1.5 Pro | 1M | $1.25/$5.00 | Contextos longos |
-| Gemini 1.5 Flash | 1M | $0.075/$0.30 | Rápido e barato |
-| Grok-2 | 128K | $2.00/$10.00 | X/Twitter, real-time |
-| Codex (OpenAI) | 200K | Variável | Automação de código |
-
-### Como o Maestro otimiza por IA
-
-**Claude (200K tokens):**
-- O Maestro reduz contexto em ~11.5%
-- Economiza ~23K tokens por sessão
-- Custo economizado: ~$0.07 por sessão
-
-**GPT-4o (128K tokens):**
-- O Maestro reduz contexto em ~11.5%
-- Economiza ~14.7K tokens por sessão
-- Custo economizado: ~$0.04 por sessão
-
-**Gemini 1.5 Pro (1M tokens):**
-- O Maestro reduz contexto em ~11.5%
-- Economiza ~115K tokens por sessão
-- Custo economizado: ~$0.14 por sessão
-
-### Melhor IA para cada cenário
-
-| Cenário | IA Recomendada | Motivo |
-|---------|----------------|--------|
-| Feature simples | GPT-4o-mini | Rápido e barato |
-| Bug complexo | Claude 3.5 Sonnet | Melhor raciocínio |
-| Refactor grande | Gemini 1.5 Pro | Contexto longo |
-| Investigação | Claude 3.5 Sonnet | Análise profunda |
-| Resume session | GPT-4o | Balanceado |
-| Cross-session | Gemini 1.5 Pro | Memória de longo prazo |
-
-### Cálculo de economia mensal
-
-**Supondo 100 sessões/mês por dev, 10 devs:**
-
-| IA | Custo sem Maestro | Custo com Maestro | Economia |
-|----|-------------------|-------------------|----------|
-| Claude 3.5 Sonnet | $450/mês | $390/mês | $60/mês |
-| GPT-4o | $375/mês | $330/mês | $45/mês |
-| GPT-4o-mini | $22.50/mês | $19.75/mês | $2.75/mês |
-| Gemini 1.5 Pro | $187.50/mês | $165/mês | $22.50/mês |
+O script usa `qwen/qwen3-vl-plus:free` por padrão, aceita `XKIRO_MODEL` para outro modelo e exibe somente status, modelo, resposta e uso. Ele não mede qualidade de agentes, produtividade ou economia. Consulte a [documentação de Chat Completions do xKiro](https://docs.xkiro.com/api/chat-completions/) para o contrato da API.
 
 ## Comece em dois minutos
 
@@ -228,13 +118,13 @@ O pacote npm instala a CLI. Os arquivos do usuário só são alterados quando in
 Windows PowerShell:
 
 ~~~powershell
-irm https://raw.githubusercontent.com/FernandoBolzan/Orquestrador-Maestro/main/scripts/bootstrap-install.ps1 | iex
+irm https://raw.githubusercontent.com/IAPro-Community/Orquestrador-Maestro/main/scripts/bootstrap-install.ps1 | iex
 ~~~
 
 Linux ou macOS:
 
 ~~~bash
-curl -fsSL https://raw.githubusercontent.com/FernandoBolzan/Orquestrador-Maestro/main/scripts/bootstrap-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/IAPro-Community/Orquestrador-Maestro/main/scripts/bootstrap-install.sh | bash
 ~~~
 
 Para uma instalação normal, não use sudo nem abra o PowerShell como Administrador. Os bootstraps configuram a instalação no perfil do usuário, ajustam o PATH, instalam a CLI e executam a verificação.
@@ -244,7 +134,7 @@ Para uma instalação normal, não use sudo nem abra o PowerShell como Administr
 Windows:
 
 ~~~powershell
-git clone https://github.com/FernandoBolzan/Orquestrador-Maestro.git
+git clone https://github.com/IAPro-Community/Orquestrador-Maestro.git
 Set-Location Orquestrador-Maestro
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-install.ps1
@@ -253,7 +143,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-install.ps1
 Linux ou macOS:
 
 ~~~bash
-git clone https://github.com/FernandoBolzan/Orquestrador-Maestro.git
+git clone https://github.com/IAPro-Community/Orquestrador-Maestro.git
 cd Orquestrador-Maestro
 bash install.sh
 bash scripts/verify-install.sh
@@ -465,20 +355,20 @@ node orquestrador/bin/memory.js stats \
 ### Exemplo prático
 
 ~~~bash
-# 1. Registrar decisão
-$ memory record --project auth --type decision --summary "JWT para APIs"
+# 1. Registrar decisão (a partir do clone)
+$ node orquestrador/bin/memory.js record --project auth --type decision --summary "JWT para APIs"
 → obs_dbd7d7ee59754ab6
 
 # 2. Registrar bug
-$ memory record --project auth --type bug --summary "Refresh token bug"
+$ node orquestrador/bin/memory.js record --project auth --type bug --summary "Refresh token bug"
 → obs_7809825090b6d182
 
 # 3. Buscar
-$ memory search --project auth --search "token"
+$ node orquestrador/bin/memory.js search --project auth --search "token"
 → [2 observações encontradas]
 
 # 4. Verificar
-$ memory stats --project auth
+$ node orquestrador/bin/memory.js stats --project auth
 → { total: 2, byType: { decision: 1, bug: 1 }, verified: 1 }
 ~~~
 
@@ -493,6 +383,8 @@ orquestrador-maestro init-dev --project-path PATH
 orquestrador-maestro compact-worklog --project-path PATH --keep N
 orquestrador-maestro check-dev-gates --project-path PATH --max-entries N --strict
 orquestrador-maestro context brief --project-path PATH --task TEXT
+orquestrador-maestro workflow-lock <generate|validate> [opcoes]
+orquestrador-maestro workflow-state <init|get|validate|approve|advance> [opcoes]
 orquestrador-maestro adapters <list|paths|validate> [id]
 orquestrador-maestro adapters render <junie|goose|openhands> --project-path PATH [--dry-run|--apply]
 orquestrador-maestro changelog [--full]
@@ -561,7 +453,7 @@ orquestrador-maestro telemetry test
 orquestrador-maestro telemetry disable
 ~~~
 
-Quando habilitada, a implementação envia apenas metadados operacionais mínimos, como comando, plataforma, arquitetura, versão major do Node.js, sucesso e identificador anônimo. Não envia prompts, conteúdo de projetos, caminhos locais, tokens, logs ou nome do usuário. Consulte docs/npm-package.md e docs/privacy-model.md para os limites atuais.
+Quando habilitada, a implementação envia apenas metadados operacionais mínimos, como comando, plataforma, arquitetura, versão major do Node.js, sucesso e identificador anônimo. Não envia prompts, conteúdo de projetos, caminhos locais, tokens, logs ou nome do usuário. Consulte [`docs/npm-package.md`](docs/npm-package.md) e [`docs/privacy-model.md`](docs/privacy-model.md) para os limites atuais.
 
 O repositório público é sanitizado. Não devem entrar no snapshot:
 
@@ -597,12 +489,12 @@ home/                     Contrato global sanitizado para instalação
 
 Arquivos que controlam o comportamento do núcleo:
 
-- orquestrador/rules.md: contrato global de qualidade, segurança e hierarquia.
-- orquestrador/maestro.md: ciclo observar → rotear → selecionar → agir → verificar → reportar.
-- orquestrador/PERSISTENCE.md: contrato de continuidade entre sessões e ferramentas.
-- orquestrador/hooks.md: roteamento compacto dos hooks operacionais.
-- orquestrador/PROGRAM_ENTRYPOINTS.json: mapa de entrada por ferramenta.
-- orquestrador/SKILL_INSTALL_POLICY.json: política de bibliotecas e raízes nativas.
+- [`orquestrador/rules.md`](orquestrador/rules.md): contrato global de qualidade, segurança e hierarquia.
+- [`orquestrador/maestro.md`](orquestrador/maestro.md): ciclo observar → rotear → selecionar → agir → verificar → reportar.
+- [`orquestrador/PERSISTENCE.md`](orquestrador/PERSISTENCE.md): contrato de continuidade entre sessões e ferramentas.
+- [`orquestrador/hooks.md`](orquestrador/hooks.md): roteamento compacto dos hooks operacionais.
+- [`orquestrador/PROGRAM_ENTRYPOINTS.json`](orquestrador/PROGRAM_ENTRYPOINTS.json): mapa de entrada por ferramenta.
+- [`orquestrador/SKILL_INSTALL_POLICY.json`](orquestrador/SKILL_INSTALL_POLICY.json): política de bibliotecas e raízes nativas.
 
 ## Desenvolvimento e contribuição
 
@@ -626,7 +518,7 @@ npm run audit
 
 O fluxo de contribuição é:
 
-1. Leia CONTRIBUTING.md e as regras do repositório.
+1. Leia [`CONTRIBUTING.md`](CONTRIBUTING.md) e as regras do repositório.
 2. Preserve a separação entre fonte local, snapshot público e perfis instaláveis.
 3. Não publique dados privados ou caminhos reais.
 4. Se mudar uma skill compartilhada, sincronize e valide o catálogo.
@@ -657,19 +549,19 @@ O fluxo de contribuição é:
 
 Se uma ferramenta não encontrar o Orquestrador:
 
-1. Rode orquestrador-maestro verify ou o verificador do repositório.
+1. Rode `orquestrador-maestro verify` ou o [verificador do repositório](scripts/verify-install.sh).
 2. Confirme que .orquestrador e AGENTS.md existem no home correto.
 3. Reinicie a ferramenta para que ela releia as regras globais.
-4. Confira o entrypoint específico em docs/installation.md.
+4. Confira o entrypoint específico em [`docs/installation.md`](docs/installation.md).
 
-Se a instalação estiver incompleta, use doctor e depois verify. Se houver erro de permissão no npm, evite misturar uma instalação antiga feita como Administrador/root com uma instalação normal; reinstale no perfil do usuário conforme docs/installation-troubleshooting.md.
+Se a instalação estiver incompleta, use `doctor` e depois `verify`. Se houver erro de permissão no npm, evite misturar uma instalação antiga feita como Administrador/root com uma instalação normal; reinstale no perfil do usuário conforme [`docs/installation-troubleshooting.md`](docs/installation-troubleshooting.md).
 
 Se aparecer texto quebrado, confirme que os arquivos estão em UTF-8 e rode validate-public.ps1 antes de publicar.
 
 ## Licença e responsabilidade
 
-Consulte a licença e os avisos do repositório antes de redistribuir. Revise instruções, permissões, skills e integrações antes de aplicá-las em produção. O mantenedor e o usuário continuam responsáveis por autorizar alterações, proteger credenciais e validar o comportamento da ferramenta de IA escolhida.
+Este snapshot não contém um arquivo `LICENSE`; os direitos de redistribuição e uso não devem ser presumidos. Revise [`CONTRIBUTING.md`](CONTRIBUTING.md), as instruções, permissões, skills e integrações antes de redistribuir ou aplicar em produção. O mantenedor e o usuário continuam responsáveis por autorizar alterações, proteger credenciais e validar o comportamento da ferramenta de IA escolhida.
 
 ---
 
-Última revisão editorial: 2026-08-12.
+Última revisão editorial: 2026-09-02.

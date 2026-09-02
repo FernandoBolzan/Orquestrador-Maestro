@@ -14,6 +14,7 @@ const packageJson = require(path.join(rootDir, "package.json"));
 const contextBrief = require(path.join(rootDir, "orquestrador", "bin", "context-brief.js"));
 const workflowLock = require(path.join(rootDir, "orquestrador", "bin", "workflow-lock.js"));
 const workflowState = require(path.join(rootDir, "orquestrador", "bin", "workflow-state.js"));
+const { Memory } = require(path.join(rootDir, "orquestrador", "bin", "memory.js"));
 const telemetryTimeoutMs = 1200;
 const telemetryConsentVersion = 1;
 
@@ -55,6 +56,16 @@ Uso:
   orquestrador-maestro compact-worklog [--project-path PATH] [--keep N]
   orquestrador-maestro check-dev-gates [--project-path PATH] [--max-entries N] [--strict]
   orquestrador-maestro context brief [--project-path PATH] [--task TEXT] [--max-chars N] [--json]
+  orquestrador-maestro memory record [--project PATH] --type TYPE --summary TEXT [opcoes]
+  orquestrador-maestro memory search [--project PATH] [--search TEXT] [--type TYPE] [--verified] [--unverified]
+  orquestrador-maestro memory show [--project PATH] --id ID
+  orquestrador-maestro memory timeline [--project PATH] [--limit N]
+  orquestrador-maestro memory promote [--project PATH] --id ID --destination PATH [--apply]
+  orquestrador-maestro memory stats [--project PATH]
+  orquestrador-maestro memory status
+  orquestrador-maestro memory cleanup [--project PATH]
+  orquestrador-maestro benchmark list
+  orquestrador-maestro benchmark run [--scenario ID] [--condition CONDITION]
   orquestrador-maestro adapters <list|paths|validate> [id]
   orquestrador-maestro adapters render <junie|goose|openhands> --project-path PATH [--dry-run|--apply]
   orquestrador-maestro workflow-lock <generate|validate> [opcoes]
@@ -323,6 +334,145 @@ function runToolAdapters(args) {
     throw new Error(`Manifesto de adaptadores nao encontrado: ${script}`);
   }
   return run(process.execPath, [script, ...args], { cwd: process.cwd() });
+}
+
+function resolveProjectPath(explicitProject) {
+  if (explicitProject) return explicitProject;
+  return process.cwd();
+}
+
+function runMemoryCommand(args) {
+  const memory = new Memory();
+  const [subcommand = "help", ...rest] = args;
+
+  if (subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
+    memory.printHelp();
+    return 0;
+  }
+
+  if (subcommand === "status") {
+    const projectPath = resolveProjectPath();
+    const repoId = memory.resolveRepositoryId(projectPath);
+    const identity = memory.resolveIdentity(projectPath);
+    const stats = memory.stats(repoId);
+    console.log(JSON.stringify({
+      repository: identity.remote || identity.root,
+      repositoryId: repoId,
+      branch: identity.branch,
+      head: identity.headCommit,
+      memory: {
+        repository: stats.total,
+        byType: stats.byType,
+        verified: stats.verified
+      }
+    }, null, 2));
+    return 0;
+  }
+
+  const project = memory.resolveProjectFromArgs(rest, process.cwd());
+
+  switch (subcommand) {
+    case "record": {
+      const type = memory.getArg(rest, "--type");
+      const summary = memory.getArg(rest, "--summary");
+      if (!type || !summary) {
+        throw new Error("--type and --summary are required");
+      }
+      const obs = memory.record(project, {
+        type,
+        summary,
+        details: memory.getArg(rest, "--details"),
+        files: memory.getArgList(rest, "--files"),
+        tags: memory.getArgList(rest, "--tags"),
+        verified: rest.includes("--verified"),
+        taskId: memory.getArg(rest, "--task"),
+        scope: memory.resolveScope(project, rest)
+      });
+      console.log(JSON.stringify(obs, null, 2));
+      return 0;
+    }
+    case "search": {
+      const results = memory.search(project, {
+        type: memory.getArg(rest, "--type"),
+        tags: memory.getArgList(rest, "--tags"),
+        search: memory.getArg(rest, "--search"),
+        from: memory.getArg(rest, "--from"),
+        to: memory.getArg(rest, "--to"),
+        limit: memory.getArgNumber(rest, "--limit"),
+        verified: rest.includes("--verified") ? true : rest.includes("--unverified") ? false : undefined,
+        branch: memory.getArg(rest, "--branch"),
+        scope: memory.getArg(rest, "--scope")
+      });
+      console.log(JSON.stringify(results, null, 2));
+      return 0;
+    }
+    case "show": {
+      const id = memory.getArg(rest, "--id");
+      if (!id) throw new Error("--id is required");
+      const obs = memory.show(project, id);
+      if (!obs) { console.error("Observation not found"); return 1; }
+      console.log(JSON.stringify(obs, null, 2));
+      return 0;
+    }
+    case "timeline": {
+      const timeline = memory.timeline(project, {
+        from: memory.getArg(rest, "--from"),
+        to: memory.getArg(rest, "--to"),
+        limit: memory.getArgNumber(rest, "--limit") || 50
+      });
+      console.log(JSON.stringify(timeline, null, 2));
+      return 0;
+    }
+    case "promote": {
+      const id = memory.getArg(rest, "--id");
+      const destination = memory.getArg(rest, "--destination");
+      if (!id || !destination) throw new Error("--id and --destination are required");
+      const apply = rest.includes("--apply");
+      const result = memory.promote(project, id, destination, { apply, projectRoot: process.cwd() });
+      console.log(JSON.stringify(result, null, 2));
+      return 0;
+    }
+    case "stats": {
+      const stats = memory.stats(project);
+      console.log(JSON.stringify(stats, null, 2));
+      return 0;
+    }
+    case "cleanup": {
+      const result = memory.cleanup(project);
+      console.log(JSON.stringify(result, null, 2));
+      return 0;
+    }
+    default:
+      throw new Error(`Unknown memory subcommand: ${subcommand}`);
+  }
+}
+
+function runBenchmarkCommand(args) {
+  const [subcommand = "list", ...rest] = args;
+  const runner = require(path.join(rootDir, "benchmarks", "runner.js"));
+  const benchmarkRunner = new runner.BenchmarkRunner();
+
+  if (subcommand === "list") {
+    const scenarios = benchmarkRunner.listScenarios();
+    console.log(JSON.stringify(scenarios, null, 2));
+    return 0;
+  }
+
+  if (subcommand === "run") {
+    const scenarioId = memory.getArg(rest, "--scenario");
+    const condition = memory.getArg(rest, "--condition") || "vanilla";
+    if (!scenarioId) {
+      const scenarios = benchmarkRunner.listScenarios();
+      console.log(JSON.stringify({ scenarios, conditions: ["vanilla", "maestro-core", "maestro-memory"] }, null, 2));
+      return 0;
+    }
+    return benchmarkRunner.runScenario(scenarioId, condition, 1).then(result => {
+      console.log(JSON.stringify(result, null, 2));
+      return 0;
+    });
+  }
+
+  throw new Error(`Unknown benchmark subcommand: ${subcommand}`);
 }
 
 function getTelemetryConfigPath() {
@@ -741,6 +891,19 @@ async function dispatch(command, args) {
 
   if (command === "context") {
     return contextBrief.main(args);
+  }
+
+  if (command === "memory") {
+    if (args.includes("--help") || args.includes("-h")) {
+      const memory = new Memory();
+      memory.printHelp();
+      return 0;
+    }
+    return runMemoryCommand(args);
+  }
+
+  if (command === "benchmark") {
+    return runBenchmarkCommand(args);
   }
 
   if (command === "adapters") {

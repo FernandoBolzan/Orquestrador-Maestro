@@ -100,15 +100,13 @@ $ memory search --project auth --search "JWT"
 
 ## Economia Estimada (10 devs)
 
-| Cenário | Sem | Com | Economia |
-|---------|-----|-----|----------|
-| Onboarding (10 devs/ano) | 200-400h | 20-30h | 170-370h |
-| Busca de contexto | 400-800h/mês | 40-80h/mês | 360-720h/mês |
-| Retrabalho | 20-30% | 5-10% | 15-20% |
-| Bugs | 50-100/ano | 10-30/ano | 40-70 |
+> **Nota:** Os valores abaixo são estimativas baseadas em premissas teóricas e não em medições reais. Resultados variam significativamente entre equipes, projetos e contextos de uso.
 
-**Custo estimado por hora:** R$ 100-200
-**Economia anual estimada:** R$ 50.000 - 200.000
+| Cenário | Sem Orquestrador | Com Orquestrador |
+|---------|------------------|------------------|
+| Onboarding | Sem contexto persistente | Contexto preservado em memória |
+| Busca de contexto | Perguntar a colegas | Busca na memória episódica |
+| Retrabalho | Sem histórico de decisões | Histórico consultável |
 
 ---
 

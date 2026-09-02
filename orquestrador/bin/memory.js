@@ -5,10 +5,29 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const os = require("node:os");
+const { execSync } = require("node:child_process");
 
-const MEMORY_SCHEMA = require("../../MEMORY_SCHEMA.json");
-
+const MEMORY_SCHEMA = require("../schemas/MEMORY_SCHEMA.json");
 const OBSERVATION_TYPES = MEMORY_SCHEMA.properties.type.enum;
+
+const SAFE_DESTINATIONS = [
+  "DEV/CONTEXT.md",
+  "DEV/DECISIONS.md",
+  "DEV/ARCHITECTURE.md",
+  "DEV/RUNBOOKS"
+];
+
+const PROMPT_INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?previous\s+instructions/gi,
+  /disregard\s+(all\s+)?prior/gi,
+  /you\s+are\s+now\s+/gi,
+  /new\s+instructions?:/gi,
+  /system\s*prompt/gi,
+  /act\s+as\s+if/gi,
+  /pretend\s+you\s+are/gi,
+  /<script>/gi,
+  /\{\{.*\}\}/g
+];
 
 class Memory {
   constructor(options = {}) {
@@ -20,9 +39,133 @@ class Memory {
     return `obs_${crypto.randomBytes(8).toString("hex")}`;
   }
 
+  resolveRepositoryId(projectRoot) {
+    try {
+      const remote = execSync("git remote get-url origin", {
+        cwd: projectRoot,
+        encoding: "utf8",
+        stdio: "pipe"
+      }).trim();
+      const normalized = remote.replace(/\.git$/, "").replace(/[:/]/g, "_").toLowerCase();
+      return `repo_${crypto.createHash("sha256").update(normalized).digest("hex").substring(0, 16)}`;
+    } catch {
+      const fallback = projectRoot.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 64);
+      return `repo_${crypto.createHash("sha256").update(fallback).digest("hex").substring(0, 16)}`;
+    }
+  }
+
+  resolveBranch(projectRoot) {
+    try {
+      return execSync("git branch --show-current", {
+        cwd: projectRoot,
+        encoding: "utf8",
+        stdio: "pipe"
+      }).trim() || "HEAD";
+    } catch {
+      return "unknown";
+    }
+  }
+
+  resolveHeadCommit(projectRoot) {
+    try {
+      return execSync("git rev-parse --short HEAD", {
+        cwd: projectRoot,
+        encoding: "utf8",
+        stdio: "pipe"
+      }).trim();
+    } catch {
+      return "unknown";
+    }
+  }
+
+  resolveWorkspaceId(projectRoot) {
+    const gitDir = path.join(projectRoot, ".git");
+    try {
+      const stat = fs.lstatSync(gitDir);
+      if (stat.isFile()) {
+        const content = fs.readFileSync(gitDir, "utf8");
+        const match = content.match(/gitdir:\s*(.+)/);
+        if (match) {
+          return `ws_${crypto.createHash("sha256").update(match[1].trim()).digest("hex").substring(0, 16)}`;
+        }
+      }
+    } catch {}
+    return `ws_${crypto.createHash("sha256").update(projectRoot).digest("hex").substring(0, 16)}`;
+  }
+
+  resolveIdentity(projectRoot) {
+    return {
+      repositoryId: this.resolveRepositoryId(projectRoot),
+      root: projectRoot,
+      remote: this.tryGetRemote(projectRoot),
+      branch: this.resolveBranch(projectRoot),
+      headCommit: this.resolveHeadCommit(projectRoot),
+      workspaceId: this.resolveWorkspaceId(projectRoot),
+      vcs: "git"
+    };
+  }
+
+  tryGetRemote(projectRoot) {
+    try {
+      return execSync("git remote get-url origin", {
+        cwd: projectRoot,
+        encoding: "utf8",
+        stdio: "pipe"
+      }).trim();
+    } catch {
+      return null;
+    }
+  }
+
+  isAncestor(projectRoot, ancestorCommit, descendantCommit) {
+    try {
+      execSync(`git merge-base --is-ancestor ${ancestorCommit} ${descendantCommit}`, {
+        cwd: projectRoot,
+        encoding: "utf8",
+        stdio: "pipe"
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  resolveProjectFromArgs(args, fallback) {
+    const project = this.getArg(args, "--project");
+    if (project) return project;
+    return this.resolveRepositoryId(fallback);
+  }
+
+  getArg(args, name) {
+    const idx = args.indexOf(name);
+    if (idx === -1) return null;
+    return args[idx + 1] || null;
+  }
+
+  getArgList(args, name) {
+    const val = this.getArg(args, name);
+    return val ? val.split(",").map(s => s.trim()).filter(Boolean) : [];
+  }
+
+  getArgNumber(args, name) {
+    const val = this.getArg(args, name);
+    return val ? Number.parseInt(val, 10) : null;
+  }
+
+  resolveScope(project, args) {
+    const explicit = this.getArg(args, "--scope");
+    if (explicit) return { level: explicit };
+    return { level: "repository" };
+  }
+
+  detectInjection(content) {
+    if (typeof content !== "string") return false;
+    return PROMPT_INJECTION_PATTERNS.some(pattern => pattern.test(content));
+  }
+
   getProjectDir(projectId) {
     const safeId = projectId.replace(/[^a-zA-Z0-9-_]/g, "_").substring(0, 64);
-    return path.join(this.baseDir, "projects", safeId);
+    return path.join(this.baseDir, "repositories", safeId);
   }
 
   getObservationsFile(projectId) {
@@ -32,20 +175,24 @@ class Memory {
   ensureProjectDir(projectId) {
     const dir = this.getProjectDir(projectId);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
     return dir;
   }
 
   redactContent(content) {
     if (typeof content !== "string") return content;
-    
     return content
-      .replace(/(api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|authorization)\s*[:=]\s*[^\s`"']+/giu, "$1=[REDACTED]")
+      .replace(/(api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|authorization|bearer)\s*[:=]\s*[^\s`"']+/giu, "$1=[REDACTED]")
       .replace(/(?:[A-Za-z]:[\\/]|\/Users\/|\/home\/|\/root\/)[^\s`"']+/gu, "[PATH_REDACTED]")
       .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, "[EMAIL_REDACTED]")
       .replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, "[PHONE_REDACTED]")
-      .replace(/\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, "[SSN_REDACTED]");
+      .replace(/\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, "[SSN_REDACTED]")
+      .replace(/eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[JWT_REDACTED]")
+      .replace(/-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----[\s\S]*?-----END\s+(RSA\s+)?PRIVATE\s+KEY-----/g, "[PRIVATE_KEY_REDACTED]")
+      .replace(/(?:mysql|postgres|mongodb):\/\/[^\s`"']+/gi, "[CONNECTION_STRING_REDACTED]")
+      .replace(/(?:sk-|pk-|rk-)[A-Za-z0-9]{20,}/g, "[API_KEY_REDACTED]")
+      .replace(/ghp_[A-Za-z0-9]{36}/g, "[GITHUB_TOKEN_REDACTED]");
   }
 
   validateObservation(obs) {
@@ -64,12 +211,41 @@ class Memory {
     if (!obs.project) {
       throw new Error("Project is required");
     }
+    if (this.detectInjection(obs.summary) || this.detectInjection(obs.details || "")) {
+      throw new Error("Potential prompt injection detected in content");
+    }
     return true;
+  }
+
+  writeAtomic(filePath, content) {
+    const tmpPath = `${filePath}.tmp.${Date.now()}`;
+    fs.writeFileSync(tmpPath, content, "utf8");
+    try {
+      fs.renameSync(tmpPath, filePath);
+    } catch (err) {
+      try { fs.unlinkSync(tmpPath); } catch {}
+      throw err;
+    }
+  }
+
+  readObservations(filePath) {
+    if (!fs.existsSync(filePath)) return [];
+    const content = fs.readFileSync(filePath, "utf8");
+    const lines = content.split("\n").filter(Boolean);
+    const valid = [];
+    let malformed = 0;
+    for (const line of lines) {
+      try {
+        valid.push(JSON.parse(line));
+      } catch {
+        malformed++;
+      }
+    }
+    return valid;
   }
 
   record(projectId, observation) {
     this.ensureProjectDir(projectId);
-    
     const obs = {
       schemaVersion: this.schemaVersion,
       id: observation.id || this.generateId(),
@@ -79,72 +255,62 @@ class Memory {
       type: observation.type,
       summary: this.redactContent(observation.summary),
       details: observation.details ? this.redactContent(observation.details) : null,
-      files: observation.files || [],
+      files: (observation.files || []).map(f => this.redactContent(f)),
       tags: observation.tags || [],
       verified: observation.verified || false,
-      source: observation.source || {}
+      source: observation.source || {},
+      scope: observation.scope || { level: "repository" }
     };
-
     this.validateObservation(obs);
-
     const filePath = this.getObservationsFile(projectId);
-    const line = JSON.stringify(obs) + "\n";
-    fs.appendFileSync(filePath, line, "utf8");
-
+    fs.appendFileSync(filePath, JSON.stringify(obs) + "\n", { encoding: "utf8", mode: 0o600 });
     return obs;
   }
 
   search(projectId, query = {}) {
     const filePath = this.getObservationsFile(projectId);
-    if (!fs.existsSync(filePath)) {
-      return [];
-    }
-
-    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
-    let observations = lines.map(line => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
+    let observations = this.readObservations(filePath);
 
     if (query.type) {
       observations = observations.filter(obs => obs.type === query.type);
     }
-
     if (query.verified !== undefined) {
       observations = observations.filter(obs => obs.verified === query.verified);
     }
-
     if (query.tags && query.tags.length > 0) {
-      observations = observations.filter(obs => 
+      observations = observations.filter(obs =>
         query.tags.some(tag => obs.tags.includes(tag))
       );
     }
-
     if (query.files && query.files.length > 0) {
       observations = observations.filter(obs =>
         query.files.some(file => obs.files.includes(file))
       );
     }
-
     if (query.from) {
       const fromDate = new Date(query.from);
       observations = observations.filter(obs => new Date(obs.timestamp) >= fromDate);
     }
-
     if (query.to) {
       const toDate = new Date(query.to);
       observations = observations.filter(obs => new Date(obs.timestamp) <= toDate);
     }
-
     if (query.search) {
       const searchLower = query.search.toLowerCase();
       observations = observations.filter(obs =>
         obs.summary.toLowerCase().includes(searchLower) ||
         (obs.details && obs.details.toLowerCase().includes(searchLower)) ||
         obs.tags.some(tag => tag.toLowerCase().includes(searchLower))
+      );
+    }
+    if (query.branch) {
+      observations = observations.filter(obs =>
+        obs.scope && (obs.scope.branch === query.branch || obs.scope.level === "repository")
+      );
+    }
+    if (query.scope) {
+      observations = observations.filter(obs =>
+        obs.scope && obs.scope.level === query.scope
       );
     }
 
@@ -159,193 +325,129 @@ class Memory {
 
   show(projectId, observationId) {
     const filePath = this.getObservationsFile(projectId);
-    if (!fs.existsSync(filePath)) {
-      return null;
-    }
-
-    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
-    for (const line of lines) {
-      try {
-        const obs = JSON.parse(line);
-        if (obs.id === observationId) {
-          return obs;
-        }
-      } catch {
-        continue;
-      }
-    }
-    return null;
+    const observations = this.readObservations(filePath);
+    return observations.find(obs => obs.id === observationId) || null;
   }
 
   timeline(projectId, options = {}) {
-    const observations = this.search(projectId, {
+    return this.search(projectId, {
       from: options.from,
       to: options.to,
       limit: options.limit || 50
-    });
-
-    const timeline = [];
-    for (const obs of observations) {
-      timeline.push({
-        id: obs.id,
-        timestamp: obs.timestamp,
-        type: obs.type,
-        summary: obs.summary,
-        verified: obs.verified
-      });
-    }
-
-    return timeline;
+    }).map(obs => ({
+      id: obs.id,
+      timestamp: obs.timestamp,
+      type: obs.type,
+      summary: obs.summary,
+      verified: obs.verified,
+      branch: obs.scope?.branch
+    }));
   }
 
-  promote(projectId, observationId, destination) {
+  promote(projectId, observationId, destination, options = {}) {
     const obs = this.show(projectId, observationId);
-    if (!obs) {
-      throw new Error(`Observation not found: ${observationId}`);
+    if (!obs) throw new Error(`Observation not found: ${observationId}`);
+    if (!obs.verified) throw new Error("Cannot promote unverified observation");
+
+    const projectRoot = options.projectRoot || process.cwd();
+    const destPath = path.resolve(projectRoot, destination);
+
+    if (!destPath.startsWith(path.resolve(projectRoot))) {
+      throw new Error("Destination must be within project root");
+    }
+    if (destPath.includes("..")) {
+      throw new Error("Path traversal not allowed");
     }
 
-    if (!obs.verified) {
-      throw new Error("Cannot promote unverified observation");
+    const isSafeDest = SAFE_DESTINATIONS.some(d => destination.startsWith(d));
+    if (!isSafeDest) {
+      throw new Error(`Destination must be one of: ${SAFE_DESTINATIONS.join(", ")}`);
     }
+
+    if (!options.apply) {
+      return {
+        observation: obs,
+        destination,
+        status: "dry-run",
+        content: `## ${obs.type}: ${obs.summary}\n\n${obs.details || ""}\n\nFiles: ${obs.files.join(", ")}\nTags: ${obs.tags.join(", ")}\nVerified: ${obs.verified}\n`
+      };
+    }
+
+    const fs2 = require("node:fs");
+    const dir = path.dirname(destPath);
+    if (!fs2.existsSync(dir)) {
+      fs2.mkdirSync(dir, { recursive: true });
+    }
+
+    const entry = `\n\n## ${obs.type}: ${obs.summary}\n\n${obs.details || ""}\n\n- Source: observation ${obs.id}\n- Promoted at: ${new Date().toISOString()}\n- Branch: ${obs.scope?.branch || "unknown"}\n`;
+    fs2.appendFileSync(destPath, entry, "utf8");
 
     return {
       observation: obs,
       destination,
-      promotedAt: new Date().toISOString(),
-      status: "promoted"
+      status: "promoted",
+      promotedAt: new Date().toISOString()
     };
   }
 
   stats(projectId) {
     const filePath = this.getObservationsFile(projectId);
-    if (!fs.existsSync(filePath)) {
-      return { total: 0, byType: {}, verified: 0 };
-    }
-
-    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
-    const observations = lines.map(line => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
-
+    const observations = this.readObservations(filePath);
     const byType = {};
     let verified = 0;
-
     for (const obs of observations) {
       byType[obs.type] = (byType[obs.type] || 0) + 1;
       if (obs.verified) verified++;
     }
-
-    return {
-      total: observations.length,
-      byType,
-      verified,
-      unverified: observations.length - verified
-    };
+    return { total: observations.length, byType, verified, unverified: observations.length - verified };
   }
 
   listProjects() {
-    const projectsDir = path.join(this.baseDir, "projects");
-    if (!fs.existsSync(projectsDir)) {
-      return [];
-    }
-
+    const projectsDir = path.join(this.baseDir, "repositories");
+    if (!fs.existsSync(projectsDir)) return [];
     return fs.readdirSync(projectsDir).filter(dir => {
       const dirPath = path.join(projectsDir, dir);
       return fs.statSync(dirPath).isDirectory();
     });
   }
 
-  prune(projectId, options = {}) {
-    const filePath = this.getObservationsFile(projectId);
-    if (!fs.existsSync(filePath)) {
-      return { pruned: 0 };
-    }
-
-    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
-    let observations = lines.map(line => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
-
-    const initialCount = observations.length;
-
-    if (options.keepRecent) {
-      observations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      observations = observations.slice(0, options.keepRecent);
-    }
-
-    if (options.keepVerified !== false) {
-      const verified = observations.filter(obs => obs.verified);
-      const unverified = observations.filter(obs => !obs.verified);
-      
-      if (options.keepRecent) {
-        const keepCount = Math.min(options.keepRecent, verified.length);
-        observations = [...verified.slice(0, keepCount), ...unverified];
-      }
-    }
-
-    const newContent = observations.map(obs => JSON.stringify(obs)).join("\n") + "\n";
-    fs.writeFileSync(filePath, newContent, "utf8");
-
-    return { pruned: initialCount - observations.length, remaining: observations.length };
-  }
-
   dedupe(projectId) {
     const filePath = this.getObservationsFile(projectId);
-    if (!fs.existsSync(filePath)) {
-      return { deduped: 0, remaining: 0 };
-    }
-
-    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
-    const observations = lines.map(line => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
-
+    const observations = this.readObservations(filePath);
     const initialCount = observations.length;
     const seen = new Map();
     const deduped = [];
 
     for (const obs of observations) {
-      const key = `${obs.type}:${obs.summary}:${obs.project}`;
+      const key = `${obs.type}:${obs.summary}`;
       const existing = seen.get(key);
-      
       if (!existing) {
         seen.set(key, obs);
         deduped.push(obs);
       } else {
-        if (new Date(obs.timestamp) > new Date(existing.timestamp)) {
+        const existingIsVerified = existing.verified;
+        const obsIsVerified = obs.verified;
+        if (obsIsVerified && !existingIsVerified) {
           const index = deduped.findIndex(d => d.id === existing.id);
-          if (index !== -1) {
-            deduped[index] = obs;
-          }
+          if (index !== -1) deduped[index] = obs;
+          seen.set(key, obs);
+        } else if (!obsIsVerified && existingIsVerified) {
+          continue;
+        } else if (new Date(obs.timestamp) > new Date(existing.timestamp)) {
+          const index = deduped.findIndex(d => d.id === existing.id);
+          if (index !== -1) deduped[index] = obs;
           seen.set(key, obs);
         }
       }
     }
 
-    const newContent = deduped.map(obs => JSON.stringify(obs)).join("\n") + "\n";
-    fs.writeFileSync(filePath, newContent, "utf8");
-
+    this.writeAtomic(filePath, deduped.map(obs => JSON.stringify(obs)).join("\n") + "\n");
     return { deduped: initialCount - deduped.length, remaining: deduped.length };
   }
 
   consolidate(projectId, observationIds, consolidatedObs) {
     const observations = observationIds.map(id => this.show(projectId, id)).filter(Boolean);
-    
-    if (observations.length === 0) {
-      throw new Error("No valid observations found to consolidate");
-    }
+    if (observations.length === 0) throw new Error("No valid observations found to consolidate");
 
     const consolidated = {
       schemaVersion: this.schemaVersion,
@@ -362,377 +464,209 @@ class Memory {
       source: consolidatedObs.source || {},
       consolidatedFrom: observationIds
     };
-
     this.validateObservation(consolidated);
 
     const filePath = this.getObservationsFile(projectId);
-    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
-    const allObservations = lines.map(line => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
-
+    const allObservations = this.readObservations(filePath);
     const filtered = allObservations.filter(obs => !observationIds.includes(obs.id));
     filtered.push(consolidated);
-
-    const newContent = filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n";
-    fs.writeFileSync(filePath, newContent, "utf8");
-
+    this.writeAtomic(filePath, filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n");
     return consolidated;
   }
 
   retention(projectId, options = {}) {
     const filePath = this.getObservationsFile(projectId);
-    if (!fs.existsSync(filePath)) {
-      return { retained: 0, removed: 0 };
-    }
-
-    const lines = fs.readFileSync(filePath, "utf8").split("\n").filter(Boolean);
-    const observations = lines.map(line => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
-
+    const observations = this.readObservations(filePath);
     const initialCount = observations.length;
     const now = new Date();
     const maxAgeDays = options.maxAgeDays || 90;
     const maxCount = options.maxCount || 1000;
 
     let filtered = observations.filter(obs => {
+      if (obs.verified) return true;
       const age = (now - new Date(obs.timestamp)) / (1000 * 60 * 60 * 24);
       return age <= maxAgeDays;
     });
 
     if (filtered.length > maxCount) {
-      filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      filtered = filtered.slice(0, maxCount);
-    }
-
-    if (options.keepVerified !== false) {
-      const verified = observations.filter(obs => obs.verified);
+      const verified = filtered.filter(obs => obs.verified);
       const unverified = filtered.filter(obs => !obs.verified);
-      const keepVerified = verified.filter(obs => {
-        const age = (now - new Date(obs.timestamp)) / (1000 * 60 * 60 * 24);
-        return age <= maxAgeDays;
-      });
-      filtered = [...keepVerified, ...unverified];
+      unverified.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      filtered = [...verified, ...unverified.slice(0, maxCount - verified.length)];
     }
 
-    const newContent = filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n";
-    fs.writeFileSync(filePath, newContent, "utf8");
-
+    this.writeAtomic(filePath, filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n");
     return { retained: filtered.length, removed: initialCount - filtered.length };
   }
 
   cleanup(projectId) {
     const dedupeResult = this.dedupe(projectId);
     const retentionResult = this.retention(projectId);
-    
-    return {
-      deduped: dedupeResult.deduped,
-      retained: retentionResult.retained,
-      removed: retentionResult.removed
-    };
+    return { deduped: dedupeResult.deduped, retained: retentionResult.retained, removed: retentionResult.removed };
   }
-}
 
-function printHelp() {
-  console.log(`Orquestrador Maestro Memory
+  prune(projectId, options = {}) {
+    const filePath = this.getObservationsFile(projectId);
+    const observations = this.readObservations(filePath);
+    const initialCount = observations.length;
+    let filtered = [...observations];
+
+    if (options.keepRecent) {
+      filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      filtered = filtered.slice(0, options.keepRecent);
+    }
+
+    if (options.keepVerified !== false) {
+      const verified = observations.filter(obs => obs.verified);
+      const unverified = filtered.filter(obs => !obs.verified);
+      if (options.keepRecent) {
+        const keepCount = Math.min(options.keepRecent, verified.length);
+        filtered = [...verified.slice(0, keepCount), ...unverified];
+      }
+    }
+
+    this.writeAtomic(filePath, filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n");
+    return { pruned: initialCount - filtered.length, remaining: filtered.length };
+  }
+
+  printHelp() {
+    console.log(`Orquestrador Maestro Memory
 
 Uso:
-  memory record --project <id> --type <type> --summary <text> [opções]
-  memory search --project <id> [opções]
-  memory show --project <id> --id <obs_id>
-  memory timeline --project <id> [opções]
-  memory promote --project <id> --id <obs_id> --destination <path>
-  memory stats --project <id>
-  memory projects
-  memory prune --project <id> [opções]
-  memory dedupe --project <id>
-  memory consolidate --project <id> --ids <id1,id2,...> --type <type> --summary <text>
-  memory retention --project <id> [opções]
-  memory cleanup --project <id>
+  memory record [--project PATH] --type TYPE --summary TEXT [opcoes]
+  memory search [--project PATH] [--search TEXT] [--type TYPE] [--verified] [--unverified]
+  memory show [--project PATH] --id ID
+  memory timeline [--project PATH] [--limit N]
+  memory promote [--project PATH] --id ID --destination PATH [--apply]
+  memory stats [--project PATH]
+  memory status
+  memory cleanup [--project PATH]
 
-Tipos de observation:
-  ${OBSERVATION_TYPES.join(", ")}
+Tipos: ${OBSERVATION_TYPES.join(", ")}
 
-Opções:
-  --project <id>        ID do projeto
-  --type <type>         Tipo da observation
-  --summary <text>      Resumo da observation
-  --details <text>      Detalhes da observation
-  --files <list>        Arquivos relacionados (comma-separated)
-  --tags <list>         Tags (comma-separated)
-  --verified            Marcar como verificado
-  --task <id>           ID da tarefa
-  --search <text>       Texto para buscar
-  --from <date>         Data inicial (ISO)
-  --to <date>           Data final (ISO)
-  --limit <n>           Limite de resultados
-  --id <obs_id>         ID da observation
-  --destination <path>  Destino para promoção
-  --keep-recent <n>     Manter N observations mais recentes
-  --help                Mostra esta ajuda
+Flags:
+  --project PATH     Diretorio do projeto (padrao: cwd)
+  --type TYPE        Tipo da observation
+  --summary TEXT     Resumo
+  --details TEXT     Detalhes
+  --files LIST       Arquivos (comma-separated)
+  --tags LIST        Tags (comma-separated)
+  --verified         Marcar como verificado
+  --unverified       Filtrar nao verificados
+  --task ID          ID da tarefa
+  --search TEXT      Texto para buscar
+  --from DATE        Data inicial
+  --to DATE          Data final
+  --limit N          Limite de resultados
+  --id ID            ID da observation
+  --branch BRANCH    Filtrar por branch
+  --scope LEVEL      Escopo: repository, branch, workspace, commit, task
+  --destination PATH Destino para promoção (DEV/CONTEXT.md, DEV/DECISIONS.md, DEV/ARCHITECTURE.md)
+  --apply            Aplicar promoção (sem --apply e dry-run)
+  --help             Mostra esta ajuda
 `);
+  }
 }
 
-function parseArgs(argv) {
-  const options = { command: null, project: null, type: null, summary: null, details: null, files: [], tags: [], verified: false, task: null, search: null, from: null, to: null, limit: null, id: null, ids: null, destination: null, keepRecent: null, maxAgeDays: null, maxCount: null };
-  const args = argv.slice(2);
-  
-  if (args[0] === "--help" || args[0] === "-h" || args.length === 0) {
-    options.help = true;
-    return options;
-  }
-
-  options.command = args[0];
-
-  for (let i = 1; i < args.length; i++) {
-    const arg = args[i];
-    const next = args[i + 1];
-
-    if (arg === "--project" && next) {
-      options.project = next;
-      i++;
-    } else if (arg === "--type" && next) {
-      options.type = next;
-      i++;
-    } else if (arg === "--summary" && next) {
-      options.summary = next;
-      i++;
-    } else if (arg === "--details" && next) {
-      options.details = next;
-      i++;
-    } else if (arg === "--files" && next) {
-      options.files = next.split(",");
-      i++;
-    } else if (arg === "--tags" && next) {
-      options.tags = next.split(",");
-      i++;
-    } else if (arg === "--verified") {
-      options.verified = true;
-    } else if (arg === "--task" && next) {
-      options.task = next;
-      i++;
-    } else if (arg === "--search" && next) {
-      options.search = next;
-      i++;
-    } else if (arg === "--from" && next) {
-      options.from = next;
-      i++;
-    } else if (arg === "--to" && next) {
-      options.to = next;
-      i++;
-    } else if (arg === "--limit" && next) {
-      options.limit = parseInt(next, 10);
-      i++;
-    } else if (arg === "--id" && next) {
-      options.id = next;
-      i++;
-    } else if (arg === "--ids" && next) {
-      options.ids = next.split(",");
-      i++;
-    } else if (arg === "--destination" && next) {
-      options.destination = next;
-      i++;
-    } else if (arg === "--keep-recent" && next) {
-      options.keepRecent = parseInt(next, 10);
-      i++;
-    } else if (arg === "--max-age-days" && next) {
-      options.maxAgeDays = parseInt(next, 10);
-      i++;
-    } else if (arg === "--max-count" && next) {
-      options.maxCount = parseInt(next, 10);
-      i++;
-    }
-  }
-
-  return options;
-}
-
-async function main() {
-  const options = parseArgs(process.argv);
+function main() {
+  const args = process.argv.slice(2);
   const memory = new Memory();
 
-  if (options.help) {
-    printHelp();
-    process.exit(0);
+  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+    memory.printHelp();
+    return 0;
   }
 
-  try {
-    switch (options.command) {
-      case "record": {
-        if (!options.project || !options.type || !options.summary) {
-          console.error("Error: --project, --type, and --summary are required");
-          process.exit(1);
-        }
-        const obs = memory.record(options.project, {
-          type: options.type,
-          summary: options.summary,
-          details: options.details,
-          files: options.files,
-          tags: options.tags,
-          verified: options.verified,
-          taskId: options.task
-        });
-        console.log(JSON.stringify(obs, null, 2));
-        break;
-      }
+  const subcommand = args[0];
+  const rest = args.slice(1);
 
-      case "search": {
-        if (!options.project) {
-          console.error("Error: --project is required");
-          process.exit(1);
-        }
-        const results = memory.search(options.project, {
-          type: options.type,
-          tags: options.tags,
-          files: options.files,
-          search: options.search,
-          from: options.from,
-          to: options.to,
-          limit: options.limit,
-          verified: options.verified
-        });
-        console.log(JSON.stringify(results, null, 2));
-        break;
-      }
+  if (subcommand === "status") {
+    const projectPath = process.cwd();
+    const repoId = memory.resolveRepositoryId(projectPath);
+    const identity = memory.resolveIdentity(projectPath);
+    const stats = memory.stats(repoId);
+    console.log(JSON.stringify({
+      repository: identity.remote || identity.root,
+      repositoryId: repoId,
+      branch: identity.branch,
+      head: identity.headCommit,
+      memory: { repository: stats.total, byType: stats.byType, verified: stats.verified }
+    }, null, 2));
+    return 0;
+  }
 
-      case "show": {
-        if (!options.project || !options.id) {
-          console.error("Error: --project and --id are required");
-          process.exit(1);
-        }
-        const obs = memory.show(options.project, options.id);
-        if (obs) {
-          console.log(JSON.stringify(obs, null, 2));
-        } else {
-          console.error("Observation not found");
-          process.exit(1);
-        }
-        break;
-      }
+  const project = memory.resolveProjectFromArgs(rest, process.cwd());
 
-      case "timeline": {
-        if (!options.project) {
-          console.error("Error: --project is required");
-          process.exit(1);
-        }
-        const timeline = memory.timeline(options.project, {
-          from: options.from,
-          to: options.to,
-          limit: options.limit
-        });
-        console.log(JSON.stringify(timeline, null, 2));
-        break;
-      }
-
-      case "promote": {
-        if (!options.project || !options.id || !options.destination) {
-          console.error("Error: --project, --id, and --destination are required");
-          process.exit(1);
-        }
-        const result = memory.promote(options.project, options.id, options.destination);
-        console.log(JSON.stringify(result, null, 2));
-        break;
-      }
-
-      case "stats": {
-        if (!options.project) {
-          console.error("Error: --project is required");
-          process.exit(1);
-        }
-        const stats = memory.stats(options.project);
-        console.log(JSON.stringify(stats, null, 2));
-        break;
-      }
-
-      case "projects": {
-        const projects = memory.listProjects();
-        console.log(JSON.stringify(projects, null, 2));
-        break;
-      }
-
-      case "prune": {
-        if (!options.project) {
-          console.error("Error: --project is required");
-          process.exit(1);
-        }
-        const result = memory.prune(options.project, {
-          keepRecent: options.keepRecent
-        });
-        console.log(JSON.stringify(result, null, 2));
-        break;
-      }
-
-      case "dedupe": {
-        if (!options.project) {
-          console.error("Error: --project is required");
-          process.exit(1);
-        }
-        const result = memory.dedupe(options.project);
-        console.log(JSON.stringify(result, null, 2));
-        break;
-      }
-
-      case "consolidate": {
-        if (!options.project || !options.ids || !options.type || !options.summary) {
-          console.error("Error: --project, --ids, --type, and --summary are required");
-          process.exit(1);
-        }
-        const result = memory.consolidate(options.project, options.ids, {
-          type: options.type,
-          summary: options.summary,
-          details: options.details,
-          verified: options.verified
-        });
-        console.log(JSON.stringify(result, null, 2));
-        break;
-      }
-
-      case "retention": {
-        if (!options.project) {
-          console.error("Error: --project is required");
-          process.exit(1);
-        }
-        const result = memory.retention(options.project, {
-          maxAgeDays: options.maxAgeDays,
-          maxCount: options.maxCount,
-          keepVerified: !options.noKeepVerified
-        });
-        console.log(JSON.stringify(result, null, 2));
-        break;
-      }
-
-      case "cleanup": {
-        if (!options.project) {
-          console.error("Error: --project is required");
-          process.exit(1);
-        }
-        const result = memory.cleanup(options.project);
-        console.log(JSON.stringify(result, null, 2));
-        break;
-      }
-
-      default:
-        console.error(`Unknown command: ${options.command}`);
-        printHelp();
-        process.exit(1);
+  switch (subcommand) {
+    case "record": {
+      const type = memory.getArg(rest, "--type");
+      const summary = memory.getArg(rest, "--summary");
+      if (!type || !summary) { console.error("--type and --summary required"); return 1; }
+      const obs = memory.record(project, {
+        type, summary,
+        details: memory.getArg(rest, "--details"),
+        files: memory.getArgList(rest, "--files"),
+        tags: memory.getArgList(rest, "--tags"),
+        verified: rest.includes("--verified"),
+        taskId: memory.getArg(rest, "--task"),
+        scope: memory.resolveScope(project, rest)
+      });
+      console.log(JSON.stringify(obs, null, 2));
+      return 0;
     }
-  } catch (error) {
-    console.error("Error:", error.message);
-    process.exit(1);
+    case "search": {
+      const results = memory.search(project, {
+        type: memory.getArg(rest, "--type"),
+        tags: memory.getArgList(rest, "--tags"),
+        search: memory.getArg(rest, "--search"),
+        from: memory.getArg(rest, "--from"),
+        to: memory.getArg(rest, "--to"),
+        limit: memory.getArgNumber(rest, "--limit"),
+        verified: rest.includes("--verified") ? true : rest.includes("--unverified") ? false : undefined,
+        branch: memory.getArg(rest, "--branch"),
+        scope: memory.getArg(rest, "--scope")
+      });
+      console.log(JSON.stringify(results, null, 2));
+      return 0;
+    }
+    case "show": {
+      const id = memory.getArg(rest, "--id");
+      if (!id) { console.error("--id required"); return 1; }
+      const obs = memory.show(project, id);
+      if (!obs) { console.error("Not found"); return 1; }
+      console.log(JSON.stringify(obs, null, 2));
+      return 0;
+    }
+    case "timeline": {
+      const tl = memory.timeline(project, { limit: memory.getArgNumber(rest, "--limit") || 50 });
+      console.log(JSON.stringify(tl, null, 2));
+      return 0;
+    }
+    case "promote": {
+      const id = memory.getArg(rest, "--id");
+      const dest = memory.getArg(rest, "--destination");
+      if (!id || !dest) { console.error("--id and --destination required"); return 1; }
+      const result = memory.promote(project, id, dest, { apply: rest.includes("--apply"), projectRoot: process.cwd() });
+      console.log(JSON.stringify(result, null, 2));
+      return 0;
+    }
+    case "stats": {
+      console.log(JSON.stringify(memory.stats(project), null, 2));
+      return 0;
+    }
+    case "cleanup": {
+      console.log(JSON.stringify(memory.cleanup(project), null, 2));
+      return 0;
+    }
+    default:
+      console.error(`Unknown: ${subcommand}`);
+      memory.printHelp();
+      return 1;
   }
 }
 
 if (require.main === module) {
-  main();
+  process.exitCode = main();
 }
 
 module.exports = { Memory };

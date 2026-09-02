@@ -197,7 +197,7 @@ describe("Memory", () => {
         verified: true
       });
 
-      const result = memory.promote("test-project", recorded.id, "DEV/DECISIONS.md");
+      const result = memory.promote("test-project", recorded.id, "DEV/DECISIONS.md", { apply: true, projectRoot: tmpDir });
       assert.equal(result.status, "promoted");
       assert.equal(result.destination, "DEV/DECISIONS.md");
       assert.ok(result.promotedAt);

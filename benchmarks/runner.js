@@ -6,7 +6,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const os = require("node:os");
 
-const BENCHMARK_SCHEMA = require("../BENCHMARK_SCHEMA.json");
+const BENCHMARK_SCHEMA = require("../orquestrador/schemas/BENCHMARK_SCHEMA.json");
 
 class BenchmarkRunner {
   constructor(options = {}) {

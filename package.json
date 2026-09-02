@@ -69,6 +69,7 @@
     "install.ps1",
     "install.sh",
     "orquestrador/*.json",
+    "orquestrador/schemas/",
     "orquestrador/*.md",
     "orquestrador/*.ps1",
     "orquestrador/*.sh",
@@ -76,6 +77,8 @@
     "orquestrador/blueprints/",
     "orquestrador/personas/",
     "orquestrador/skills/",
+    "benchmarks/runner.js",
+    "benchmarks/scenarios/",
     "scripts/*.js",
     "scripts/*.py",
     "scripts/*.ps1",
@@ -90,6 +93,7 @@
     "outdated:all": "node scripts/audit-dependencies.js outdated",
     "pack:dry-run": "npm pack --dry-run",
     "test": "node --test tests/*.test.js",
+    "test:xkiro": "node scripts/test-xkiro.js",
     "validate": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-public.ps1 && powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-skills.ps1"
   },
   "config": {

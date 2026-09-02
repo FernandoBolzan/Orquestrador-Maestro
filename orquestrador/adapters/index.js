@@ -14,18 +14,22 @@ class Adapter {
   shouldRecord(event) {
     if (!event || !event.type) return false;
     
-    const meaningfulTypes = [
+    const meaningfulTypes = new Set([
       "tool_use",
       "file_edit",
       "file_create",
       "file_delete",
       "command_execute",
+      "shell",
+      "bash",
+      "edit",
+      "write",
       "error",
       "decision",
       "discovery"
-    ];
+    ]);
     
-    return meaningfulTypes.includes(event.type);
+    return meaningfulTypes.has(event.type);
   }
 
   normalizeEvent(rawEvent) {
