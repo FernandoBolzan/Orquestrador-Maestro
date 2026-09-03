@@ -185,6 +185,67 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       assert.equal(obs.length, 1, "Only 1 should remain (keepRecent=1)");
       assert.equal(obs[0].verified, false, "Remaining should be unverified (verified was prunable)");
     });
+
+    it("should handle mix of verified/unverified correctly", () => {
+      const gitDir = path.join(tmpDir, "git-prune-mix");
+      fs.mkdirSync(gitDir, { recursive: true });
+      initGit(gitDir);
+      const memory = new Memory({ baseDir: path.join(tmpDir, "mem") });
+      const { resolveGitContext } = require("../orquestrador/lib/git-context.js");
+      const gitContext = resolveGitContext(gitDir);
+      const projectId = memory.resolveRepositoryId(gitDir);
+
+      for (let i = 0; i < 3; i++) {
+        memory.record(projectId, {
+          type: "discovery",
+          summary: "Verified " + i,
+          verified: true,
+          source: { tool: "test" }
+        }, { projectRoot: gitDir, gitContext });
+      }
+
+      for (let i = 0; i < 5; i++) {
+        memory.record(projectId, {
+          type: "discovery",
+          summary: "Unverified " + i,
+          source: { tool: "test" }
+        }, { projectRoot: gitDir, gitContext });
+      }
+
+      memory.prune(projectId, { keepRecent: 2, keepVerified: true });
+      const obs = memory.search(projectId);
+      const verified = obs.filter(o => o.verified);
+      const unverified = obs.filter(o => !o.verified);
+      assert.equal(verified.length, 3, "All 3 verified should be preserved");
+      assert.equal(unverified.length, 2, "Only 2 unverified should remain");
+    });
+
+    it("should preserve promoted observations in prune", () => {
+      const gitDir = path.join(tmpDir, "git-prune-promoted");
+      fs.mkdirSync(gitDir, { recursive: true });
+      initGit(gitDir);
+      const memory = new Memory({ baseDir: path.join(tmpDir, "mem") });
+      const { resolveGitContext } = require("../orquestrador/lib/git-context.js");
+      const gitContext = resolveGitContext(gitDir);
+      const projectId = memory.resolveRepositoryId(gitDir);
+
+      memory.record(projectId, {
+        type: "discovery",
+        summary: "Verified obs",
+        verified: true,
+        source: { tool: "test" }
+      }, { projectRoot: gitDir, gitContext });
+
+      memory.record(projectId, {
+        type: "discovery",
+        summary: "Unverified obs",
+        source: { tool: "test" }
+      }, { projectRoot: gitDir, gitContext });
+
+      memory.prune(projectId, { keepRecent: 1, keepVerified: true });
+      const obs = memory.search(projectId);
+      assert.ok(obs.length >= 1, "Should have at least 1 observation");
+    });
   });
 
   describe("#8 Task Classifier — accents", () => {
@@ -278,10 +339,10 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
     });
   });
 
-  describe("#17 Infrastructure Claim Eligibility", () => {
+  describe("#17 Claim Eligibility & Evidence Gate", () => {
     it("should not allow infrastructure runs to be claim-eligible", () => {
       const infraRun = {
-        evidence: { type: "infrastructure", publicClaimEligible: false },
+        evidence: { executionType: "infrastructure", publicClaimEligible: false, reproducible: true, isolated: true },
         usage: { tokenSource: "provider-reported" },
         validation: { passed: true }
       };
@@ -290,7 +351,7 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
 
     it("should allow real-execution runs to be claim-eligible", () => {
       const realRun = {
-        evidence: { type: "real-execution", publicClaimEligible: true, reproducible: true },
+        evidence: { executionType: "real-execution", publicClaimEligible: true, reproducible: true, isolated: true },
         usage: { tokenSource: "provider-reported" },
         validation: { passed: true }
       };
@@ -299,7 +360,7 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
 
     it("should block runs without provider-reported usage", () => {
       const run = {
-        evidence: { type: "real-execution", publicClaimEligible: true },
+        evidence: { executionType: "real-execution", publicClaimEligible: true, reproducible: true, isolated: true },
         usage: { tokenSource: "tokenizer-estimated" },
         validation: { passed: true }
       };
@@ -308,11 +369,47 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
 
     it("should block runs with publicClaimEligible undefined", () => {
       const run = {
-        evidence: { type: "real-execution" },
+        evidence: { executionType: "real-execution", reproducible: true, isolated: true },
         usage: { tokenSource: "provider-reported" },
         validation: { passed: true }
       };
       assert.ok(!isClaimEligibleRun(run), "Undefined publicClaimEligible should not be eligible");
+    });
+
+    it("should block runs with reproducible undefined", () => {
+      const run = {
+        evidence: { executionType: "real-execution", publicClaimEligible: true, isolated: true },
+        usage: { tokenSource: "provider-reported" },
+        validation: { passed: true }
+      };
+      assert.ok(!isClaimEligibleRun(run), "Undefined reproducible should not be eligible");
+    });
+
+    it("should block runs with isolated undefined", () => {
+      const run = {
+        evidence: { executionType: "real-execution", publicClaimEligible: true, reproducible: true },
+        usage: { tokenSource: "provider-reported" },
+        validation: { passed: true }
+      };
+      assert.ok(!isClaimEligibleRun(run), "Undefined isolated should not be eligible");
+    });
+
+    it("should block runs with failed validation", () => {
+      const run = {
+        evidence: { executionType: "real-execution", publicClaimEligible: true, reproducible: true, isolated: true },
+        usage: { tokenSource: "provider-reported" },
+        validation: { passed: false }
+      };
+      assert.ok(!isClaimEligibleRun(run), "Failed validation should not be eligible");
+    });
+
+    it("should block synthetic runs", () => {
+      const run = {
+        evidence: { executionType: "synthetic", publicClaimEligible: false, reproducible: true, isolated: true },
+        usage: { tokenSource: "unknown" },
+        validation: { passed: true }
+      };
+      assert.ok(!isClaimEligibleRun(run), "Synthetic run should not be eligible");
     });
 
     it("should prevent mixed-evidence contamination in reports", () => {
@@ -324,14 +421,14 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
           benchmark: "test-001", condition: "vanilla", run: 1,
           usage: { inputTokens: 100, tokenSource: "provider-reported" },
           validation: { passed: true },
-          evidence: { type: "infrastructure", publicClaimEligible: false },
+          evidence: { executionType: "infrastructure", publicClaimEligible: false, reproducible: true, isolated: true },
           metadata: { durationMs: 100 }
         },
         {
           benchmark: "test-001", condition: "maestro-memory", run: 1,
           usage: { inputTokens: 80, tokenSource: "provider-reported" },
           validation: { passed: true },
-          evidence: { type: "real-execution", publicClaimEligible: true, reproducible: true },
+          evidence: { executionType: "real-execution", publicClaimEligible: true, reproducible: true, isolated: true },
           metadata: { durationMs: 100 }
         }
       ];
@@ -340,6 +437,56 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       assert.ok(report.evidenceGate.hasMixedEvidence, "Should detect mixed evidence");
       assert.equal(report.evidenceGate.allRunsCount, 2, "Should count all runs");
       assert.equal(report.evidenceGate.claimEligibleRunsCount, 1, "Should count claim-eligible runs");
+      assert.equal(report.evidenceGate.publicClaimEligible, true, "Gate should be eligible");
+      assert.ok(report.summary.claimEligibleRuns["test-001_maestro-memory"], "Should have claim-eligible summary");
+      assert.ok(!report.summary.claimEligibleRuns["test-001_vanilla"], "Should not have vanilla in claim-eligible summary");
+    });
+
+    it("should set publicClaimEligible=false when no eligible runs", () => {
+      const { BenchmarkRunner } = require("../benchmarks/runner.js");
+      const runner = new BenchmarkRunner();
+
+      const infraResults = [
+        {
+          benchmark: "test-001", condition: "vanilla", run: 1,
+          usage: { inputTokens: 100, tokenSource: "unknown" },
+          validation: { passed: true },
+          evidence: { executionType: "synthetic", publicClaimEligible: false, reproducible: true, isolated: true },
+          metadata: { durationMs: 100 }
+        }
+      ];
+
+      const report = runner.generateReport(infraResults);
+      assert.equal(report.evidenceGate.publicClaimEligible, false, "Should be false when no eligible runs");
+      assert.equal(report.evidenceGate.claimEligibleRunsCount, 0, "Should have 0 eligible runs");
+    });
+
+    it("should have all runs in allRuns summary", () => {
+      const { BenchmarkRunner } = require("../benchmarks/runner.js");
+      const runner = new BenchmarkRunner();
+
+      const results = [
+        {
+          benchmark: "test-001", condition: "vanilla", run: 1,
+          usage: { inputTokens: 100, tokenSource: "unknown" },
+          validation: { passed: true },
+          evidence: { executionType: "synthetic", publicClaimEligible: false, reproducible: true, isolated: true },
+          metadata: { durationMs: 100 }
+        },
+        {
+          benchmark: "test-001", condition: "maestro-memory", run: 1,
+          usage: { inputTokens: 80, tokenSource: "provider-reported" },
+          validation: { passed: true },
+          evidence: { executionType: "real-execution", publicClaimEligible: true, reproducible: true, isolated: true },
+          metadata: { durationMs: 100 }
+        }
+      ];
+
+      const report = runner.generateReport(results);
+      assert.ok(report.summary.allRuns["test-001_vanilla"], "Should have vanilla in allRuns");
+      assert.ok(report.summary.allRuns["test-001_maestro-memory"], "Should have maestro-memory in allRuns");
+      assert.equal(report.summary.allRuns["test-001_vanilla"].totalRuns, 1);
+      assert.equal(report.summary.allRuns["test-001_maestro-memory"].totalRuns, 1);
     });
   });
 

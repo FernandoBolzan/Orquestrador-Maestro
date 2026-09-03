@@ -187,7 +187,14 @@ ${prompt}`;
         outputTokens: result.usage.output_tokens || result.usage.completion_tokens,
         cachedTokens: result.usage.cache_read_input_tokens || 0,
         totalTokens: (result.usage.input_tokens || result.usage.prompt_tokens) + 
-                     (result.usage.output_tokens || result.usage.completion_tokens)
+                     (result.usage.output_tokens || result.usage.completion_tokens),
+        tokenSource: "provider-reported"
+      },
+      evidence: {
+        executionType: "real-execution",
+        publicClaimEligible: false,
+        reproducible: true,
+        isolated: true
       },
       content: result.content.substring(0, 500) + "...",
       durationMs: duration,

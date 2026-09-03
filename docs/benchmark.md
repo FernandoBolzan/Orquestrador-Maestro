@@ -157,7 +157,7 @@ node benchmarks/real-ai-benchmark.js
 ## Benchmark Results
 
 Results must include:
-1. **Evidence type**: How data was collected
+1. **Evidence executionType**: `synthetic` (fixture validation), `infrastructure` (setup/teardown), or `real-execution` (actual AI model call)
 2. **Provider**: Which AI service was used
 3. **Model**: Specific model ID
 4. **Scenario**: What task was performed
@@ -165,6 +165,9 @@ Results must include:
 6. **Metrics**: Tokens, duration, acceptance
 7. **Timestamp**: When the benchmark ran
 8. **Commit**: Which code version was tested
+9. **Token source**: `provider-reported` or `tokenizer-estimated`
+10. **Reproducible**: Whether the result is reproducible
+11. **Isolated**: Whether the run was isolated from other runs
 
 ## Marketing Guidelines
 

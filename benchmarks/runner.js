@@ -10,10 +10,12 @@ const BENCHMARK_SCHEMA = require("../orquestrador/schemas/BENCHMARK_SCHEMA.json"
 
 function isClaimEligibleRun(run) {
   if (!run || typeof run !== "object") return false;
-  if (run.evidence?.type !== "real-execution") return false;
+  if (run.evidence?.executionType !== "real-execution") return false;
   if (run.evidence?.publicClaimEligible !== true) return false;
   if (run.usage?.tokenSource !== "provider-reported") return false;
   if (run.validation?.passed !== true) return false;
+  if (run.evidence?.reproducible !== true) return false;
+  if (run.evidence?.isolated !== true) return false;
   return true;
 }
 
@@ -121,7 +123,6 @@ class BenchmarkRunner {
         testsFailed: 0
       },
       evidence: {
-        type: "infrastructure",
         executionType: "synthetic",
         publicClaimEligible: false,
         reproducible: true,
@@ -257,13 +258,17 @@ class BenchmarkRunner {
     const hasMixedEvidence = claimEligibleRuns.length > 0 && claimEligibleRuns.length < allRuns.length;
 
     const report = {
-      summary: {},
+      summary: {
+        allRuns: {},
+        claimEligibleRuns: {}
+      },
       details: grouped,
       evidenceGate: {
-        type: "unknown",
+        executionType: "unknown",
         providerReportedUsage: false,
         independentAcceptance: false,
         reproducible: false,
+        isolated: false,
         publicClaimEligible: false,
         hasMixedEvidence,
         allRunsCount: allRuns.length,
@@ -271,13 +276,14 @@ class BenchmarkRunner {
       }
     };
 
-    for (const run of claimEligibleRuns) {
-      report.evidenceGate.type = "real-execution";
+    if (claimEligibleRuns.length > 0) {
+      const firstEligible = claimEligibleRuns[0];
+      report.evidenceGate.executionType = "real-execution";
       report.evidenceGate.providerReportedUsage = true;
       report.evidenceGate.independentAcceptance = true;
-      report.evidenceGate.reproducible = run.evidence?.reproducible !== false;
+      report.evidenceGate.reproducible = firstEligible.evidence?.reproducible === true;
+      report.evidenceGate.isolated = firstEligible.evidence?.isolated === true;
       report.evidenceGate.publicClaimEligible = true;
-      break;
     }
     
     for (const [key, runs] of Object.entries(grouped)) {
@@ -285,13 +291,29 @@ class BenchmarkRunner {
       const inputTokens = runs.map(r => r.usage.inputTokens).filter(t => t !== null);
       const durations = runs.map(r => r.metadata.durationMs);
       
-      report.summary[key] = {
+      report.summary.allRuns[key] = {
         totalRuns: runs.length,
         successfulRuns: successfulRuns.length,
         successRate: successfulRuns.length / runs.length,
         medianInputTokens: this.median(inputTokens),
         medianDuration: this.median(durations)
       };
+
+      const eligibleRuns = runs.filter(r => isClaimEligibleRun(r));
+      if (eligibleRuns.length > 0) {
+        const eligibleSuccessful = eligibleRuns.filter(r => r.validation.passed);
+        const eligibleInputTokens = eligibleRuns.map(r => r.usage.inputTokens).filter(t => t !== null);
+        const eligibleDurations = eligibleRuns.map(r => r.metadata.durationMs);
+
+        report.summary.claimEligibleRuns[key] = {
+          totalRuns: eligibleRuns.length,
+          successfulRuns: eligibleSuccessful.length,
+          successRate: eligibleSuccessful.length / eligibleRuns.length,
+          medianInputTokens: this.median(eligibleInputTokens),
+          medianDuration: this.median(eligibleDurations),
+          publicClaimEligible: true
+        };
+      }
     }
     
     return report;

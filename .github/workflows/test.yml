@@ -18,6 +18,7 @@ jobs:
       matrix:
         node-version: [18, 20, 22]
         os: [ubuntu-latest]
+      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,9 +41,7 @@ jobs:
         run: npm pack
 
       - name: Install from tarball
-        run: |
-          TARBALL=$(ls *.tgz)
-          npm install -g "$TARBALL"
+        run: npm install -g *.tgz
 
       - name: CLI smoke tests
         run: |
@@ -62,6 +61,7 @@ jobs:
     strategy:
       matrix:
         node-version: [20, 22]
+      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -75,15 +75,13 @@ jobs:
         run: npm ci || npm install
 
       - name: Run tests (subset)
-        run: npm test -- --test-name-pattern="generateId|record|search|show|stats|listProjects|validateObservation|task classification|canonical precedence|prompt injection"
+        run: npm test -- --test-name-pattern="generateId|record|search|show|stats|listProjects|validateObservation|task classification|canonical precedence|prompt injection|claim eligibility|evidence gate|prune"
 
       - name: Create tarball
         run: npm pack
 
       - name: Install from tarball
-        run: |
-          $TARBALL = Get-ChildItem *.tgz | Select-Object -First 1
-          npm install -g "$TARBALL"
+        run: npm install -g $(Get-ChildItem *.tgz | Select-Object -First 1)
 
       - name: CLI smoke tests
         run: |
@@ -103,6 +101,7 @@ jobs:
     strategy:
       matrix:
         node-version: [20, 22]
+      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -116,15 +115,13 @@ jobs:
         run: npm ci || npm install
 
       - name: Run tests (subset)
-        run: npm test -- --test-name-pattern="generateId|record|search|show|stats|listProjects|validateObservation|task classification|canonical precedence|prompt injection"
+        run: npm test -- --test-name-pattern="generateId|record|search|show|stats|listProjects|validateObservation|task classification|canonical precedence|prompt injection|claim eligibility|evidence gate|prune"
 
       - name: Create tarball
         run: npm pack
 
       - name: Install from tarball
-        run: |
-          TARBALL=$(ls *.tgz | head -1)
-          npm install -g "$TARBALL"
+        run: npm install -g *.tgz
 
       - name: CLI smoke tests
         run: |

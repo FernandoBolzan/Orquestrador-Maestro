@@ -6,7 +6,6 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 
 const LOCK_STALE_MS = 30000;
-const LOCK_MAX_AGE_MS = 300000;
 const LOCK_RETRY_MS = 50;
 const LOCK_MAX_RETRIES = 100;
 
@@ -33,24 +32,16 @@ function acquireLock(lockPath) {
           const age = Date.now() - lockAge;
 
           if (age > LOCK_STALE_MS) {
-            let shouldBreak = false;
+            let pidAlive = false;
             try {
               process.kill(lock.pid, 0);
-              // PID alive → lock is live. Never break by age alone.
+              pidAlive = true;
             } catch {
-              // PID dead → lock is stale, safe to break.
-              shouldBreak = true;
+              pidAlive = false;
             }
 
-            if (shouldBreak) {
-              try {
-                const existingContent = fs.readFileSync(lockPath, "utf8").trim();
-                const existingLock = JSON.parse(existingContent);
-                if (existingLock.ownerId === lock.ownerId) {
-                  fs.unlinkSync(lockPath);
-                }
-                continue;
-              } catch {}
+            if (!pidAlive) {
+              tryRecoverStaleLock(lockPath, lock);
             }
           }
         } catch {}
@@ -63,6 +54,78 @@ function acquireLock(lockPath) {
   }
 
   throw new Error(`Failed to acquire lock after timeout: ${lockPath}`);
+}
+
+function tryRecoverStaleLock(lockPath, originalLock) {
+  const recoveryPath = `${lockPath}.recovery`;
+  let recoveryLock = null;
+
+  try {
+    const recoveryData = JSON.stringify({
+      pid: process.pid,
+      createdAt: new Date().toISOString(),
+      ownerId: crypto.randomBytes(8).toString("hex"),
+      recovering: lockPath
+    });
+    fs.writeFileSync(recoveryPath, recoveryData, { flag: "wx", mode: 0o600 });
+    recoveryLock = JSON.parse(recoveryData);
+  } catch {
+    return false;
+  }
+
+  try {
+    let currentContent;
+    try {
+      currentContent = fs.readFileSync(lockPath, "utf8").trim();
+    } catch {
+      return false;
+    }
+
+    let currentLock;
+    try {
+      currentLock = JSON.parse(currentContent);
+    } catch {
+      return false;
+    }
+
+    if (currentLock.ownerId !== originalLock.ownerId) {
+      return false;
+    }
+
+    let pidAlive = false;
+    try {
+      process.kill(currentLock.pid, 0);
+      pidAlive = true;
+    } catch {
+      pidAlive = false;
+    }
+
+    if (pidAlive) {
+      return false;
+    }
+
+    try {
+      const verifyContent = fs.readFileSync(lockPath, "utf8").trim();
+      const verifyLock = JSON.parse(verifyContent);
+      if (verifyLock.ownerId !== originalLock.ownerId) {
+        return false;
+      }
+      fs.unlinkSync(lockPath);
+      return true;
+    } catch {
+      return false;
+    }
+  } finally {
+    try {
+      if (recoveryLock) {
+        const rc = fs.readFileSync(recoveryPath, "utf8").trim();
+        const rl = JSON.parse(rc);
+        if (rl.ownerId === recoveryLock.ownerId) {
+          fs.unlinkSync(recoveryPath);
+        }
+      }
+    } catch {}
+  }
 }
 
 function releaseLock(lockPath, ownerId) {

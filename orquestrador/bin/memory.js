@@ -658,15 +658,17 @@ class Memory {
       const initialCount = observations.length;
       let filtered = [...observations];
 
-      const protectedObs = options.keepVerified !== false
+      const keepVerified = options.keepVerified !== false;
+      const protectedObs = keepVerified
         ? filtered.filter(obs => obs.verified)
         : [];
-
-      const prunable = filtered.filter(obs => !obs.verified);
+      const prunable = keepVerified
+        ? filtered.filter(obs => !obs.verified)
+        : [...filtered];
 
       if (options.keepRecent) {
         prunable.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        const slots = Math.max(0, options.keepRecent - protectedObs.length);
+        const slots = Math.max(0, options.keepRecent);
         filtered = [...protectedObs, ...prunable.slice(0, slots)];
       } else {
         filtered = [...protectedObs, ...prunable];

@@ -147,13 +147,8 @@
     "evidence": {
       "type": "object",
       "description": "Evidence gate metadata for claim eligibility",
-      "required": ["type", "publicClaimEligible"],
+      "required": ["executionType", "publicClaimEligible"],
       "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["real-execution", "simulated", "infrastructure", "unknown"],
-          "description": "Type of evidence: real-execution (actual AI model call), simulated (fixture-based), infrastructure (setup only), unknown"
-        },
         "executionType": {
           "type": "string",
           "enum": ["synthetic", "infrastructure", "real-execution"],

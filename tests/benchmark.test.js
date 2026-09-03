@@ -151,10 +151,11 @@ describe("BenchmarkRunner", () => {
       
       assert.ok(report.summary);
       assert.ok(report.details);
-      assert.ok(report.summary["test_vanilla"]);
-      assert.equal(report.summary["test_vanilla"].totalRuns, 2);
-      assert.equal(report.summary["test_vanilla"].successfulRuns, 2);
-      assert.equal(report.summary["test_vanilla"].successRate, 1);
+      assert.ok(report.summary.allRuns);
+      assert.ok(report.summary.allRuns["test_vanilla"]);
+      assert.equal(report.summary.allRuns["test_vanilla"].totalRuns, 2);
+      assert.equal(report.summary.allRuns["test_vanilla"].successfulRuns, 2);
+      assert.equal(report.summary.allRuns["test_vanilla"].successRate, 1);
     });
   });
 
