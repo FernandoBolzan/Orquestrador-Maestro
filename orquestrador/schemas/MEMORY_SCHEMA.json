@@ -91,7 +91,8 @@
         "branch": { "type": ["string", "null"] },
         "workspaceId": { "type": "string" },
         "headCommit": { "type": "string" },
-        "taskId": { "type": "string" }
+        "taskId": { "type": "string" },
+        "promoted": { "type": "boolean" }
       },
       "required": ["level"],
       "description": "Observation scope"

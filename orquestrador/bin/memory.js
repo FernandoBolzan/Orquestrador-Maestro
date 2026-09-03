@@ -246,6 +246,7 @@ class Memory {
       project: projectId,
       type: observation.type,
       summary: this.redactContent(observation.summary),
+      details: observation.details ? this.redactContent(observation.details) : null,
       files: (observation.files || []).map(f => this.redactContent(f)),
       tags: observation.tags || [],
       verified: observation.verified || false,
@@ -459,6 +460,20 @@ class Memory {
         existingContent = fs.readFileSync(destPath, "utf8");
       }
       this.writeAtomic(destPath, existingContent + entry);
+
+      const obsFilePath = this.getObservationsFile(projectId);
+      const obsLockPath = getLockPath(obsFilePath);
+      withLock(obsLockPath, () => {
+        const { valid: observations, malformedLines } = this.readObservations(obsFilePath);
+        const idx = observations.findIndex(o => o.id === observationId);
+        if (idx !== -1) {
+          if (!observations[idx].scope) observations[idx].scope = {};
+          observations[idx].scope.promoted = true;
+          const lines = [...observations.map(o => JSON.stringify(o)), ...malformedLines];
+          this.writeAtomic(obsFilePath, lines.join("\n") + "\n");
+        }
+      });
+
       return {
         observation: obs,
         destination,
@@ -543,16 +558,15 @@ class Memory {
       const observations = observationIds.map(id => this.show(projectId, id)).filter(Boolean);
       if (observations.length === 0) throw new Error("No valid observations found to consolidate");
 
-      const scopes = observations.map(o => o.scope?.level).filter(Boolean);
-      const uniqueScopes = [...new Set(scopes)];
-      if (uniqueScopes.length > 1) {
-        const repoObs = observations.filter(o => o.scope?.level === "repository");
-        if (repoObs.length === 0) {
-          throw new Error("Cannot consolidate observations from incompatible scopes without explicit promotion");
-        }
-      }
+      const scopeLevels = ["task", "commit", "branch", "workspace", "repository"];
+      const broadest = observations.reduce((best, o) => {
+        const lvl = scopeLevels.indexOf(o.scope?.level ?? "");
+        const bestLvl = scopeLevels.indexOf(best);
+        return lvl > bestLvl ? (o.scope?.level ?? best) : best;
+      }, scopeLevels[0]);
 
       const firstScope = observations[0].scope || { level: "repository" };
+      const mergedScope = { ...firstScope, level: broadest };
 
       const consolidated = {
         schemaVersion: this.schemaVersion,
@@ -566,7 +580,7 @@ class Memory {
         tags: [...new Set(observations.flatMap(obs => obs.tags || []))],
         verified: consolidatedObs.verified || false,
         source: consolidatedObs.source || {},
-        scope: consolidatedObs.scope || firstScope,
+        scope: consolidatedObs.scope || mergedScope,
         consolidatedFrom: observationIds
       };
 

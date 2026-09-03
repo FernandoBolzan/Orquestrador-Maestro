@@ -9,7 +9,7 @@ const LOCK_RETRY_MS = 50;
 const LOCK_MAX_RETRIES = 100;
 
 function acquireLock(lockPath) {
-  const dir = require("node:path").dirname(lockPath);
+  const dir = path.dirname(lockPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
@@ -18,14 +18,15 @@ function acquireLock(lockPath) {
 
   while (Date.now() < deadline) {
     try {
-      fs.openSync(lockPath, "wx");
+      fs.writeFileSync(lockPath, String(process.pid), { flag: "wx", mode: 0o600 });
       return true;
     } catch (err) {
       if (err.code === "EEXIST") {
         try {
-          const stat = fs.statSync(lockPath);
-          const age = Date.now() - stat.mtimeMs;
-          if (age > LOCK_STALE_MS) {
+          const content = fs.readFileSync(lockPath, "utf8").trim();
+          const lockAge = fs.statSync(lockPath).mtimeMs;
+          const age = Date.now() - lockAge;
+          if (age > LOCK_STALE_MS && content !== String(process.pid)) {
             try {
               fs.unlinkSync(lockPath);
               continue;
@@ -40,12 +41,15 @@ function acquireLock(lockPath) {
     }
   }
 
-  throw new Error(`Failed to acquire lock after ${LOCK_MAX_RETRIES} retries: ${lockPath}`);
+  throw new Error(`Failed to acquire lock after timeout: ${lockPath}`);
 }
 
 function releaseLock(lockPath) {
   try {
-    fs.unlinkSync(lockPath);
+    const content = fs.readFileSync(lockPath, "utf8").trim();
+    if (content === String(process.pid)) {
+      fs.unlinkSync(lockPath);
+    }
   } catch {}
 }
 
