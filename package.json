@@ -74,6 +74,7 @@
     "orquestrador/*.ps1",
     "orquestrador/*.sh",
     "orquestrador/bin/",
+    "orquestrador/lib/",
     "orquestrador/blueprints/",
     "orquestrador/personas/",
     "orquestrador/skills/",

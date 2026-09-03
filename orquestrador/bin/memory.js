@@ -136,7 +136,9 @@ class Memory {
 
   resolveProjectFromArgs(args, fallback) {
     const project = this.getArg(args, "--project");
-    if (project) return project;
+    if (project) {
+      return this.resolveRepositoryId(project);
+    }
     return this.resolveRepositoryId(fallback);
   }
 
@@ -156,9 +158,19 @@ class Memory {
     return val ? Number.parseInt(val, 10) : null;
   }
 
-  resolveScope(project, args) {
+  resolveScope(project, args, projectRoot) {
     const explicit = this.getArg(args, "--scope");
-    if (explicit) return { level: explicit };
+    if (explicit) {
+      const identity = projectRoot ? this.resolveIdentity(projectRoot) : null;
+      const scope = { level: explicit };
+      if (identity) {
+        scope.repositoryId = identity.repositoryId;
+        scope.branch = identity.branch;
+        scope.workspaceId = identity.workspaceId;
+        scope.headCommit = identity.headCommit;
+      }
+      return scope;
+    }
     return { level: "repository" };
   }
 
@@ -237,7 +249,7 @@ class Memory {
 
   writeAtomic(filePath, content) {
     const tmpPath = `${filePath}.tmp.${Date.now()}`;
-    fs.writeFileSync(tmpPath, content, "utf8");
+    fs.writeFileSync(tmpPath, content, { encoding: "utf8", mode: 0o600 });
     try {
       fs.renameSync(tmpPath, filePath);
     } catch (err) {
@@ -298,9 +310,10 @@ class Memory {
     this.validateObservation(applied);
     const filePath = this.getObservationsFile(projectId);
     
-    const { valid: existing } = this.readObservations(filePath);
+    const { valid: existing, malformedLines } = this.readObservations(filePath);
     existing.push(applied);
-    this.writeAtomic(filePath, existing.map(o => JSON.stringify(o)).join("\n") + "\n");
+    const lines = [...existing.map(o => JSON.stringify(o)), ...malformedLines];
+    this.writeAtomic(filePath, lines.join("\n") + "\n");
     
     return applied;
   }
@@ -335,12 +348,16 @@ class Memory {
       observations = observations.filter(obs => new Date(obs.timestamp) <= toDate);
     }
     if (query.search) {
-      const searchLower = query.search.toLowerCase();
-      observations = observations.filter(obs =>
-        obs.summary.toLowerCase().includes(searchLower) ||
-        (obs.details && obs.details.toLowerCase().includes(searchLower)) ||
-        obs.tags.some(tag => tag.toLowerCase().includes(searchLower))
-      );
+      const searchTokens = this.tokenize(query.search);
+      if (searchTokens.length > 0) {
+        observations = observations.filter(obs => {
+          const obsTokens = this.tokenize(
+            (obs.summary || "") + " " + (obs.details || "") + " " + (obs.tags || []).join(" ")
+          );
+          const overlap = searchTokens.filter(t => obsTokens.includes(t));
+          return overlap.length > 0;
+        });
+      }
     }
     if (query.branch) {
       observations = observations.filter(obs =>
@@ -360,6 +377,16 @@ class Memory {
     }
 
     return observations;
+  }
+
+  tokenize(text) {
+    if (!text || typeof text !== "string") return [];
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .split(/[^a-z0-9]+/)
+      .filter(token => token.length >= 3);
   }
 
   show(projectId, observationId) {
@@ -658,7 +685,7 @@ function main() {
         tags: memory.getArgList(rest, "--tags"),
         verified: rest.includes("--verified"),
         taskId: memory.getArg(rest, "--task"),
-        scope: memory.resolveScope(project, rest)
+        scope: memory.resolveScope(project, rest, process.cwd())
       });
       console.log(JSON.stringify(obs, null, 2));
       return 0;

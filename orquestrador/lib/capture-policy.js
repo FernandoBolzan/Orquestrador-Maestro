@@ -111,9 +111,9 @@ class CapturePolicy {
           summary: "[metadata only]",
           details: null,
           files: [],
-          tags: observation.tags || [],
+          tags: [],
           verified: observation.verified || false,
-          source: observation.source || {},
+          source: { tool: observation.source?.tool || "unknown" },
           scope: observation.scope || { level: "repository" },
           capturePolicy: POLICIES.METADATA_ONLY
         };
@@ -124,6 +124,8 @@ class CapturePolicy {
           summary: this.redactText(observation.summary || ""),
           details: observation.details ? this.redactText(observation.details) : null,
           files: (observation.files || []).map(f => this.redactText(f)),
+          tags: (observation.tags || []).map(t => this.redactText(t)),
+          source: this.redactSource(observation.source || {}),
           capturePolicy: POLICIES.REDACT
         };
 
@@ -146,6 +148,14 @@ class CapturePolicy {
       .replace(/ghp_[A-Za-z0-9]{36}/g, "[GITHUB_TOKEN_REDACTED]")
       .replace(/sk-[A-Za-z0-9]{20,}/g, "[API_KEY_REDACTED]")
       .replace(/-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----[\s\S]*?-----END\s+(RSA\s+)?PRIVATE\s+KEY-----/g, "[PRIVATE_KEY_REDACTED]");
+  }
+
+  redactSource(source) {
+    if (!source || typeof source !== "object") return source;
+    const redacted = { ...source };
+    if (redacted.session) redacted.session = "[REDACTED]";
+    if (redacted.commit) redacted.commit = "[REDACTED]";
+    return redacted;
   }
 }
 

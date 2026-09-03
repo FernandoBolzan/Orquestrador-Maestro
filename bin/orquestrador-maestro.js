@@ -386,7 +386,7 @@ function runMemoryCommand(args) {
         tags: memory.getArgList(rest, "--tags"),
         verified: rest.includes("--verified"),
         taskId: memory.getArg(rest, "--task"),
-        scope: memory.resolveScope(project, rest)
+        scope: memory.resolveScope(project, rest, process.cwd())
       });
       console.log(JSON.stringify(obs, null, 2));
       return 0;

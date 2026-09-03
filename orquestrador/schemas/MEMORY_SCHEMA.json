@@ -101,6 +101,11 @@
     "workspaceId": {
       "type": "string",
       "description": "Workspace identifier"
+    },
+    "capturePolicy": {
+      "type": "string",
+      "enum": ["ALLOW", "REDACT", "METADATA_ONLY", "DROP"],
+      "description": "Capture policy applied to this observation"
     }
   }
 }
