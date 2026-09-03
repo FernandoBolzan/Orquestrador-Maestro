@@ -383,6 +383,7 @@ function buildBrief(options) {
     throw new Error(`Projeto não encontrado: ${projectRoot}`);
   }
 
+  const gitCtx = resolveGitContext(projectRoot);
   const taskClassification = classifyTask(options.task);
   const budget = computeBudget(options.maxChars, taskClassification);
   
@@ -478,9 +479,18 @@ function buildBrief(options) {
   const content = truncate(`${finalHeader}\n\n${sections.join("\n\n")}`.trim(), budget.maxChars);
 
   const result = {
-    projectRoot: "[redigido]",
+    identity: {
+      projectRoot: "[redigido]",
+      repositoryId: gitCtx.repositoryId,
+      workspaceId: gitCtx.workspaceId,
+      branch: gitCtx.branch,
+      detached: gitCtx.detached,
+      headCommit: gitCtx.headCommit,
+      vcs: gitCtx.vcs
+    },
     task: options.task,
     taskClassification,
+    memoryEnabled: shouldUseMemory(taskClassification),
     budget: {
       maxChars: budget.maxChars,
       usedChars: content.length,

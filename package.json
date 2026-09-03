@@ -75,6 +75,7 @@
     "orquestrador/*.sh",
     "orquestrador/bin/",
     "orquestrador/lib/",
+    "orquestrador/adapters/",
     "orquestrador/blueprints/",
     "orquestrador/personas/",
     "orquestrador/skills/",
@@ -102,7 +103,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FernandoBolzan/Orquestrador-Maestro.git"
+    "url": "git+https://github.com/IAPro-Community/Orquestrador-Maestro.git"
   },
   "keywords": [
     "iapro",
@@ -124,9 +125,9 @@
     "hooks"
   ],
   "author": "Grupo IAPro",
-  "homepage": "https://github.com/FernandoBolzan/Orquestrador-Maestro#readme",
+  "homepage": "https://github.com/IAPro-Community/Orquestrador-Maestro#readme",
   "bugs": {
-    "url": "https://github.com/FernandoBolzan/Orquestrador-Maestro/issues"
+    "url": "https://github.com/IAPro-Community/Orquestrador-Maestro/issues"
   },
   "engines": {
     "node": ">=18.0.0"
