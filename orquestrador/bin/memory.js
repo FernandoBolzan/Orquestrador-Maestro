@@ -5,12 +5,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const os = require("node:os");
-const { execSync } = require("node:child_process");
 
 const MEMORY_SCHEMA = require("../schemas/MEMORY_SCHEMA.json");
 const OBSERVATION_TYPES = MEMORY_SCHEMA.properties.type.enum;
 const { classifyTask } = require("../lib/task-classifier.js");
 const { CapturePolicy, POLICIES } = require("../lib/capture-policy.js");
+const { resolveGitContext, resolveProjectRoot, shouldUseMemory } = require("../lib/git-context.js");
+const { isObservationVisible, resolveObservationScope, rankObservations } = require("../lib/visibility.js");
+const { withLock, getLockPath } = require("../lib/lock.js");
 
 const SAFE_DESTINATIONS = [
   "DEV/CONTEXT.md",
@@ -42,104 +44,16 @@ class Memory {
     return `obs_${crypto.randomBytes(8).toString("hex")}`;
   }
 
-  resolveRepositoryId(projectRoot) {
-    try {
-      const remote = execSync("git remote get-url origin", {
-        cwd: projectRoot,
-        encoding: "utf8",
-        stdio: "pipe"
-      }).trim();
-      const normalized = remote.replace(/\.git$/, "").replace(/[:/]/g, "_").toLowerCase();
-      return `repo_${crypto.createHash("sha256").update(normalized).digest("hex").substring(0, 16)}`;
-    } catch {
-      const fallback = projectRoot.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 64);
-      return `repo_${crypto.createHash("sha256").update(fallback).digest("hex").substring(0, 16)}`;
-    }
-  }
-
-  resolveBranch(projectRoot) {
-    try {
-      return execSync("git branch --show-current", {
-        cwd: projectRoot,
-        encoding: "utf8",
-        stdio: "pipe"
-      }).trim() || "HEAD";
-    } catch {
-      return "unknown";
-    }
-  }
-
-  resolveHeadCommit(projectRoot) {
-    try {
-      return execSync("git rev-parse --short HEAD", {
-        cwd: projectRoot,
-        encoding: "utf8",
-        stdio: "pipe"
-      }).trim();
-    } catch {
-      return "unknown";
-    }
-  }
-
-  resolveWorkspaceId(projectRoot) {
-    const gitDir = path.join(projectRoot, ".git");
-    try {
-      const stat = fs.lstatSync(gitDir);
-      if (stat.isFile()) {
-        const content = fs.readFileSync(gitDir, "utf8");
-        const match = content.match(/gitdir:\s*(.+)/);
-        if (match) {
-          return `ws_${crypto.createHash("sha256").update(match[1].trim()).digest("hex").substring(0, 16)}`;
-        }
-      }
-    } catch {}
-    return `ws_${crypto.createHash("sha256").update(projectRoot).digest("hex").substring(0, 16)}`;
-  }
-
-  resolveIdentity(projectRoot) {
-    return {
-      repositoryId: this.resolveRepositoryId(projectRoot),
-      root: projectRoot,
-      remote: this.tryGetRemote(projectRoot),
-      branch: this.resolveBranch(projectRoot),
-      headCommit: this.resolveHeadCommit(projectRoot),
-      workspaceId: this.resolveWorkspaceId(projectRoot),
-      vcs: "git"
-    };
-  }
-
-  tryGetRemote(projectRoot) {
-    try {
-      return execSync("git remote get-url origin", {
-        cwd: projectRoot,
-        encoding: "utf8",
-        stdio: "pipe"
-      }).trim();
-    } catch {
-      return null;
-    }
-  }
-
-  isAncestor(projectRoot, ancestorCommit, descendantCommit) {
-    try {
-      const { execFileSync } = require("node:child_process");
-      execFileSync("git", ["merge-base", "--is-ancestor", ancestorCommit, descendantCommit], {
-        cwd: projectRoot,
-        encoding: "utf8",
-        stdio: "pipe"
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   resolveProjectFromArgs(args, fallback) {
     const project = this.getArg(args, "--project");
-    if (project) {
-      return this.resolveRepositoryId(project);
-    }
-    return this.resolveRepositoryId(fallback);
+    const projectPath = project || fallback;
+    const root = resolveProjectRoot(projectPath);
+    return root ? this.resolveRepositoryId(root) : this.resolveRepositoryId(projectPath);
+  }
+
+  resolveProjectRootFromArgs(args, fallback) {
+    const project = this.getArg(args, "--project");
+    return resolveProjectRoot(project || fallback) || path.resolve(project || fallback);
   }
 
   getArg(args, name) {
@@ -158,20 +72,41 @@ class Memory {
     return val ? Number.parseInt(val, 10) : null;
   }
 
-  resolveScope(project, args, projectRoot) {
-    const explicit = this.getArg(args, "--scope");
-    if (explicit) {
-      const identity = projectRoot ? this.resolveIdentity(projectRoot) : null;
-      const scope = { level: explicit };
-      if (identity) {
-        scope.repositoryId = identity.repositoryId;
-        scope.branch = identity.branch;
-        scope.workspaceId = identity.workspaceId;
-        scope.headCommit = identity.headCommit;
-      }
-      return scope;
+  resolveRepositoryId(projectRoot) {
+    try {
+      const remote = require("node:child_process").execSync("git remote get-url origin", {
+        cwd: projectRoot,
+        encoding: "utf8",
+        stdio: "pipe"
+      }).trim();
+      const normalized = remote.replace(/\.git$/, "").replace(/[:/]/g, "_").toLowerCase();
+      return `repo_${crypto.createHash("sha256").update(normalized).digest("hex").substring(0, 16)}`;
+    } catch {
+      const fallback = projectRoot.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 64);
+      return `repo_${crypto.createHash("sha256").update(fallback).digest("hex").substring(0, 16)}`;
     }
-    return { level: "repository" };
+  }
+
+  resolveScope(projectId, args, projectRoot) {
+    const explicit = this.getArg(args, "--scope");
+    const gitCtx = projectRoot ? resolveGitContext(projectRoot) : null;
+    const taskId = this.getArg(args, "--task");
+
+    if (explicit) {
+      return resolveObservationScope({
+        type: this.getArg(args, "--type") || "discovery",
+        gitContext: gitCtx,
+        taskId,
+        explicitScope: { level: explicit }
+      });
+    }
+
+    return resolveObservationScope({
+      type: this.getArg(args, "--type") || "discovery",
+      gitContext: gitCtx,
+      taskId,
+      explicitScope: null
+    });
   }
 
   detectInjection(content) {
@@ -258,6 +193,11 @@ class Memory {
     }
   }
 
+  appendObservation(filePath, obs) {
+    const line = JSON.stringify(obs) + "\n";
+    fs.appendFileSync(filePath, line, { encoding: "utf8", mode: 0o600 });
+  }
+
   readObservations(filePath) {
     if (!fs.existsSync(filePath)) return { valid: [], malformed: 0, malformedLines: [] };
     const content = fs.readFileSync(filePath, "utf8");
@@ -276,7 +216,7 @@ class Memory {
     return { valid, malformed, malformedLines };
   }
 
-  record(projectId, observation) {
+  record(projectId, observation, options = {}) {
     if (this.containsPrivateContent(observation.summary) || this.containsPrivateContent(observation.details || "")) {
       throw new Error("Private content cannot be persisted to memory");
     }
@@ -287,35 +227,47 @@ class Memory {
     }
 
     this.ensureProjectDir(projectId);
+
+    let scope = observation.scope;
+    if (!scope || !scope.level) {
+      const gitCtx = options.gitContext || (options.projectRoot ? resolveGitContext(options.projectRoot) : null);
+      scope = resolveObservationScope({
+        type: observation.type,
+        gitContext: gitCtx,
+        taskId: observation.taskId,
+        explicitScope: observation.scope
+      });
+    }
+
     const obs = {
       schemaVersion: this.schemaVersion,
       id: observation.id || this.generateId(),
       timestamp: observation.timestamp || new Date().toISOString(),
       project: projectId,
-      taskId: observation.taskId || null,
       type: observation.type,
       summary: this.redactContent(observation.summary),
-      details: observation.details ? this.redactContent(observation.details) : null,
       files: (observation.files || []).map(f => this.redactContent(f)),
       tags: observation.tags || [],
       verified: observation.verified || false,
       source: observation.source || {},
-      scope: observation.scope || { level: "repository" },
+      scope,
       capturePolicy: policyResult.policy
     };
+
+    if (observation.taskId) obs.taskId = observation.taskId;
 
     const applied = this.capturePolicy.applyPolicy(obs, policyResult);
     if (!applied) return null;
 
     this.validateObservation(applied);
+
     const filePath = this.getObservationsFile(projectId);
-    
-    const { valid: existing, malformedLines } = this.readObservations(filePath);
-    existing.push(applied);
-    const lines = [...existing.map(o => JSON.stringify(o)), ...malformedLines];
-    this.writeAtomic(filePath, lines.join("\n") + "\n");
-    
-    return applied;
+    const lockPath = getLockPath(filePath);
+
+    return withLock(lockPath, () => {
+      this.appendObservation(filePath, applied);
+      return applied;
+    });
   }
 
   search(projectId, query = {}) {
@@ -379,14 +331,61 @@ class Memory {
     return observations;
   }
 
+  searchWithVisibility(projectId, gitContext, query = {}) {
+    const filePath = this.getObservationsFile(projectId);
+    const { valid: allObservations } = this.readObservations(filePath);
+
+    let observations = allObservations.filter(obs =>
+      isObservationVisible(obs, gitContext, { taskId: query.taskId, allowAncestry: query.allowAncestry })
+    );
+
+    if (query.type) {
+      observations = observations.filter(obs => obs.type === query.type);
+    }
+    if (query.verified !== undefined) {
+      observations = observations.filter(obs => obs.verified === query.verified);
+    }
+    if (query.search) {
+      const searchTokens = this.tokenize(query.search);
+      if (searchTokens.length > 0) {
+        observations = observations.filter(obs => {
+          const obsTokens = this.tokenize(
+            (obs.summary || "") + " " + (obs.details || "") + " " + (obs.tags || []).join(" ")
+          );
+          return searchTokens.some(t => obsTokens.includes(t));
+        });
+      }
+    }
+
+    if (query.rank && query.search) {
+      const taskTokens = this.tokenize(query.search);
+      const ranked = rankObservations(observations, taskTokens, gitContext, { taskId: query.taskId });
+      observations = ranked.map(r => r.obs);
+    }
+
+    observations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (query.limit) {
+      observations = observations.slice(0, query.limit);
+    }
+
+    return observations;
+  }
+
   tokenize(text) {
     if (!text || typeof text !== "string") return [];
+    const STOP_WORDS = new Set([
+      "the", "and", "that", "this", "with", "for", "from", "are", "was",
+      "para", "com", "uma", "um", "dos", "das", "que", "por", "mais",
+      "continue", "continuar", "fazer", "ajustar", "using", "used",
+      "have", "has", "had", "was", "were", "been", "being"
+    ]);
     return text
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .split(/[^a-z0-9]+/)
-      .filter(token => token.length >= 3);
+      .filter(token => token.length >= 3 && !STOP_WORDS.has(token));
   }
 
   show(projectId, observationId) {
@@ -416,15 +415,16 @@ class Memory {
     if (!obs.verified) throw new Error("Cannot promote unverified observation");
 
     const projectRoot = options.projectRoot || process.cwd();
-    const destPath = path.resolve(projectRoot, destination);
+    const resolvedRoot = resolveProjectRoot(projectRoot) || path.resolve(projectRoot);
+    const destPath = path.resolve(resolvedRoot, destination);
 
-    if (!destPath.startsWith(path.resolve(projectRoot))) {
+    if (!destPath.startsWith(path.resolve(resolvedRoot))) {
       throw new Error("Destination must be within project root");
     }
 
     try {
       const realDestPath = fs.realpathSync(path.dirname(destPath));
-      if (!realDestPath.startsWith(path.resolve(projectRoot))) {
+      if (!realDestPath.startsWith(path.resolve(resolvedRoot))) {
         throw new Error("Symlink escape detected");
       }
     } catch (err) {
@@ -451,19 +451,21 @@ class Memory {
     }
 
     const entry = `\n\n## ${obs.type}: ${obs.summary}\n\n${obs.details || ""}\n\n- Source: observation ${obs.id}\n- Promoted at: ${new Date().toISOString()}\n- Branch: ${obs.scope?.branch || "unknown"}\n`;
-    
-    let existingContent = "";
-    if (fs.existsSync(destPath)) {
-      existingContent = fs.readFileSync(destPath, "utf8");
-    }
-    this.writeAtomic(destPath, existingContent + entry);
 
-    return {
-      observation: obs,
-      destination,
-      status: "promoted",
-      promotedAt: new Date().toISOString()
-    };
+    const lockPath = getLockPath(destPath);
+    return withLock(lockPath, () => {
+      let existingContent = "";
+      if (fs.existsSync(destPath)) {
+        existingContent = fs.readFileSync(destPath, "utf8");
+      }
+      this.writeAtomic(destPath, existingContent + entry);
+      return {
+        observation: obs,
+        destination,
+        status: "promoted",
+        promotedAt: new Date().toISOString()
+      };
+    });
   }
 
   stats(projectId) {
@@ -489,93 +491,127 @@ class Memory {
 
   dedupe(projectId) {
     const filePath = this.getObservationsFile(projectId);
-    const { valid: observations, malformed, malformedLines } = this.readObservations(filePath);
-    const initialCount = observations.length;
-    const seen = new Map();
-    const deduped = [];
+    const lockPath = getLockPath(filePath);
 
-    for (const obs of observations) {
-      const key = `${obs.type}:${obs.summary}`;
-      const existing = seen.get(key);
-      if (!existing) {
-        seen.set(key, obs);
-        deduped.push(obs);
-      } else {
-        const existingIsVerified = existing.verified;
-        const obsIsVerified = obs.verified;
-        if (obsIsVerified && !existingIsVerified) {
-          const index = deduped.findIndex(d => d.id === existing.id);
-          if (index !== -1) deduped[index] = obs;
+    return withLock(lockPath, () => {
+      const { valid: observations, malformed, malformedLines } = this.readObservations(filePath);
+      const initialCount = observations.length;
+      const seen = new Map();
+      const deduped = [];
+
+      for (const obs of observations) {
+        const scopeKey = obs.scope
+          ? `${obs.scope.level}:${obs.scope.repositoryId || ""}:${obs.scope.branch || ""}:${obs.scope.workspaceId || ""}:${obs.scope.taskId || ""}:${obs.scope.headCommit || ""}`
+          : "no-scope";
+        const key = `${scopeKey}:${obs.type}:${(obs.summary || "").substring(0, 100)}`;
+        const existing = seen.get(key);
+        if (!existing) {
           seen.set(key, obs);
-        } else if (!obsIsVerified && existingIsVerified) {
-          continue;
-        } else if (new Date(obs.timestamp) > new Date(existing.timestamp)) {
-          const index = deduped.findIndex(d => d.id === existing.id);
-          if (index !== -1) deduped[index] = obs;
-          seen.set(key, obs);
+          deduped.push(obs);
+        } else {
+          const existingIsVerified = existing.verified;
+          const obsIsVerified = obs.verified;
+          if (obsIsVerified && !existingIsVerified) {
+            const index = deduped.findIndex(d => d.id === existing.id);
+            if (index !== -1) deduped[index] = obs;
+            seen.set(key, obs);
+          } else if (!obsIsVerified && existingIsVerified) {
+            continue;
+          } else if (new Date(obs.timestamp) > new Date(existing.timestamp)) {
+            const index = deduped.findIndex(d => d.id === existing.id);
+            if (index !== -1) deduped[index] = obs;
+            seen.set(key, obs);
+          }
         }
       }
-    }
 
-    const lines = [...deduped.map(obs => JSON.stringify(obs)), ...malformedLines];
-    this.writeAtomic(filePath, lines.join("\n") + "\n");
-    return { deduped: initialCount - deduped.length, remaining: deduped.length, malformed };
+      const lines = [...deduped.map(obs => JSON.stringify(obs)), ...malformedLines];
+      this.writeAtomic(filePath, lines.join("\n") + "\n");
+      return { deduped: initialCount - deduped.length, remaining: deduped.length, malformed };
+    });
   }
 
   consolidate(projectId, observationIds, consolidatedObs) {
-    const observations = observationIds.map(id => this.show(projectId, id)).filter(Boolean);
-    if (observations.length === 0) throw new Error("No valid observations found to consolidate");
-
-    const consolidated = {
-      schemaVersion: this.schemaVersion,
-      id: consolidatedObs.id || this.generateId(),
-      timestamp: consolidatedObs.timestamp || new Date().toISOString(),
-      project: projectId,
-      taskId: consolidatedObs.taskId || observations[0].taskId,
-      type: consolidatedObs.type || "discovery",
-      summary: this.redactContent(consolidatedObs.summary),
-      details: consolidatedObs.details ? this.redactContent(consolidatedObs.details) : null,
-      files: [...new Set(observations.flatMap(obs => obs.files || []))],
-      tags: [...new Set(observations.flatMap(obs => obs.tags || []))],
-      verified: consolidatedObs.verified || false,
-      source: consolidatedObs.source || {},
-      consolidatedFrom: observationIds
-    };
-    this.validateObservation(consolidated);
-
     const filePath = this.getObservationsFile(projectId);
-    const { valid: allObservations, malformedLines } = this.readObservations(filePath);
-    const filtered = allObservations.filter(obs => !observationIds.includes(obs.id));
-    filtered.push(consolidated);
-    const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
-    this.writeAtomic(filePath, lines.join("\n") + "\n");
-    return consolidated;
+    const lockPath = getLockPath(filePath);
+
+    const preCheck = this.readObservations(filePath);
+    const preCheckObs = observationIds.map(id => preCheck.valid.find(o => o.id === id)).filter(Boolean);
+    if (preCheckObs.length === 0) throw new Error("No valid observations found to consolidate");
+
+    return withLock(lockPath, () => {
+      const observations = observationIds.map(id => this.show(projectId, id)).filter(Boolean);
+      if (observations.length === 0) throw new Error("No valid observations found to consolidate");
+
+      const scopes = observations.map(o => o.scope?.level).filter(Boolean);
+      const uniqueScopes = [...new Set(scopes)];
+      if (uniqueScopes.length > 1) {
+        const repoObs = observations.filter(o => o.scope?.level === "repository");
+        if (repoObs.length === 0) {
+          throw new Error("Cannot consolidate observations from incompatible scopes without explicit promotion");
+        }
+      }
+
+      const firstScope = observations[0].scope || { level: "repository" };
+
+      const consolidated = {
+        schemaVersion: this.schemaVersion,
+        id: consolidatedObs.id || this.generateId(),
+        timestamp: consolidatedObs.timestamp || new Date().toISOString(),
+        project: projectId,
+        type: consolidatedObs.type || "discovery",
+        summary: this.redactContent(consolidatedObs.summary),
+        details: consolidatedObs.details ? this.redactContent(consolidatedObs.details) : null,
+        files: [...new Set(observations.flatMap(obs => obs.files || []))],
+        tags: [...new Set(observations.flatMap(obs => obs.tags || []))],
+        verified: consolidatedObs.verified || false,
+        source: consolidatedObs.source || {},
+        scope: consolidatedObs.scope || firstScope,
+        consolidatedFrom: observationIds
+      };
+
+      if (consolidatedObs.taskId) consolidated.taskId = consolidatedObs.taskId;
+
+      this.validateObservation(consolidated);
+
+      const { valid: allObservations, malformedLines } = this.readObservations(filePath);
+      const filtered = allObservations.filter(obs => !observationIds.includes(obs.id));
+      filtered.push(consolidated);
+      const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
+      this.writeAtomic(filePath, lines.join("\n") + "\n");
+      return consolidated;
+    });
   }
 
   retention(projectId, options = {}) {
     const filePath = this.getObservationsFile(projectId);
-    const { valid: observations, malformed, malformedLines } = this.readObservations(filePath);
-    const initialCount = observations.length;
-    const now = new Date();
-    const maxAgeDays = options.maxAgeDays || 90;
-    const maxCount = options.maxCount || 1000;
+    const lockPath = getLockPath(filePath);
 
-    let filtered = observations.filter(obs => {
-      if (obs.verified) return true;
-      const age = (now - new Date(obs.timestamp)) / (1000 * 60 * 60 * 24);
-      return age <= maxAgeDays;
+    return withLock(lockPath, () => {
+      const { valid: observations, malformed, malformedLines } = this.readObservations(filePath);
+      const initialCount = observations.length;
+      const now = new Date();
+      const maxAgeDays = options.maxAgeDays || 90;
+      const maxCount = options.maxCount || 1000;
+
+      let filtered = observations.filter(obs => {
+        if (obs.verified) return true;
+        if (obs.scope?.promoted) return true;
+        const age = (now - new Date(obs.timestamp)) / (1000 * 60 * 60 * 24);
+        return age <= maxAgeDays;
+      });
+
+      if (filtered.length > maxCount) {
+        const verified = filtered.filter(obs => obs.verified || obs.scope?.promoted);
+        const unverified = filtered.filter(obs => !obs.verified && !obs.scope?.promoted);
+        unverified.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        filtered = [...verified, ...unverified.slice(0, maxCount - verified.length)];
+      }
+
+      const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
+      this.writeAtomic(filePath, lines.join("\n") + "\n");
+      return { retained: filtered.length, removed: initialCount - filtered.length, malformed };
     });
-
-    if (filtered.length > maxCount) {
-      const verified = filtered.filter(obs => obs.verified);
-      const unverified = filtered.filter(obs => !obs.verified);
-      unverified.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      filtered = [...verified, ...unverified.slice(0, maxCount - verified.length)];
-    }
-
-    const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
-    this.writeAtomic(filePath, lines.join("\n") + "\n");
-    return { retained: filtered.length, removed: initialCount - filtered.length, malformed };
   }
 
   cleanup(projectId) {
@@ -586,27 +622,31 @@ class Memory {
 
   prune(projectId, options = {}) {
     const filePath = this.getObservationsFile(projectId);
-    const { valid: observations, malformed, malformedLines } = this.readObservations(filePath);
-    const initialCount = observations.length;
-    let filtered = [...observations];
+    const lockPath = getLockPath(filePath);
 
-    if (options.keepRecent) {
-      filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      filtered = filtered.slice(0, options.keepRecent);
-    }
+    return withLock(lockPath, () => {
+      const { valid: observations, malformed, malformedLines } = this.readObservations(filePath);
+      const initialCount = observations.length;
+      let filtered = [...observations];
 
-    if (options.keepVerified !== false) {
-      const verified = filtered.filter(obs => obs.verified);
-      const unverified = filtered.filter(obs => !obs.verified);
-      if (options.keepRecent && verified.length < options.keepRecent) {
-        const keepCount = Math.min(options.keepRecent, verified.length);
-        filtered = [...verified.slice(0, keepCount), ...unverified];
+      if (options.keepRecent) {
+        filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        filtered = filtered.slice(0, options.keepRecent);
       }
-    }
 
-    const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
-    this.writeAtomic(filePath, lines.join("\n") + "\n");
-    return { pruned: initialCount - filtered.length, remaining: filtered.length, malformed };
+      if (options.keepVerified !== false) {
+        const verified = filtered.filter(obs => obs.verified);
+        const unverified = filtered.filter(obs => !obs.verified);
+        if (options.keepRecent && verified.length < options.keepRecent) {
+          const keepCount = Math.min(options.keepRecent, verified.length);
+          filtered = [...verified.slice(0, keepCount), ...unverified];
+        }
+      }
+
+      const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
+      this.writeAtomic(filePath, lines.join("\n") + "\n");
+      return { pruned: initialCount - filtered.length, remaining: filtered.length, malformed };
+    });
   }
 
   printHelp() {
@@ -641,8 +681,8 @@ Flags:
   --id ID            ID da observation
   --branch BRANCH    Filtrar por branch
   --scope LEVEL      Escopo: repository, branch, workspace, commit, task
-  --destination PATH Destino para promoção (DEV/CONTEXT.md, DEV/DECISIONS.md, DEV/ARCHITECTURE.md)
-  --apply            Aplicar promoção (sem --apply e dry-run)
+  --destination PATH Destino para promocao (DEV/CONTEXT.md, DEV/DECISIONS.md, DEV/ARCHITECTURE.md)
+  --apply            Aplicar promocao (sem --apply e dry-run)
   --help             Mostra esta ajuda
 `);
   }
@@ -662,20 +702,24 @@ function main() {
 
   if (subcommand === "status") {
     const projectPath = process.cwd();
-    const repoId = memory.resolveRepositoryId(projectPath);
-    const identity = memory.resolveIdentity(projectPath);
+    const gitCtx = resolveGitContext(projectPath);
+    const repoId = gitCtx.repositoryId;
     const stats = memory.stats(repoId);
     console.log(JSON.stringify({
-      repository: identity.remote || identity.root,
+      repository: gitCtx.remote || gitCtx.projectRoot,
       repositoryId: repoId,
-      branch: identity.branch,
-      head: identity.headCommit,
+      branch: gitCtx.branch,
+      detached: gitCtx.detached,
+      head: gitCtx.headCommit,
+      workspaceId: gitCtx.workspaceId,
       memory: { repository: stats.total, byType: stats.byType, verified: stats.verified }
     }, null, 2));
     return 0;
   }
 
+  const projectPath = memory.resolveProjectRootFromArgs(rest, process.cwd());
   const project = memory.resolveProjectFromArgs(rest, process.cwd());
+  const gitCtx = resolveGitContext(projectPath);
 
   switch (subcommand) {
     case "record": {
@@ -689,8 +733,8 @@ function main() {
         tags: memory.getArgList(rest, "--tags"),
         verified: rest.includes("--verified"),
         taskId: memory.getArg(rest, "--task"),
-        scope: memory.resolveScope(project, rest, process.cwd())
-      });
+        scope: memory.resolveScope(project, rest, projectPath)
+      }, { gitContext: gitCtx, projectRoot: projectPath });
       console.log(JSON.stringify(obs, null, 2));
       return 0;
     }
@@ -726,7 +770,7 @@ function main() {
       const id = memory.getArg(rest, "--id");
       const dest = memory.getArg(rest, "--destination");
       if (!id || !dest) { console.error("--id and --destination required"); return 1; }
-      const result = memory.promote(project, id, dest, { apply: rest.includes("--apply"), projectRoot: process.cwd() });
+      const result = memory.promote(project, id, dest, { apply: rest.includes("--apply"), projectRoot: projectPath });
       console.log(JSON.stringify(result, null, 2));
       return 0;
     }

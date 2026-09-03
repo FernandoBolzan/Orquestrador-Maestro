@@ -52,7 +52,7 @@
       "description": "Short summary of the observation"
     },
     "details": {
-      "type": "string",
+      "type": ["string", "null"],
       "description": "Detailed explanation"
     },
     "files": {
@@ -84,28 +84,27 @@
       "properties": {
         "level": {
           "type": "string",
-          "enum": ["repository", "workspace", "branch"],
+          "enum": ["repository", "branch", "workspace", "commit", "task"],
           "description": "Scope level"
         },
-        "branch": { "type": "string" },
+        "repositoryId": { "type": "string" },
+        "branch": { "type": ["string", "null"] },
         "workspaceId": { "type": "string" },
-        "repositoryId": { "type": "string" }
+        "headCommit": { "type": "string" },
+        "taskId": { "type": "string" }
       },
       "required": ["level"],
       "description": "Observation scope"
-    },
-    "branch": {
-      "type": "string",
-      "description": "Git branch (for branch-scoped observations)"
-    },
-    "workspaceId": {
-      "type": "string",
-      "description": "Workspace identifier"
     },
     "capturePolicy": {
       "type": "string",
       "enum": ["ALLOW", "REDACT", "METADATA_ONLY", "DROP"],
       "description": "Capture policy applied to this observation"
+    },
+    "consolidatedFrom": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Observation IDs consolidated into this one"
     }
   }
 }

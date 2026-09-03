@@ -8,6 +8,7 @@ const { execSync } = require("node:child_process");
 const { Memory } = require("../orquestrador/bin/memory.js");
 const { buildBrief, classifyTask, computeBudget } = require("../orquestrador/bin/context-brief.js");
 const { ClaudeAdapter, CodexAdapter, OpenCodeAdapter, createAdapter } = require("../orquestrador/adapters/index.js");
+const { resolveGitContext } = require("../orquestrador/lib/git-context.js");
 
 describe("Hardening", () => {
   let tmpDir;
@@ -242,8 +243,8 @@ describe("Hardening", () => {
         execSync(`git worktree add ${worktreeA} -b feat-a`, { cwd: repoDir, stdio: "pipe" });
         execSync(`git worktree add ${worktreeB} -b feat-b`, { cwd: repoDir, stdio: "pipe" });
         
-        const identityA = memory.resolveIdentity(worktreeA);
-        const identityB = memory.resolveIdentity(worktreeB);
+        const identityA = resolveGitContext(worktreeA);
+        const identityB = resolveGitContext(worktreeB);
         
         assert.equal(identityA.repositoryId, identityB.repositoryId);
         assert.notEqual(identityA.workspaceId, identityB.workspaceId);
@@ -269,9 +270,9 @@ describe("Hardening", () => {
         const commitHash = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf8" }).trim();
         execSync("git checkout " + commitHash, { cwd: repoDir, stdio: "pipe" });
         
-        const identity = memory.resolveIdentity(repoDir);
-        assert.equal(identity.branch, "HEAD");
-        assert.equal(identity.headCommit, commitHash.substring(0, 7));
+        const identity = resolveGitContext(repoDir);
+        assert.equal(identity.branch, null);
+        assert.equal(identity.detached, true);
         assert.ok(identity.repositoryId);
       } finally {
         fs.rmSync(repoDir, { recursive: true, force: true });
