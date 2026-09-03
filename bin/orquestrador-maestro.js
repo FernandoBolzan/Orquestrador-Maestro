@@ -13,6 +13,7 @@ const rootDir = path.resolve(__dirname, "..");
 const packageJson = require(path.join(rootDir, "package.json"));
 const contextBrief = require(path.join(rootDir, "orquestrador", "bin", "context-brief.js"));
 const workflowLock = require(path.join(rootDir, "orquestrador", "bin", "workflow-lock.js"));
+const { resolveGitContext } = require(path.join(rootDir, "orquestrador", "lib", "git-context.js"));
 const workflowState = require(path.join(rootDir, "orquestrador", "bin", "workflow-state.js"));
 const { Memory } = require(path.join(rootDir, "orquestrador", "bin", "memory.js"));
 const telemetryTimeoutMs = 1200;
@@ -352,14 +353,16 @@ function runMemoryCommand(args) {
 
   if (subcommand === "status") {
     const projectPath = resolveProjectPath();
-    const repoId = memory.resolveRepositoryId(projectPath);
-    const identity = memory.resolveIdentity(projectPath);
-    const stats = memory.stats(repoId);
+    const gitCtx = resolveGitContext(projectPath);
+    const stats = memory.stats(gitCtx.repositoryId);
     console.log(JSON.stringify({
-      repository: identity.remote || identity.root,
-      repositoryId: repoId,
-      branch: identity.branch,
-      head: identity.headCommit,
+      repository: gitCtx.remote || gitCtx.projectRoot,
+      repositoryId: gitCtx.repositoryId,
+      workspaceId: gitCtx.workspaceId,
+      branch: gitCtx.branch,
+      detached: gitCtx.detached,
+      head: gitCtx.headCommit,
+      vcs: gitCtx.vcs,
       memory: {
         repository: stats.total,
         byType: stats.byType,
@@ -370,6 +373,7 @@ function runMemoryCommand(args) {
   }
 
   const project = memory.resolveProjectFromArgs(rest, process.cwd());
+  const projectRoot = memory.resolveProjectRootFromArgs(rest, process.cwd());
 
   switch (subcommand) {
     case "record": {
@@ -386,8 +390,9 @@ function runMemoryCommand(args) {
         tags: memory.getArgList(rest, "--tags"),
         verified: rest.includes("--verified"),
         taskId: memory.getArg(rest, "--task"),
-        scope: memory.resolveScope(project, rest, process.cwd())
-      });
+        scope: memory.resolveScope(project, rest, projectRoot),
+        gitContext: resolveGitContext(projectRoot)
+      }, { projectRoot, gitContext: resolveGitContext(projectRoot) });
       console.log(JSON.stringify(obs, null, 2));
       return 0;
     }
@@ -428,7 +433,7 @@ function runMemoryCommand(args) {
       const destination = memory.getArg(rest, "--destination");
       if (!id || !destination) throw new Error("--id and --destination are required");
       const apply = rest.includes("--apply");
-      const result = memory.promote(project, id, destination, { apply, projectRoot: process.cwd() });
+      const result = memory.promote(project, id, destination, { apply, projectRoot });
       console.log(JSON.stringify(result, null, 2));
       return 0;
     }

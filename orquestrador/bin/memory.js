@@ -73,18 +73,8 @@ class Memory {
   }
 
   resolveRepositoryId(projectRoot) {
-    try {
-      const remote = require("node:child_process").execSync("git remote get-url origin", {
-        cwd: projectRoot,
-        encoding: "utf8",
-        stdio: "pipe"
-      }).trim();
-      const normalized = remote.replace(/\.git$/, "").replace(/[:/]/g, "_").toLowerCase();
-      return `repo_${crypto.createHash("sha256").update(normalized).digest("hex").substring(0, 16)}`;
-    } catch {
-      const fallback = projectRoot.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 64);
-      return `repo_${crypto.createHash("sha256").update(fallback).digest("hex").substring(0, 16)}`;
-    }
+    const { resolveRepositoryId: resolveFromGitContext } = require("../lib/git-context.js");
+    return resolveFromGitContext(projectRoot);
   }
 
   resolveScope(projectId, args, projectRoot) {
@@ -362,9 +352,9 @@ class Memory {
       const taskTokens = this.tokenize(query.search);
       const ranked = rankObservations(observations, taskTokens, gitContext, { taskId: query.taskId });
       observations = ranked.map(r => r.obs);
+    } else {
+      observations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     }
-
-    observations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     if (query.limit) {
       observations = observations.slice(0, query.limit);
@@ -558,15 +548,38 @@ class Memory {
       const observations = observationIds.map(id => this.show(projectId, id)).filter(Boolean);
       if (observations.length === 0) throw new Error("No valid observations found to consolidate");
 
-      const scopeLevels = ["task", "commit", "branch", "workspace", "repository"];
-      const broadest = observations.reduce((best, o) => {
-        const lvl = scopeLevels.indexOf(o.scope?.level ?? "");
-        const bestLvl = scopeLevels.indexOf(best);
-        return lvl > bestLvl ? (o.scope?.level ?? best) : best;
-      }, scopeLevels[0]);
+      const levels = [...new Set(observations.map(o => o.scope?.level).filter(Boolean))];
+      if (levels.length > 1) {
+        throw new Error("Cannot consolidate observations from different scope levels");
+      }
+
+      const scopeLevel = levels[0];
+      if (scopeLevel === "branch") {
+        const branches = [...new Set(observations.map(o => o.scope?.branch).filter(Boolean))];
+        if (branches.length > 1) {
+          throw new Error("Cannot consolidate observations from different branches");
+        }
+      }
+      if (scopeLevel === "workspace") {
+        const workspaces = [...new Set(observations.map(o => o.scope?.workspaceId).filter(Boolean))];
+        if (workspaces.length > 1) {
+          throw new Error("Cannot consolidate observations from different workspaces");
+        }
+      }
+      if (scopeLevel === "task") {
+        const taskIds = [...new Set(observations.map(o => o.scope?.taskId).filter(Boolean))];
+        if (taskIds.length > 1) {
+          throw new Error("Cannot consolidate observations from different tasks");
+        }
+      }
+      if (scopeLevel === "commit") {
+        const commits = [...new Set(observations.map(o => o.scope?.headCommit).filter(Boolean))];
+        if (commits.length > 1) {
+          throw new Error("Cannot consolidate observations from different commits");
+        }
+      }
 
       const firstScope = observations[0].scope || { level: "repository" };
-      const mergedScope = { ...firstScope, level: broadest };
 
       const consolidated = {
         schemaVersion: this.schemaVersion,
@@ -580,7 +593,7 @@ class Memory {
         tags: [...new Set(observations.flatMap(obs => obs.tags || []))],
         verified: consolidatedObs.verified || false,
         source: consolidatedObs.source || {},
-        scope: consolidatedObs.scope || mergedScope,
+        scope: consolidatedObs.scope || firstScope,
         consolidatedFrom: observationIds
       };
 

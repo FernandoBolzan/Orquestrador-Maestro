@@ -74,7 +74,16 @@ function resolveObservationScope({ type, gitContext, taskId, explicitScope }) {
     workaround: "workspace"
   };
 
-  const level = defaultScopeByType[type] || "branch";
+  let level = defaultScopeByType[type] || "branch";
+
+  if (gitContext && gitContext.detached && level === "branch") {
+    level = "commit";
+  }
+
+  if (level === "task" && !taskId) {
+    level = gitContext && gitContext.detached ? "commit" : "branch";
+  }
+
   const scope = { level };
 
   if (gitContext) {

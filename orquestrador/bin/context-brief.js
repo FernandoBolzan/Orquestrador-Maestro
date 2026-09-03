@@ -437,7 +437,7 @@ function buildBrief(options) {
 
     try {
       const { Memory } = require("./memory.js");
-      const mem = new Memory();
+      const mem = options.memory || new Memory();
       const projectId = mem.resolveRepositoryId(projectRoot);
       const gitCtx = resolveGitContext(projectRoot);
       const taskTokens = tokenize(options.task || "");

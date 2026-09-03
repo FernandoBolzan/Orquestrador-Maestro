@@ -124,6 +124,8 @@ export ANTHROPIC_API_KEY=sk-ant-...
 node benchmarks/real-ai-benchmark.js
 ```
 
+**Note**: `real-ai-benchmark.js` is a provider API smoke test. It measures raw API response quality, not the Maestro product workflow. It is not eligible for product performance claims (`publicClaimEligible: false`).
+
 ## Public Claims
 
 ### Allowed (with evidence)

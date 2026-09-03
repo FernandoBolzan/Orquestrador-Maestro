@@ -3,6 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 
 const LOCK_STALE_MS = 30000;
 const LOCK_RETRY_MS = 50;
@@ -14,23 +15,37 @@ function acquireLock(lockPath) {
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
 
+  const ownerId = crypto.randomBytes(8).toString("hex");
   const deadline = Date.now() + LOCK_RETRY_MS * LOCK_MAX_RETRIES;
 
   while (Date.now() < deadline) {
     try {
-      fs.writeFileSync(lockPath, String(process.pid), { flag: "wx", mode: 0o600 });
-      return true;
+      const lockData = JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString(), ownerId });
+      fs.writeFileSync(lockPath, lockData, { flag: "wx", mode: 0o600 });
+      return { ownerId };
     } catch (err) {
       if (err.code === "EEXIST") {
         try {
           const content = fs.readFileSync(lockPath, "utf8").trim();
+          const lock = JSON.parse(content);
           const lockAge = fs.statSync(lockPath).mtimeMs;
           const age = Date.now() - lockAge;
-          if (age > LOCK_STALE_MS && content !== String(process.pid)) {
+
+          if (age > LOCK_STALE_MS) {
+            let ownerAlive = false;
             try {
-              fs.unlinkSync(lockPath);
-              continue;
-            } catch {}
+              process.kill(lock.pid, 0);
+              ownerAlive = true;
+            } catch {
+              ownerAlive = false;
+            }
+
+            if (!ownerAlive) {
+              try {
+                fs.unlinkSync(lockPath);
+                continue;
+              } catch {}
+            }
           }
         } catch {}
         const jitter = Math.floor(Math.random() * LOCK_RETRY_MS);
@@ -44,21 +59,22 @@ function acquireLock(lockPath) {
   throw new Error(`Failed to acquire lock after timeout: ${lockPath}`);
 }
 
-function releaseLock(lockPath) {
+function releaseLock(lockPath, ownerId) {
   try {
     const content = fs.readFileSync(lockPath, "utf8").trim();
-    if (content === String(process.pid)) {
+    const lock = JSON.parse(content);
+    if (lock.pid === process.pid && (!ownerId || lock.ownerId === ownerId)) {
       fs.unlinkSync(lockPath);
     }
   } catch {}
 }
 
 function withLock(lockPath, fn) {
-  acquireLock(lockPath);
+  const { ownerId } = acquireLock(lockPath);
   try {
     return fn();
   } finally {
-    releaseLock(lockPath);
+    releaseLock(lockPath, ownerId);
   }
 }
 

@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 "use strict";
 
+// This is a provider API smoke benchmark.
+// It does not execute the Maestro product workflow.
+// It is not eligible for product performance claims.
+// publicClaimEligible: false
+
 const fs = require("node:fs");
 const path = require("node:path");
 const https = require("node:https");

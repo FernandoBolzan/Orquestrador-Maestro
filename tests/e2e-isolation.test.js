@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
-const { execSync } = require("node:child_process");
+const { execSync, execFileSync } = require("node:child_process");
 
 const { Memory } = require("../orquestrador/bin/memory.js");
 const { resolveGitContext } = require("../orquestrador/lib/git-context.js");
@@ -193,7 +193,7 @@ describe("End-to-End Detached HEAD", () => {
       gitContext: ctx,
       explicitScope: null
     });
-    assert.equal(scope.level, "branch");
+    assert.equal(scope.level, "commit");
     assert.equal(scope.headCommit, headSha);
   });
 });
@@ -255,20 +255,27 @@ describe("End-to-End Concurrency", () => {
     const projectId = "concurrent-test";
     memory.ensureProjectDir(projectId);
 
-    const expected = 50;
-    const promises = [];
+    const workers = 5;
+    const perWorker = 20;
+    const projectRoot = path.resolve(__dirname, "..");
+    const workerScript = path.join(__dirname, "worker-record.js");
 
-    for (let i = 0; i < expected; i++) {
-      const result = memory.record(projectId, {
-        type: "discovery",
-        summary: `Concurrent observation ${i}`
+    const results = [];
+    for (let w = 0; w < workers; w++) {
+      const out = execFileSync(process.execPath, [workerScript, projectRoot, tmpDir, projectId, String(w), String(perWorker)], {
+        encoding: "utf8",
+        timeout: 30000
       });
-      promises.push(result);
+      results.push(JSON.parse(out.trim()));
     }
 
+    const totalRecorded = results.reduce((sum, r) => sum + r.recorded, 0);
+    assert.equal(totalRecorded, workers * perWorker);
+
     const filePath = memory.getObservationsFile(projectId);
-    const { valid } = memory.readObservations(filePath);
-    assert.equal(valid.length, expected);
+    const { valid, malformed } = memory.readObservations(filePath);
+    assert.equal(valid.length, workers * perWorker);
+    assert.equal(malformed, 0);
   });
 
   it("should handle concurrent dedupe without corruption", () => {
@@ -320,7 +327,8 @@ describe("End-to-End Canonical Conflict", () => {
       const result = buildBrief({
         projectPath: projectRoot,
         task: "what framework do we use",
-        maxChars: 16000
+        maxChars: 16000,
+        memory
       });
 
       assert.ok(result.content.includes("React"));
