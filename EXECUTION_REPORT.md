@@ -9,13 +9,13 @@ READY FOR MERGE
 feat/context-memory-benchmark
 
 ### HEAD
-543b520
+b1983e2
 
 ### Base
 c25ce19 (main)
 
 ### Tests
-153 passed
+157 passed
 0 failed
 1 skipped
 
@@ -156,25 +156,42 @@ NOT ALLOWED
 ## Changes Made
 
 ### memory.js
-- Added `classifyTask()` method for task classification
+- Added `classifyTask()` method for task classification (now shared via lib/task-classifier.js)
 - Added `containsPrivateContent()` for private exclusion
 - Added `stripPrivateContent()` for content stripping
 - Enhanced `redactContent()` with more patterns
 - Updated `record()` to check for private content
 - Fixed connection string redaction pattern
-- Fixed record() to use atomic writes
+- Fixed record() to use atomic writes with mode 0o600
 - Fixed readObservations() to return malformed count
 - Fixed dedupe/retention/consolidate/prune to preserve malformed lines
-- Fixed search() to filter by branch
+- Fixed search() to use token overlap instead of full-string
 - Fixed isAncestor() to use execFileSync
+- Added CapturePolicy integration (ALLOW/REDACT/METADATA_ONLY/DROP)
+- Added sanitizeTags/sanitizeSource for REDACT policy
+- Added preserve malformed lines in write-back
 
 ### context-brief.js
-- Added `classifyTask()` function
+- Added `classifyTask()` function (now shared via lib/task-classifier.js)
 - Added `computeBudget()` function
 - Updated `buildBrief()` to use task classification and budget
 - Added budget breakdown in result
 - Exported new functions
 - Fixed branch context leakage by passing branch to memory search
+
+### lib/capture-policy.js (new)
+- CapturePolicy class with ALLOW/REDACT/METADATA_ONLY/DROP
+- sanitizeTags for REDACT policy
+- sanitizeSource for REDACT/METADATA_ONLY policies
+- Prompt injection detection (returns null instead of throwing)
+
+### lib/task-classifier.js (new)
+- Shared classifyTask() for context-brief and memory
+- Trivial/bounded/complex/resumed/investigation categories
+
+### memory.js scope resolution
+- resolveScope() auto-populates repositoryId/branch/workspaceId
+- resolveProjectFromArgs() resolves to repositoryId via resolveRepositoryId()
 
 ### tests/hardening.test.js
 - Task classification tests
