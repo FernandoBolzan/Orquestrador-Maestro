@@ -157,6 +157,34 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       const verified = obs.filter(o => o.verified);
       assert.equal(verified.length, 1, "Verified observation must be preserved");
     });
+
+    it("should make verified prunable when keepVerified=false", () => {
+      const gitDir = path.join(tmpDir, "git-prune-false");
+      fs.mkdirSync(gitDir, { recursive: true });
+      initGit(gitDir);
+      const memory = new Memory({ baseDir: path.join(tmpDir, "mem") });
+      const { resolveGitContext } = require("../orquestrador/lib/git-context.js");
+      const gitContext = resolveGitContext(gitDir);
+      const projectId = memory.resolveRepositoryId(gitDir);
+
+      memory.record(projectId, {
+        type: "discovery",
+        summary: "Verified obs",
+        verified: true,
+        source: { tool: "test" }
+      }, { projectRoot: gitDir, gitContext });
+
+      memory.record(projectId, {
+        type: "discovery",
+        summary: "Unverified obs",
+        source: { tool: "test" }
+      }, { projectRoot: gitDir, gitContext });
+
+      memory.prune(projectId, { keepRecent: 1, keepVerified: false });
+      const obs = memory.search(projectId);
+      assert.equal(obs.length, 1, "Only 1 should remain (keepRecent=1)");
+      assert.equal(obs[0].verified, false, "Remaining should be unverified (verified was prunable)");
+    });
   });
 
   describe("#8 Task Classifier — accents", () => {
@@ -202,6 +230,25 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       const content = fs2.readFileSync(lockPath, "utf8");
       const lock = JSON.parse(content);
       assert.equal(lock.ownerId, ownerIdB, "Lock should be B's");
+    });
+
+    it("should not break a live lock by age alone", () => {
+      const { acquireLock, releaseLock, getLockPath } = require("../orquestrador/lib/lock.js");
+      const lockPath = path.join(tmpDir, "live-age.lock");
+
+      // Acquire lock with current PID (live)
+      const { ownerId } = acquireLock(lockPath);
+
+      // Verify lock exists and belongs to us
+      const content = fs.readFileSync(lockPath, "utf8");
+      const lock = JSON.parse(content);
+      assert.equal(lock.pid, process.pid, "Lock should be owned by current PID");
+
+      // Release lock
+      releaseLock(lockPath, ownerId);
+
+      // Verify lock is released
+      assert.ok(!fs.existsSync(lockPath), "Lock should be released");
     });
   });
 
@@ -257,6 +304,78 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
         validation: { passed: true }
       };
       assert.ok(!isClaimEligibleRun(run), "Non-provider-reported should not be eligible");
+    });
+
+    it("should block runs with publicClaimEligible undefined", () => {
+      const run = {
+        evidence: { type: "real-execution" },
+        usage: { tokenSource: "provider-reported" },
+        validation: { passed: true }
+      };
+      assert.ok(!isClaimEligibleRun(run), "Undefined publicClaimEligible should not be eligible");
+    });
+
+    it("should prevent mixed-evidence contamination in reports", () => {
+      const { BenchmarkRunner } = require("../benchmarks/runner.js");
+      const runner = new BenchmarkRunner();
+
+      const mixedResults = [
+        {
+          benchmark: "test-001", condition: "vanilla", run: 1,
+          usage: { inputTokens: 100, tokenSource: "provider-reported" },
+          validation: { passed: true },
+          evidence: { type: "infrastructure", publicClaimEligible: false },
+          metadata: { durationMs: 100 }
+        },
+        {
+          benchmark: "test-001", condition: "maestro-memory", run: 1,
+          usage: { inputTokens: 80, tokenSource: "provider-reported" },
+          validation: { passed: true },
+          evidence: { type: "real-execution", publicClaimEligible: true, reproducible: true },
+          metadata: { durationMs: 100 }
+        }
+      ];
+
+      const report = runner.generateReport(mixedResults);
+      assert.ok(report.evidenceGate.hasMixedEvidence, "Should detect mixed evidence");
+      assert.equal(report.evidenceGate.allRunsCount, 2, "Should count all runs");
+      assert.equal(report.evidenceGate.claimEligibleRunsCount, 1, "Should count claim-eligible runs");
+    });
+  });
+
+  describe("#18 Task-Scoped Context Retrieval", () => {
+    it("should retrieve task-scoped observations via searchWithVisibility", () => {
+      const gitDir = path.join(tmpDir, "git-task-scope");
+      fs.mkdirSync(gitDir, { recursive: true });
+      initGit(gitDir);
+      const memory = new Memory({ baseDir: path.join(tmpDir, "mem") });
+      const { resolveGitContext } = require("../orquestrador/lib/git-context.js");
+      const gitContext = resolveGitContext(gitDir);
+      const projectId = memory.resolveRepositoryId(gitDir);
+
+      // Record task-scoped observation
+      memory.record(projectId, {
+        type: "discovery",
+        summary: "Task-specific finding",
+        taskId: "task-123",
+        source: { tool: "test" }
+      }, { projectRoot: gitDir, gitContext });
+
+      // Record branch-scoped observation (no taskId)
+      memory.record(projectId, {
+        type: "discovery",
+        summary: "Branch-level finding",
+        source: { tool: "test" }
+      }, { projectRoot: gitDir, gitContext });
+
+      // Search with taskId should prefer task-scoped
+      const taskResults = memory.searchWithVisibility(projectId, gitContext, {
+        taskId: "task-123",
+        search: "Task-specific",
+        rank: true
+      });
+      assert.ok(taskResults.length >= 1, "Should find task-scoped observation");
+      assert.equal(taskResults[0].taskId, "task-123", "First result should be task-scoped");
     });
   });
 

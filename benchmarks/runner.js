@@ -11,7 +11,7 @@ const BENCHMARK_SCHEMA = require("../orquestrador/schemas/BENCHMARK_SCHEMA.json"
 function isClaimEligibleRun(run) {
   if (!run || typeof run !== "object") return false;
   if (run.evidence?.type !== "real-execution") return false;
-  if (run.evidence?.publicClaimEligible === false) return false;
+  if (run.evidence?.publicClaimEligible !== true) return false;
   if (run.usage?.tokenSource !== "provider-reported") return false;
   if (run.validation?.passed !== true) return false;
   return true;
@@ -122,6 +122,7 @@ class BenchmarkRunner {
       },
       evidence: {
         type: "infrastructure",
+        executionType: "synthetic",
         publicClaimEligible: false,
         reproducible: true,
         isolated: true
@@ -251,6 +252,10 @@ class BenchmarkRunner {
       grouped[key].push(result);
     }
     
+    const allRuns = results;
+    const claimEligibleRuns = results.filter(r => isClaimEligibleRun(r));
+    const hasMixedEvidence = claimEligibleRuns.length > 0 && claimEligibleRuns.length < allRuns.length;
+
     const report = {
       summary: {},
       details: grouped,
@@ -259,19 +264,20 @@ class BenchmarkRunner {
         providerReportedUsage: false,
         independentAcceptance: false,
         reproducible: false,
-        publicClaimEligible: false
+        publicClaimEligible: false,
+        hasMixedEvidence,
+        allRunsCount: allRuns.length,
+        claimEligibleRunsCount: claimEligibleRuns.length
       }
     };
 
-    for (const run of results) {
-      if (isClaimEligibleRun(run)) {
-        report.evidenceGate.type = "real-execution";
-        report.evidenceGate.providerReportedUsage = true;
-        report.evidenceGate.independentAcceptance = true;
-        report.evidenceGate.reproducible = run.evidence?.reproducible !== false;
-        report.evidenceGate.publicClaimEligible = true;
-        break;
-      }
+    for (const run of claimEligibleRuns) {
+      report.evidenceGate.type = "real-execution";
+      report.evidenceGate.providerReportedUsage = true;
+      report.evidenceGate.independentAcceptance = true;
+      report.evidenceGate.reproducible = run.evidence?.reproducible !== false;
+      report.evidenceGate.publicClaimEligible = true;
+      break;
     }
     
     for (const [key, runs] of Object.entries(grouped)) {

@@ -1,36 +1,26 @@
-# Comparação: Com vs Sem Orquestrador
+# Comparação: Com e Sem Orquestrador
 
-## Cenário Real
-
-Imagine um projeto com 10 desenvolvedores trabalhando em uma feature de autenticação.
-
----
-
-## SEM Orquestrador
+## Sem Orquestrador
 
 ### O que acontece:
 ```
-Dev 1: "Qual era a decisão sobre JWT vs Session?"
-Dev 2: "Não sei, pergunta pro Fulano"
-Dev 3: "Fulano saiu, não documentou"
-Dev 4: "Vou implementar com Session então"
-Dev 5: "Mas o outro time usou JWT..."
+$ git log --oneline -5
+→ a1b2c3d fix: adjust validation
+→ e4f5g6h fix: adjust validation
+→ i7j8k9l fix: adjust validation
+
+$ grep -r "TODO" src/
+→ 47 resultados
+
+$ memory search --project auth --search "JWT"
+→ Command not found: memory
 ```
 
 ### Problemas:
-- **Perda de contexto:** Decisões se perdem entre sessões
-- **Re-trabalho:** Mesmas perguntas respondidas múltiplas vezes
-- **Inconsistência:** Cada dev implementa de um jeito
-- **Onboarding lento:** Novos devs precisam de semanas para entender
+- **Contexto perdido:** Decisões ficam em cabeças/Slack
+- **Busca manual:** "Pergunta pro Fulano"
+- **Repetição:** Mesmos bugs aparecem反复
 - **Bugs:** Erros conhecidos são repetidos
-
-### Métricas (estimadas):
-| Item | Custo |
-|------|-------|
-| Tempo médio de onboarding | 2-4 semanas |
-| Horas gastas em "caçar contexto" | 10-20h/semana/dev |
-| Bugs por release | 5-10 |
-| Retrabalho | 20-30% |
 
 ---
 
@@ -51,16 +41,8 @@ $ memory search --project auth --search "JWT"
 - **Contexto preservado:** Decisões ficam registradas
 - **Busca instantânea:** Encontra informações em segundos
 - **Consistência:** Todos seguem as mesmas decisões
-- **Onboarding rápido:** Novos devs aprendem em dias
+- **Onboarding rápido:** Novos devs aprendem mais rápido
 - **Menos bugs:** Conhecimento acumulado evita erros
-
-### Métricas (estimadas):
-| Item | Custo |
-|------|-------|
-| Tempo médio de onboarding | 2-3 dias |
-| Horas gastas em "caçar contexto" | 1-2h/semana/dev |
-| Bugs por release | 1-3 |
-| Retrabalho | 5-10% |
 
 ---
 
@@ -71,9 +53,8 @@ $ memory search --project auth --search "JWT"
 | **Contexto** | Perdido entre sessões | Preservado em JSONL |
 | **Busca** | "Pergunta pro Fulano" | `memory search` |
 | **Decisões** | Em cabeças/Slack | Em ADRs + memória |
-| **Onboarding** | 2-4 semanas | 2-3 dias |
-| **Bugs** | 5-10/release | 1-3/release |
-| **Retrabalho** | 20-30% | 5-10% |
+| **Onboarding** | Sem contexto persistente | Contexto preservado |
+| **Bugs** | Erros repetidos | Conhecimento acumulado |
 
 ---
 
@@ -86,27 +67,15 @@ $ memory search --project auth --search "JWT"
 2. Não sabe se é bug novo ou conhecido
 3. Pergunta no Slack
 4. Ninguém lembra
-5. Investiga 4 horas
-6. Descobre que já foi reportado 2 vezes
+5. Investiga tempo considerável
+6. Descobre que já foi reportado
 
 **Com Orquestrador:**
 1. Dev encontra bug
 2. Roda: `memory search --search "refresh token"`
 3. Encontra: "Bug conhecido: TokenService permite múltiplos refreshes"
 4. Ve: `files: ["src/TokenService.ts"]`
-5. Corrige em 30 minutos
-
----
-
-## Economia Estimada (10 devs)
-
-> **Nota:** Os valores abaixo são estimativas baseadas em premissas teóricas e não em medições reais. Resultados variam significativamente entre equipes, projetos e contextos de uso.
-
-| Cenário | Sem Orquestrador | Com Orquestrador |
-|---------|------------------|------------------|
-| Onboarding | Sem contexto persistente | Contexto preservado em memória |
-| Busca de contexto | Perguntar a colegas | Busca na memória episódica |
-| Retrabalho | Sem histórico de decisões | Histórico consultável |
+5. Corrige rapidamente
 
 ---
 
@@ -126,7 +95,7 @@ $ memory search --project auth --search "JWT"
 ### 3. Benchmark Engine
 - Mede eficiência de contexto
 - Compara: vanilla vs maestro-core vs maestro-memory
-- Métricas reais de uso
+- Métricas de infraestrutura (setup only)
 
 ### 4. Adapters
 - Integra com Claude, Codex, OpenCode
@@ -139,9 +108,9 @@ $ memory search --project auth --search "JWT"
 
 | Pergunta | Resposta |
 |----------|----------|
-| Vale a pena? | Sim, para projetos com 3+ devs |
+| Vale a pena? | Sim, para projetos com múltiplos devs |
 | Quando usar? | Quando há contexto valioso a preservar |
-| Quanto economiza? | 15-30% do tempo de desenvolvimento |
+| Quanto economiza? | Requer medição real para afirmar |
 | Complexidade? | Baixa - zero dependências, JSONL simples |
 
 **Próximo passo:** Testar em um projeto real

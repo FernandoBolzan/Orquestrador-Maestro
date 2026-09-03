@@ -30,6 +30,7 @@ Uso:
 Opções:
   --project-path PATH   Projeto a reidratar (padrão: diretório atual)
   --task TEXTO          Intenção do Maestro para priorizar documentos
+  --task-id ID          ID da tarefa para recuperação de observações scoped
   --max-chars N         Limite total do briefing (padrão: ${DEFAULT_MAX_CHARS})
   --json                Retorna metadados e conteúdo em JSON
   --help                Exibe esta ajuda
@@ -37,7 +38,7 @@ Opções:
 }
 
 function parseArgs(argv) {
-  const options = { projectPath: process.cwd(), task: "", maxChars: DEFAULT_MAX_CHARS, json: false };
+  const options = { projectPath: process.cwd(), task: "", maxChars: DEFAULT_MAX_CHARS, json: false, taskId: null };
   const args = [...argv];
   if (args[0] === "brief") {
     args.shift();
@@ -63,6 +64,8 @@ function parseArgs(argv) {
       options.projectPath = next;
     } else if (arg === "--task") {
       options.task = next;
+    } else if (arg === "--task-id") {
+      options.taskId = next;
     } else if (arg === "--max-chars") {
       const parsed = Number.parseInt(next, 10);
       if (!Number.isInteger(parsed) || parsed < 1000 || parsed > MAX_MAX_CHARS) {
@@ -446,6 +449,7 @@ function buildBrief(options) {
       if (shouldUseMemory(taskClass)) {
         const memResults = mem.searchWithVisibility(projectId, gitCtx, {
           search: options.task || undefined,
+          taskId: options.taskId || undefined,
           limit: 20,
           rank: true
         });

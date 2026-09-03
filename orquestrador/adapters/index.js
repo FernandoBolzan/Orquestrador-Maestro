@@ -38,7 +38,7 @@ class Adapter {
 
     if (noisyTypes.has(event.type)) return false;
 
-    return !!DEFAULT_OBSERVATION_TYPE_MAP[event.type] || !!event.type;
+    return Object.hasOwn(DEFAULT_OBSERVATION_TYPE_MAP, event.type) || !!event.type;
   }
 
   normalizeEvent(rawEvent) {

@@ -39,7 +39,7 @@
 
 **Métrica:** Tempo médio de busca (segundos)
 
-**Resultado esperado:** 90% mais rápido com memória
+**Resultado esperado:** Busca com memória deve ser mais rápida que busca manual
 
 ---
 
@@ -54,7 +54,7 @@
 
 **Métrica:** Tokens de entrada (input tokens)
 
-**Resultado esperado:** 10-15% menos tokens com Maestro
+**Resultado esperado:** Requer medição real para afirmar
 
 ---
 
@@ -69,7 +69,7 @@
 
 **Métrica:** Número de bugs, score de qualidade
 
-**Resultado esperado:** 30-50% menos bugs com Maestro
+**Resultado esperado:** Requer medição real para afirmar
 
 ---
 
@@ -84,7 +84,7 @@
 
 **Métrica:** Número de vezes que o mesmo bug é repetido
 
-**Resultado esperado:** 70-90% menos retrabalho
+**Resultado esperado:** Requer medição real para afirmar
 
 ---
 
@@ -98,7 +98,7 @@
 
 **Métrica:** Dias para onboarding completo
 
-**Resultado esperado:** 85% mais rápido (2-4 semanas → 2-3 dias)
+**Resultado esperado:** Requer medição real para afirmar
 
 ---
 
@@ -225,5 +225,5 @@ node orquestrador/bin/memory.js record \
 
 3. **Longo prazo (3 meses):**
    - Medir onboarding completo
-   - Calcular ROI real
+   - Analisar custo-benefício
    - Publicar caso de uso

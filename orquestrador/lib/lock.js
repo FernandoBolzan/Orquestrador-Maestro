@@ -36,9 +36,9 @@ function acquireLock(lockPath) {
             let shouldBreak = false;
             try {
               process.kill(lock.pid, 0);
-              const lockAge = Date.now() - new Date(lock.createdAt).getTime();
-              if (lockAge > LOCK_MAX_AGE_MS) shouldBreak = true;
+              // PID alive → lock is live. Never break by age alone.
             } catch {
+              // PID dead → lock is stale, safe to break.
               shouldBreak = true;
             }
 

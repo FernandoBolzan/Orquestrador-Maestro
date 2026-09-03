@@ -38,7 +38,7 @@
 | maestro-core | 528 chars | 2,897ms |
 | maestro-memory | 528 chars | 2,816ms |
 
-**Análise:** Maestro adiciona 143 chars de overhead (regras + protocolo), mas reduz duração em 12%.
+**Análise:** Maestro adiciona 143 chars de overhead (regras + protocolo). Durações variam entre condições.
 
 ### 2. bug-fix-auth
 
@@ -48,7 +48,7 @@
 | maestro-core | 2,378 chars | 3,624ms |
 | maestro-memory | 2,378 chars | 3,757ms |
 
-**Análise:** Maestro adiciona 143 chars de overhead, mas reduz duração em 7%.
+**Análise:** Maestro adiciona 143 chars de overhead. Durações variam entre condições.
 
 ### 3. investigate-performance
 
@@ -78,7 +78,7 @@
 | maestro-core | 1,562 chars | 2,982ms |
 | maestro-memory | 1,562 chars | 3,375ms |
 
-**Análise:** Maestro adiciona 143 chars de overhead, mas reduz duração em 15%.
+**Análise:** Maestro adiciona 143 chars de overhead. Durações variam entre condições.
 
 ### 6. cross-session-migration
 
@@ -100,7 +100,7 @@
 | maestro-core | 1,386 chars | 528 | 2,378 |
 | maestro-memory | 1,386 chars | 528 | 2,378 |
 
-**Overhead do Maestro:** +143 chars (11.5% em média)
+**Overhead do Maestro:** +143 chars em média
 
 ### Duração
 
@@ -110,20 +110,18 @@
 | maestro-core | 1,586ms | 3ms | 3,624ms |
 | maestro-memory | 1,660ms | 3ms | 3,757ms |
 
-**Economia do Maestro Core:** -201ms (11.3% mais rápido)
-**Economia do Maestro Memory:** -127ms (7.1% mais rápido)
+**Variação:** Durações variam entre condições; sem tendência consistente.
 
 ## Análise
 
 ### Positivos
 
 1. **Overhead consistente:** Maestro adiciona ~143 chars em todos os cenários
-2. **Setup mais rápido:** Maestro Core é 11.3% mais rápido em setup
-3. **Memória não adiciona overhead significativo:** Maestro Memory é apenas 4.7% mais lento que Core
+2. **Setup funciona:** Todas as condições completam o setup
 
 ### Negativos
 
-1. **Overhead de contexto:** +11.5% em tamanho de contexto
+1. **Overhead de contexto:** +143 chars por cenário
 2. **Sem execução real:** Benchmarks medem apenas setup, não execução real com IA
 
 ### Limitações
@@ -135,18 +133,16 @@
 ## Claims Suportadas
 
 ✅ **"Maestro adiciona contexto estruturado"** - +143 chars por cenário
-✅ **"Maestro Core reduz overhead de setup"** - 11.3% mais rápido
-✅ **"Memória não impacta significativamente"** - Apenas 4.7% mais lento
+✅ **"Benchmark infrastructure funciona"** - Setup completa em todas as condições
 
-❌ **NÃO suportado:** "Maestro reduz tokens em X%" - Requer execução real com IA
-❌ **NÃO suportado:** "Maestro é Y vezes mais eficiente" - Requer benchmark completo
+❌ **NÃO suportado:** "Maestro reduz tokens" - Requer execução real com IA
+❌ **NÃO suportado:** "Maestro é mais eficiente" - Requer benchmark completo
 
 ## Próximos Passos
 
 1. **Execução real com IA:** Integrar com Claude/GPT-4 para medir tokens reais
 2. **Múltiplos runs:** Executar 3+ runs por cenário/condição
 3. **Métricas de tokens:** Coletar usage real da API do modelo
-4. **Análise estatística:** Calcular p-values e intervalos de confiança
 
 ---
 

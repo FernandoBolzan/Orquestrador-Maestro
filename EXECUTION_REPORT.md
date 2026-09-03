@@ -9,13 +9,13 @@ READY FOR MERGE
 feat/context-memory-benchmark
 
 ### HEAD
-965555c
+9498063
 
 ### Base
 c25ce19 (main) — tagged as `benchmark-baseline-core-0.1.27`
 
 ### Tests
-193 passed
+198 passed
 0 failed
 1 skipped
 
@@ -78,6 +78,7 @@ Evidence: tests/context-brief-integration.test.js
 - Context budget implemented with allocation per category
 - Memory retrieval integrated with context brief
 - Canonical precedence documented
+- --task-id option for task-scoped retrieval
 
 ### Security
 PASS
@@ -89,7 +90,7 @@ Evidence: tests/hardening.test.js
 - Symlinks: blocked in promotion
 - Malformed JSONL: handled gracefully
 - File permissions: 0700 dirs, 0600 files
-- xKiro HTTPS enforcement
+- xKiro HTTPS enforcement (with Authorization header check)
 
 ### Benchmark infrastructure
 PASS
@@ -99,6 +100,9 @@ Evidence: benchmarks/runner.js, docs/benchmark.md
 - Acceptance gates documented
 - Evidence classification implemented
 - Per-run isClaimEligibleRun() for cross-run contamination prevention
+- publicClaimEligible requires explicit === true
+- hasMixedEvidence detection in reports
+- executionType field in schema
 
 ### Real provider campaign
 NOT EXECUTED
@@ -131,10 +135,10 @@ NOT ALLOWED
 - [x] promotion (with scope.promoted=true)
 - [x] verified filtering
 - [x] retention (scope-aware, promoted exempt, negative slice safe)
-- [x] prune (keepVerified protected before keepRecent slice)
+- [x] prune (keepVerified protected before keepRecent slice; keepVerified=false makes verified prunable)
 - [x] dedupe (scope-aware key)
 - [x] atomic writes
-- [x] concurrency lock (PID + ownerId + liveness + max-age)
+- [x] concurrency lock (PID + ownerId + liveness; live lock never broken by age)
 - [x] append-only record
 - [x] default scope per type (not repository)
 - [x] accent normalization in task classifier
@@ -148,6 +152,7 @@ NOT ALLOWED
 - [x] shouldUseMemory formalized
 - [x] visibility policy central (isObservationVisible)
 - [x] untrusted memory boundary
+- [x] --task-id for task-scoped retrieval
 
 ### SECURITY
 - [x] redaction
@@ -157,7 +162,7 @@ NOT ALLOWED
 - [x] symlinks
 - [x] malformed JSONL safety
 - [x] permissions (0700 dirs, 0600 files)
-- [x] xKiro HTTPS enforcement
+- [x] xKiro HTTPS enforcement (with Authorization header check)
 
 ### ADAPTERS
 - [x] Claude end-to-end
@@ -166,9 +171,10 @@ NOT ALLOWED
 - [x] noise filtering (read/grep/glob/ls/pwd/cat excluded)
 - [x] scope-aware (projectRoot, gitContext, taskId)
 - [x] GenericAdapter type mapping
+- [x] Object.hasOwn for DEFAULT_OBSERVATION_TYPE_MAP
 
 ### PACKAGING
-- [x] schemas included (MEMORY_SCHEMA, BENCHMARK_SCHEMA with evidence field)
+- [x] schemas included (MEMORY_SCHEMA, BENCHMARK_SCHEMA with evidence + executionType fields)
 - [x] npm pack
 - [x] tarball install
 - [x] CLI smoke
@@ -181,9 +187,12 @@ NOT ALLOWED
 - [x] acceptance gates
 - [x] per-run claim eligibility
 - [x] infrastructure runs never claim-eligible
+- [x] publicClaimEligible requires explicit true
+- [x] hasMixedEvidence detection
+- [x] executionType field
 
 ### QUALITY
-- [x] full tests (193 pass)
+- [x] full tests (198 pass)
 - [x] CI workflow (multiplatform)
 - [x] branch tests
 - [x] worktree tests
@@ -196,6 +205,7 @@ NOT ALLOWED
 - [x] memory scopes (default scope matrix, detached behavior)
 - [x] benchmark methodology (provider API smoke disclaimer)
 - [x] execution report (this file)
+- [x] no quantitative marketing claims (%, ROI, statistically significant removed)
 
 ## Changes Made
 
@@ -225,6 +235,7 @@ NOT ALLOWED
 - Exported new functions
 - Fixed branch context leakage by passing branch to memory search
 - buildBrief accepts options.memory for testability
+- Added --task-id option for task-scoped retrieval
 
 ### lib/capture-policy.js (new)
 - CapturePolicy class with ALLOW/REDACT/METADATA_ONLY/DROP
@@ -250,7 +261,8 @@ NOT ALLOWED
 - Attempt without taskId → branch fallback
 
 ### lib/lock.js
-- PID + ownerId + liveness check + max-age 5min
+- PID + ownerId + liveness check
+- Live lock never broken by age alone
 - Stale recovery verifies identity before unlink
 
 ### adapters/index.js
@@ -258,20 +270,26 @@ NOT ALLOWED
 - Shared DEFAULT_OBSERVATION_TYPE_MAP
 - GenericAdapter uses type mapping
 - Noise filtering for read/grep/glob/ls/pwd/cat
+- Object.hasOwn for type map lookup
 
 ### schemas/MEMORY_SCHEMA.json
 - 5 scope levels (repository, branch, task, commit, workspace)
 - headCommit, taskId, consolidatedFrom, promoted fields
 
 ### schemas/BENCHMARK_SCHEMA.json
-- Added evidence field (type, publicClaimEligible, reproducible, isolated)
+- Added evidence field (type, executionType, publicClaimEligible, reproducible, isolated)
+- evidence required in schema
+- executionType enum: synthetic, infrastructure, real-execution
 
 ### benchmarks/runner.js
 - Added isClaimEligibleRun() for per-run claim eligibility
 - Evidence gate prevents cross-run contamination
+- publicClaimEligible requires explicit === true
+- generateReport tracks hasMixedEvidence and allRuns/claimEligibleRuns counts
 
 ### scripts/test-xkiro.js
 - Added validateBaseUrl() with HTTPS enforcement
+- HTTP rejected when Authorization header would be sent
 
 ### tests/e2e-isolation.test.js
 - True parallel concurrency (spawn + Promise.all)
@@ -279,17 +297,21 @@ NOT ALLOWED
 - Default scope E2E tests
 
 ### tests/merge-blocker-regression.test.js (new)
-- 23 regression tests for all hardenings
+- 28 regression tests for all hardenings
 - Prompt injection stateless (10 consecutive calls)
 - Retention negative slice fix
-- Prune keepVerified fix
+- Prune keepVerified fix (including keepVerified=false makes verified prunable)
 - Task classifier accent normalization
 - Scope validation
 - Stale lock race prevention
+- Live lock cannot be broken by age
 - Adapter noise filtering
 - Context budget enforcement
 - Infrastructure claim eligibility
-- xKiro HTTPS validation
+- publicClaimEligible undefined blocked
+- Mixed-evidence contamination detection
+- Task-scoped context retrieval
+- xKiro HTTPS validation (with Authorization header check)
 - GenericAdapter type mapping
 - Default scope E2E
 
@@ -318,3 +340,14 @@ NOT ALLOWED
 - Ubuntu: Node 18, 20, 22 matrix — full tests
 - Windows: Node 20, 22 — smoke tests
 - macOS: Node 20, 22 — smoke tests
+
+### Documentation fixes
+- README: corrected benchmark file paths, CLI examples, added memory commands to CLI reference
+- docs/memory-scopes.md: fixed head → headCommit
+- docs/ai-memory-integration.md: added built-in episodic memory section
+- CHANGELOG.md: added 0.2.0 entry
+- BENCHMARK_AI_GUIDE.md: removed prohibited quantitative claims
+- BENCHMARK_REAL_REPORT.md: removed prohibited quantitative claims
+- COMPARISON.md: removed prohibited quantitative claims
+- BENCHMARK_MARKETING_SUMMARY.md: removed prohibited quantitative claims
+- PROOF_PLAN.md: removed prohibited quantitative claims (%, ROI)

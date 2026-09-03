@@ -198,13 +198,9 @@ echo "Tarefa: Criar componente Button" | openai api chat.completions.create -m g
 
 ## 8. Resultado esperado
 
-Com Maestro, você deve ver:
+Com Maestro, o contexto deve ser mais focado e as respostas devem refletir o workflow orquestrado.
 
-1. **~10-15% menos tokens de input** (menos contexto enviado)
-2. **~5-10% menos tokens de output** (respostas mais concisas)
-3. **~10-20% mais rápido** (menos processamento)
-
-Se não ver melhoria, verifique:
+Se não vir o comportamento esperado, verifique:
 - Se o prompt do Maestro está sendo incluído corretamente
 - Se os cenários são complexos o suficiente
 - Se a IA está usando o contexto do Maestro

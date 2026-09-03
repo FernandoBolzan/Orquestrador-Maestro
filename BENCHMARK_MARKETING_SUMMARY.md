@@ -12,7 +12,7 @@
 ### Test Design
 - **6 scenarios:** feature, bug, investigation, refactor, resume, cross-session
 - **3 conditions:** vanilla, maestro-core, maestro-memory
-- **3 runs per scenario/condition:** for statistical significance
+- **3 runs per scenario/condition:** for variance observation
 - **Total runs:** 54
 
 ### Isolation
@@ -47,7 +47,7 @@
 | Maestro Core | 0%* |
 | Maestro Memory | 0%* |
 
-*Note: Success rate is 0% because validation commands require actual project setup (npm install, etc.) which is not included in the simulated benchmark. In real-world usage with proper project setup, success rates would reflect actual task completion.
+*Note: Success rate is 0% because validation commands require actual project setup (npm install, etc.) which is not included in the simulated benchmark. This is infrastructure-only measurement, not task completion.
 
 ### Execution Duration (Median)
 
@@ -80,9 +80,9 @@ The benchmark shows mixed results across scenarios:
 
 ### Negative Results
 
-1. **Overhead in trivial tasks:** Some scenarios show Maestro adding slight overhead (100-200 tokens) compared to vanilla.
+1. **Overhead in trivial tasks:** Some scenarios show Maestro adding slight overhead compared to vanilla.
 
-2. **No significant improvement in token reduction:** The simulated benchmark does not show dramatic token savings, which is expected since:
+2. **No dramatic token reduction in simulation:** The simulated benchmark does not show dramatic token differences, which is expected since:
    - Real AI models would benefit from context optimization
    - The benchmark uses simulated token counts
    - Actual task completion would show different patterns
@@ -144,8 +144,7 @@ cat benchmarks/results/benchmark-v1-report.json
 1. **Real AI execution:** Integrate with actual AI models for meaningful token measurement
 2. **Larger sample size:** Increase to 10+ runs per condition
 3. **More scenarios:** Add edge cases, multi-file refactors, debugging sessions
-4. **Statistical analysis:** Add p-values, confidence intervals
-5. **Cost analysis:** Map token usage to actual API costs
+4. **Cost analysis:** Map token usage to actual API costs
 
 ## Conclusion
 
