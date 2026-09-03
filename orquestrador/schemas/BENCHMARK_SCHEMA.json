@@ -143,6 +143,29 @@
           "description": "Additional notes"
         }
       }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Evidence gate metadata for claim eligibility",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["real-execution", "simulated", "unknown"],
+          "description": "Type of evidence"
+        },
+        "publicClaimEligible": {
+          "type": "boolean",
+          "description": "Whether this run is eligible for public claims"
+        },
+        "reproducible": {
+          "type": "boolean",
+          "description": "Whether the result is reproducible"
+        },
+        "isolated": {
+          "type": "boolean",
+          "description": "Whether the run was isolated from other runs"
+        }
+      }
     }
   }
 }

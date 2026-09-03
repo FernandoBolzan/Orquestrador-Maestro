@@ -6,7 +6,7 @@ function classifyTask(taskText) {
     return { class: "trivial", reason: "empty or invalid task text" };
   }
 
-  const text = taskText.toLowerCase().trim();
+  const text = taskText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   
   const resumedPatterns = [
     /continue\s+(a\s+)?(correcao|trabalho|implementacao|feature|fix)/i,

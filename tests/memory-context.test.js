@@ -131,8 +131,8 @@ describe("Memory-Context Integration", () => {
       assert.equal(stats.total, 2);
 
       const pruned = memory.prune(projectId, { keepRecent: 1 });
-      assert.equal(pruned.remaining, 1);
-      assert.equal(pruned.pruned, 1);
+      assert.equal(pruned.remaining, 2);
+      assert.equal(pruned.pruned, 0);
     });
   });
 

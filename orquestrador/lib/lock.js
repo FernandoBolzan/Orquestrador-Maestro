@@ -44,7 +44,11 @@ function acquireLock(lockPath) {
 
             if (shouldBreak) {
               try {
-                fs.unlinkSync(lockPath);
+                const existingContent = fs.readFileSync(lockPath, "utf8").trim();
+                const existingLock = JSON.parse(existingContent);
+                if (existingLock.ownerId === lock.ownerId) {
+                  fs.unlinkSync(lockPath);
+                }
                 continue;
               } catch {}
             }

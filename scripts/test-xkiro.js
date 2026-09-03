@@ -8,6 +8,15 @@ const DEFAULT_BASE_URL = "https://api.xkiro.com/v1";
 const DEFAULT_MODEL = "qwen/qwen3-vl-plus:free";
 const DEFAULT_PROMPT = "Responda apenas: OK";
 
+function validateBaseUrl(url) {
+  const parsed = new URL(url);
+  if (parsed.protocol === "https:") return true;
+  if (parsed.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)) {
+    return true;
+  }
+  throw new Error(`HTTP not allowed with authenticated requests. Use HTTPS for: ${parsed.hostname}`);
+}
+
 function unquote(value) {
   return value.replace(/^(['"])(.*)\1$/, "$2");
 }
@@ -43,6 +52,7 @@ async function main() {
   }
 
   const baseUrl = (process.env.XKIRO_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  validateBaseUrl(baseUrl);
   const model = process.env.XKIRO_MODEL || DEFAULT_MODEL;
   const prompt = process.env.XKIRO_TEST_PROMPT || DEFAULT_PROMPT;
   const controller = new AbortController();
@@ -82,4 +92,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { readDotEnvKey, redact };
+module.exports = { readDotEnvKey, redact, validateBaseUrl };

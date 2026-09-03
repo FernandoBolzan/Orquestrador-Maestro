@@ -8,6 +8,15 @@ const os = require("node:os");
 
 const BENCHMARK_SCHEMA = require("../orquestrador/schemas/BENCHMARK_SCHEMA.json");
 
+function isClaimEligibleRun(run) {
+  if (!run || typeof run !== "object") return false;
+  if (run.evidence?.type !== "real-execution") return false;
+  if (run.evidence?.publicClaimEligible === false) return false;
+  if (run.usage?.tokenSource !== "provider-reported") return false;
+  if (run.validation?.passed !== true) return false;
+  return true;
+}
+
 class BenchmarkRunner {
   constructor(options = {}) {
     this.scenariosDir = options.scenariosDir || path.join(__dirname, "scenarios");
@@ -246,17 +255,24 @@ class BenchmarkRunner {
       summary: {},
       details: grouped,
       evidenceGate: {
-        providerReportedUsage: results.some(r => r.usage.tokenSource === "provider-reported"),
-        independentAcceptance: results.some(r => r.validation.passed),
-        reproducible: results.every(r => r.evidence?.reproducible !== false),
+        type: "unknown",
+        providerReportedUsage: false,
+        independentAcceptance: false,
+        reproducible: false,
         publicClaimEligible: false
       }
     };
-    
-    report.evidenceGate.publicClaimEligible =
-      report.evidenceGate.providerReportedUsage &&
-      report.evidenceGate.independentAcceptance &&
-      report.evidenceGate.reproducible;
+
+    for (const run of results) {
+      if (isClaimEligibleRun(run)) {
+        report.evidenceGate.type = "real-execution";
+        report.evidenceGate.providerReportedUsage = true;
+        report.evidenceGate.independentAcceptance = true;
+        report.evidenceGate.reproducible = run.evidence?.reproducible !== false;
+        report.evidenceGate.publicClaimEligible = true;
+        break;
+      }
+    }
     
     for (const [key, runs] of Object.entries(grouped)) {
       const successfulRuns = runs.filter(r => r.validation.passed);
@@ -289,4 +305,4 @@ if (require.main === module) {
   console.log("Available scenarios:", scenarios);
 }
 
-module.exports = { BenchmarkRunner };
+module.exports = { BenchmarkRunner, isClaimEligibleRun };

@@ -22,15 +22,15 @@ const SAFE_DESTINATIONS = [
 ];
 
 const PROMPT_INJECTION_PATTERNS = [
-  /ignore\s+(all\s+)?previous\s+instructions/gi,
-  /disregard\s+(all\s+)?prior/gi,
-  /you\s+are\s+now\s+/gi,
-  /new\s+instructions?:/gi,
-  /system\s*prompt/gi,
-  /act\s+as\s+if/gi,
-  /pretend\s+you\s+are/gi,
-  /<script>/gi,
-  /\{\{.*\}\}/g
+  /ignore\s+(all\s+)?previous\s+instructions/i,
+  /disregard\s+(all\s+)?prior/i,
+  /you\s+are\s+now\s+/i,
+  /new\s+instructions?:/i,
+  /system\s*prompt/i,
+  /act\s+as\s+if/i,
+  /pretend\s+you\s+are/i,
+  /<script>/i,
+  /\{\{.*\}\}/
 ];
 
 class Memory {
@@ -633,7 +633,8 @@ class Memory {
         const verified = filtered.filter(obs => obs.verified || obs.scope?.promoted);
         const unverified = filtered.filter(obs => !obs.verified && !obs.scope?.promoted);
         unverified.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        filtered = [...verified, ...unverified.slice(0, maxCount - verified.length)];
+        const keepUnverified = Math.max(0, maxCount - verified.length);
+        filtered = [...verified, ...unverified.slice(0, keepUnverified)];
       }
 
       const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
@@ -657,18 +658,18 @@ class Memory {
       const initialCount = observations.length;
       let filtered = [...observations];
 
-      if (options.keepRecent) {
-        filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        filtered = filtered.slice(0, options.keepRecent);
-      }
+      const protectedObs = options.keepVerified !== false
+        ? filtered.filter(obs => obs.verified)
+        : [];
 
-      if (options.keepVerified !== false) {
-        const verified = filtered.filter(obs => obs.verified);
-        const unverified = filtered.filter(obs => !obs.verified);
-        if (options.keepRecent && verified.length < options.keepRecent) {
-          const keepCount = Math.min(options.keepRecent, verified.length);
-          filtered = [...verified.slice(0, keepCount), ...unverified];
-        }
+      const prunable = filtered.filter(obs => !obs.verified);
+
+      if (options.keepRecent) {
+        prunable.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        const slots = Math.max(0, options.keepRecent - protectedObs.length);
+        filtered = [...protectedObs, ...prunable.slice(0, slots)];
+      } else {
+        filtered = [...protectedObs, ...prunable];
       }
 
       const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
