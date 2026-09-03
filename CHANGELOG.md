@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0 - 2026-09-02
+
+### Context Intelligence & Episodic Memory
+
+- **Unified Git Context Resolver**: consolidates repository, workspace, branch, detached, and head commit into a single `getGitContext()` call across all entry points.
+- **Branch-Based Scoping**: observations automatically inherit branch, workspace, and task context for visibility and search filtering.
+- **Visibility Policy**: scope-aware ranking that filters observations by repository, workspace, and branch; promotes verified and marked-as-done observations.
+- **Task Classifier**: classifies intent into `trivial`, `bounded`, `complex`, `resumed`, `investigation` with NFD accent normalization for cross-platform consistency.
+- **Concurrency Lock**: PID-based lock with identity verification, liveness checks, and configurable max-age (default 5 minutes) for safe parallel operations.
+- **Memory CLI Commands**: `record`, `search`, `show`, `timeline`, `stats`, `list-projects`, `status`, `promote`, `dedupe`, `retention`, `prune`, `consolidate`, `cleanup`.
+- **Benchmark CLI Commands**: `list`, `run`, `validate` for scenario execution and fixture validation.
+- **Adapter Scope Awareness**: adapters now receive `projectRoot`, `gitContext`, and `taskId` for scope-aware behavior; `DEFAULT_OBSERVATION_TYPE_MAP` centralized in adapters/index.js.
+- **Benchmark Engine Hardening**: `isClaimEligibleRun()` per-run eligibility check, benchmark schema `evidence` field for reproducibility tracking.
+- **Merge-Blocker Cleanup**: prompt injection regex (removed `g` flag), retention negative slice protection (`Math.max(0, ...)`), prune `keepVerified` partition logic, stale lock identity verification, xKiro HTTPS validation, `validateBaseUrl()`.
+- **CI Multiplatform**: Ubuntu (Node 18/20/22) full tests, Windows (Node 20/22) smoke, macOS (Node 20/22) smoke.
+- **Test Suite**: 193 tests passing, 0 failures, 1 skipped; regression test suite covering all hardenings.
+- **Zero Dependencies**: only Node.js standard library used.
+- **CHANGELOG updated**: entry for 0.2.0 documenting all capabilities.
+- **Documentation fixes**: corrected benchmark file paths, CLI examples using `orquestrador-maestro memory` CLI, added missing memory commands to CLI reference, fixed `head` → `headCommit` in memory-scopes.md, updated ai-memory-integration.md to mention built-in episodic memory.
+
 ## 0.1.27 - 2026-08-30
 
 ### Novos CLIs de programação assistida

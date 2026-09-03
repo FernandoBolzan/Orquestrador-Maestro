@@ -74,20 +74,20 @@ git clone https://github.com/IAPro-Community/Orquestrador-Maestro.git
 cd Orquestrador-Maestro
 
 # Rodar todos os testes
-node --test tests/*.test.js
+npm test
 
-# Rodar o benchmark real
-node benchmarks/real-benchmark.js
+# Rodar o benchmark real (requer API keys)
+node benchmarks/real-ai-benchmark.js
 
 # Ver resultados
-cat benchmarks/results/real/real-benchmark-report.json
+cat benchmarks/results/real/real-ai-benchmark-report.json
 ~~~
 
 ### O que esta medição demonstra
 
 O runner compara o tamanho do contexto montado para cenários sintéticos e mede a validação local de fixtures. Ele não executa um modelo de IA, não mede qualidade de código, produtividade, custo, tokens consumidos ou redução de bugs. Os resultados variam com o commit, ambiente e cenários; portanto não devem ser usados como promessa geral de desempenho.
 
-Os cenários e o código da medição estão em [`benchmarks/scenarios/`](benchmarks/scenarios/) e [`benchmarks/real-benchmark.js`](benchmarks/real-benchmark.js). Os resultados são gerados localmente em `benchmarks/results/real/` e não fazem parte do pacote público.
+Os cenários e o código da medição estão em [`benchmarks/scenarios/`](benchmarks/scenarios/) e [`benchmarks/real-ai-benchmark.js`](benchmarks/real-ai-benchmark.js). Os resultados são gerados localmente em `benchmarks/results/real/` e não fazem parte do pacote público.
 
 ### Smoke test opcional com xKiro
 
@@ -303,6 +303,41 @@ orquestrador-maestro adapters render junie --project-path . --apply
 
 O `render` usa simulação por padrão; `--apply` é obrigatório para gravar. Ele cria somente arquivos de instrução, skills e agentes do projeto, preservando arquivos existentes. Não instala a ferramenta, não escolhe modelo ou provedor e não gerencia login, credenciais, MCP, extensões, sessões, cache, logs ou histórico. OpenHands continua exigindo seu ambiente suportado, incluindo WSL no Windows.
 
+## Arquitetura
+
+![Architecture Overview](docs/diagrams/architecture-overview.svg)
+
+### Componentes Principais
+
+| Componente | Descrição |
+|------------|-----------|
+| **Git Context Resolver** | Resolve repository, workspace, branch, detached, head commit em uma única chamada |
+| **Task Classifier** | Classifica intent em trivial/bounded/complex/resumed/investigation com NFD normalization |
+| **Visibility Policy** | Filtra e rankeia observações por scope (repository → workspace → branch) |
+| **Concurrency Lock** | PID-based lock com identity verification e liveness check |
+| **Episodic Memory** | JSONL store com search, timeline, consolidation, retention, prune |
+| **Context Brief** | Monta briefing com DEV/ files, memory observations, e budget trimming |
+| **Adapter Layer** | Integração scope-aware com Codex, Claude, OpenCode, Goose, Junie, OpenHands, xKiro |
+| **Benchmark Engine** | 6 cenários × 3 condições × 5 repetições com evidence gate |
+
+### Memory Scopes
+
+![Memory Scopes](docs/diagrams/memory-scopes.svg)
+
+As observações são automaticamente escopadas por Repository → Workspace → Branch. A política de visibilidade filtra e rankeia por scope mais específico, com boost para observações verificadas.
+
+### Benchmark Flow
+
+![Benchmark Flow](docs/diagrams/benchmark-flow.svg)
+
+O benchmark compara 3 condições (Vanilla, Maestro Core, Maestro Memory) em 6 cenários sintéticos, com 5 repetições cada. A métrica principal é tokens por tarefa concluída com sucesso.
+
+### Context Brief Flow
+
+![Context Brief Flow](docs/diagrams/context-brief-flow.svg)
+
+O context brief monta o briefing integrando git context, visibility policy, task classifier, DEV/ files e memory observations, com budget trimming para evitar overflow.
+
 Depois da instalação, uma solicitação útil para qualquer IA é:
 
 ~~~text
@@ -316,60 +351,76 @@ verifique o resultado e não faça commit nem push sem minha autorização.
 
 ### O que é
 
-A memória episódica permite registrar e buscar decisões, bugs, descobertas e problemas ao longo do tempo. Cada observação é salva em JSONL e pode ser buscada por tipo, tags ou texto.
+A memória episódica permite registrar e buscar decisões, problemas, descobertas e implementações ao longo do tempo. Cada observação é salva em JSONL e pode ser buscada por tipo, tags ou texto. Observações são automaticamente escopadas por branch, workspace ou tarefa.
 
 ### Como usar
 
 ~~~bash
 # Registrar uma decisão
-node orquestrador/bin/memory.js record \
+orquestrador-maestro memory record \
   --project meu-projeto \
   --type decision \
   --summary "Usei JWT para autenticação" \
   --tags "auth,jwt" \
   --verified
 
-# Registrar um bug
-node orquestrador/bin/memory.js record \
+# Registrar um problema
+orquestrador-maestro memory record \
   --project meu-projeto \
-  --type bug \
+  --type problem \
   --summary "Bug no refresh token" \
   --details "TokenService permite múltiplos refreshes" \
   --files "src/services/TokenService.ts" \
   --tags "bug,security"
 
 # Buscar observações
-node orquestrador/bin/memory.js search \
+orquestrador-maestro memory search \
   --project meu-projeto \
   --search "auth"
 
 # Ver timeline
-node orquestrador/bin/memory.js timeline \
+orquestrador-maestro memory timeline \
   --project meu-projeto
 
 # Ver estatísticas
-node orquestrador/bin/memory.js stats \
+orquestrador-maestro memory stats \
   --project meu-projeto
 ~~~
+
+### Tipos de observação
+
+| Tipo | Uso |
+|------|-----|
+| `decision` | Decisões arquiteturais e de design |
+| `discovery` | Descobertas durante exploração |
+| `problem` | Bugs e problemas encontrados |
+| `implementation` | Implementações e mudanças de código |
+| `verification` | Resultados de testes e validações |
+| `risk` | Riscos identificados |
+| `dependency` | Dependências e integrações |
+| `attempt` | Tentativas de execução (comandos, testes) |
+| `failure` | Falhas e erros |
+| `environment` | Configurações de ambiente |
+| `workaround` | Soluções temporárias |
 
 ### Exemplo prático
 
 ~~~bash
-# 1. Registrar decisão (a partir do clone)
-$ node orquestrador/bin/memory.js record --project auth --type decision --summary "JWT para APIs"
+# 1. Registrar decisão
+$ orquestrador-maestro memory record --project auth --type decision --summary "JWT para APIs"
 → obs_dbd7d7ee59754ab6
 
-# 2. Registrar bug
-$ node orquestrador/bin/memory.js record --project auth --type bug --summary "Refresh token bug"
+# 2. Registrar problema
+$ orquestrador-maestro memory record --project auth --type problem --summary "Refresh token bug"
 → obs_7809825090b6d182
 
 # 3. Buscar
-$ node orquestrador/bin/memory.js search --project auth --search "token"
+$ orquestrador-maestro memory search --project auth --search "token"
 → [2 observações encontradas]
 
 # 4. Verificar
-$ node orquestrador/bin/memory.js stats --project auth
-→ { total: 2, byType: { decision: 1, bug: 1 }, verified: 1 }
+$ orquestrador-maestro memory stats --project auth
+→ { total: 2, byType: { decision: 1, problem: 1 }, verified: 1 }
 ~~~
 
 ## Referência da CLI
@@ -387,6 +438,21 @@ orquestrador-maestro workflow-lock <generate|validate> [opcoes]
 orquestrador-maestro workflow-state <init|get|validate|approve|advance> [opcoes]
 orquestrador-maestro adapters <list|paths|validate> [id]
 orquestrador-maestro adapters render <junie|goose|openhands> --project-path PATH [--dry-run|--apply]
+orquestrador-maestro memory record --project PATH --type TYPE --summary TEXT [opcoes]
+orquestrador-maestro memory search --project PATH [--search TEXT] [--type TYPE] [--branch BRANCH]
+orquestrador-maestro memory show --project PATH --id OBS_ID
+orquestrador-maestro memory timeline --project PATH [--limit N]
+orquestrador-maestro memory stats --project PATH
+orquestrador-maestro memory list-projects
+orquestrador-maestro memory promote --id OBS_ID --destination PATH [--apply]
+orquestrador-maestro memory status [--project PATH]
+orquestrador-maestro memory dedupe --project PATH
+orquestrador-maestro memory retention --project PATH [--max-age-days N] [--max-count N]
+orquestrador-maestro memory prune --project PATH [--keep-recent N] [--keep-verified]
+orquestrador-maestro memory consolidate --project PATH --ids OBS_ID,OBS_ID
+orquestrador-maestro memory cleanup --project PATH
+orquestrador-maestro benchmark list
+orquestrador-maestro benchmark run --scenario ID --condition CONDITION
 orquestrador-maestro changelog [--full]
 orquestrador-maestro list-targets
 orquestrador-maestro dry-run

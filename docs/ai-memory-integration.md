@@ -1,11 +1,12 @@
 # Integração opcional com ai-memory
 
-O Orquestrador Maestro pode usar [ai-memory](https://github.com/akitaonrails/ai-memory) como camada opcional de memória longa entre agentes. Isso não é requisito para instalar ou usar o Orquestrador.
+O Orquestrador Maestro possui um sistema de **memória episódica integrada** (JSONL, busca por branch/workspace/tarefa, promoção para DEV/, consolidação e retenção). O [ai-memory](https://github.com/akitaonrails/ai-memory) pode ser usado como camada opcional adicional para memória longa entre agentes. Isso não é requisito para instalar ou usar o Orquestrador.
 
 ## Divisão de responsabilidades
 
-- `DEV/` guarda regras, specs, decisões aprovadas, handoff atual e evidências de verificação.
-- `ai-memory` pode guardar observações sanitizadas, histórico de sessões, busca e sugestões de consolidação.
+- **Memória episódica integrada**: Observações JSONL com escopo por branch, workspace e tarefa. Busca visível, consolidação, retenção e promoção para DEV/.
+- **DEV/**: Guarda regras, specs, decisões aprovadas, handoff atual e evidências de verificação.
+- **ai-memory** (opcional): Pode guardar observações sanitizadas, histórico de sessões, busca semântica e sugestões de consolidação.
 - O agente nunca deve promover automaticamente uma sugestão externa para `AGENTS.md`, `DEV/SPECS/ACTIVE.md` ou uma decisão arquitetural.
 
 ## Fluxo recomendado

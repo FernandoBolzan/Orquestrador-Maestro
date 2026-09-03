@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" font-family="Segoe UI, system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="repoGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.05"/>
+    </linearGradient>
+    <linearGradient id="wsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:0.05"/>
+    </linearGradient>
+    <linearGradient id="branchGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:0.05"/>
+    </linearGradient>
+    <filter id="sh2" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect width="800" height="520" fill="url(#bg2)" rx="12"/>
+
+  <!-- Title -->
+  <text x="400" y="40" text-anchor="middle" fill="#f8fafc" font-size="20" font-weight="700">Memory Scope Hierarchy</text>
+  <text x="400" y="60" text-anchor="middle" fill="#94a3b8" font-size="11">Observations are scoped by Repository → Workspace → Branch</text>
+
+  <!-- Repository Level -->
+  <rect x="40" y="80" width="720" height="120" rx="10" fill="url(#repoGrad)" stroke="#6366f1" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="60" y="105" fill="#a5b4fc" font-size="12" font-weight="700">📁 Repository</text>
+  <text x="60" y="122" fill="#94a3b8" font-size="10">Scope: repository-wide observations visible across all workspaces</text>
+
+  <rect x="60" y="135" width="200" height="50" rx="6" fill="#1e1b4b" stroke="#6366f1" stroke-width="1"/>
+  <text x="160" y="155" text-anchor="middle" fill="#c7d2fe" font-size="10" font-weight="600">repository scope</text>
+  <text x="160" y="170" text-anchor="middle" fill="#94a3b8" font-size="8">projectRoot + repositoryId</text>
+
+  <rect x="280" y="135" width="200" height="50" rx="6" fill="#1e1b4b" stroke="#6366f1" stroke-width="1"/>
+  <text x="380" y="155" text-anchor="middle" fill="#c7d2fe" font-size="10" font-weight="600">branch scope</text>
+  <text x="380" y="170" text-anchor="middle" fill="#94a3b8" font-size="8">branch + detached + headCommit</text>
+
+  <rect x="500" y="135" width="200" height="50" rx="6" fill="#1e1b4b" stroke="#6366f1" stroke-width="1"/>
+  <text x="600" y="155" text-anchor="middle" fill="#c7d2fe" font-size="10" font-weight="600">task scope</text>
+  <text x="600" y="170" text-anchor="middle" fill="#94a3b8" font-size="8">taskId + taskClassifier</text>
+
+  <!-- Workspace Level -->
+  <rect x="40" y="220" width="720" height="120" rx="10" fill="url(#wsGrad)" stroke="#06b6d4" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="60" y="245" fill="#67e8f9" font-size="12" font-weight="700">🖥️ Workspace</text>
+  <text x="60" y="262" fill="#94a3b8" font-size="10">Scope: workspace-wide observations within a repository</text>
+
+  <rect x="60" y="275" width="200" height="50" rx="6" fill="#083344" stroke="#06b6d4" stroke-width="1"/>
+  <text x="160" y="295" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">workspace scope</text>
+  <text x="160" y="310" text-anchor="middle" fill="#94a3b8" font-size="8">workspaceId + projectRoot</text>
+
+  <rect x="280" y="275" width="200" height="50" rx="6" fill="#083344" stroke="#06b6d4" stroke-width="1"/>
+  <text x="380" y="295" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">dev files</text>
+  <text x="380" y="310" text-anchor="middle" fill="#94a3b8" font-size="8">DEV/HANDOFF.md, DEV/SPECS/</text>
+
+  <rect x="500" y="275" width="200" height="50" rx="6" fill="#083344" stroke="#06b6d4" stroke-width="1"/>
+  <text x="600" y="295" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">cross-branch</text>
+  <text x="600" y="310" text-anchor="middle" fill="#94a3b8" font-size="8">branch=null for workspace-wide</text>
+
+  <!-- Branch Level -->
+  <rect x="40" y="360" width="720" height="120" rx="10" fill="url(#branchGrad)" stroke="#10b981" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="60" y="385" fill="#6ee7b7" font-size="12" font-weight="700">🌿 Branch</text>
+  <text x="60" y="402" fill="#94a3b8" font-size="10">Scope: branch-specific observations (most granular)</text>
+
+  <rect x="60" y="415" width="200" height="50" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+  <text x="160" y="435" text-anchor="middle" fill="#a7f3d0" font-size="10" font-weight="600">branch scope</text>
+  <text x="160" y="450" text-anchor="middle" fill="#94a3b8" font-size="8">branch + repositoryId</text>
+
+  <rect x="280" y="415" width="200" height="50" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+  <text x="380" y="435" text-anchor="middle" fill="#a7f3d0" font-size="10" font-weight="600">head commit</text>
+  <text x="380" y="450" text-anchor="middle" fill="#94a3b8" font-size="8">headCommit (git HEAD)</text>
+
+  <rect x="500" y="415" width="200" height="50" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+  <text x="600" y="435" text-anchor="middle" fill="#a7f3d0" font-size="10" font-weight="600">detached HEAD</text>
+  <text x="600" y="450" text-anchor="middle" fill="#94a3b8" font-size="8">detached=true, no branch</text>
+
+  <!-- Flow arrows -->
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#475569"/>
+    </marker>
+  </defs>
+  <line x1="400" y1="200" x2="400" y2="220" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="400" y1="340" x2="400" y2="360" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Legend -->
+  <rect x="60" y="490" width="12" height="12" rx="2" fill="#6366f1"/>
+  <text x="78" y="500" fill="#94a3b8" font-size="9">Repository</text>
+  <rect x="170" y="490" width="12" height="12" rx="2" fill="#06b6d4"/>
+  <text x="188" y="500" fill="#94a3b8" font-size="9">Workspace</text>
+  <rect x="280" y="490" width="12" height="12" rx="2" fill="#10b981"/>
+  <text x="298" y="500" fill="#94a3b8" font-size="9">Branch</text>
+  <text x="500" y="500" fill="#64748b" font-size="9">Visibility: repo → ws → branch (most specific wins)</text>
+</svg>

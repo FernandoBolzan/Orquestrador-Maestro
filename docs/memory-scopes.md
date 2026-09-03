@@ -201,7 +201,7 @@ Output:
   "workspaceId": "ws_xyz789...",
   "branch": "feat/context-memory-benchmark",
   "detached": false,
-  "head": "543b520...",
+  "headCommit": "543b520...",
   "vcs": "git",
   "memory": {
     "repository": 4,
