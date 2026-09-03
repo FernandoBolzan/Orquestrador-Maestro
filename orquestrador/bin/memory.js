@@ -10,6 +10,7 @@ const { execSync } = require("node:child_process");
 const MEMORY_SCHEMA = require("../schemas/MEMORY_SCHEMA.json");
 const OBSERVATION_TYPES = MEMORY_SCHEMA.properties.type.enum;
 const { classifyTask } = require("../lib/task-classifier.js");
+const { CapturePolicy, POLICIES } = require("../lib/capture-policy.js");
 
 const SAFE_DESTINATIONS = [
   "DEV/CONTEXT.md",
@@ -34,6 +35,7 @@ class Memory {
   constructor(options = {}) {
     this.baseDir = options.baseDir || path.join(os.homedir(), ".orquestrador", "memory");
     this.schemaVersion = 1;
+    this.capturePolicy = options.capturePolicy || new CapturePolicy();
   }
 
   generateId() {
@@ -266,7 +268,12 @@ class Memory {
     if (this.containsPrivateContent(observation.summary) || this.containsPrivateContent(observation.details || "")) {
       throw new Error("Private content cannot be persisted to memory");
     }
-    
+
+    const policyResult = this.capturePolicy.evaluate(observation);
+    if (policyResult.policy === POLICIES.DROP) {
+      return null;
+    }
+
     this.ensureProjectDir(projectId);
     const obs = {
       schemaVersion: this.schemaVersion,
@@ -281,16 +288,21 @@ class Memory {
       tags: observation.tags || [],
       verified: observation.verified || false,
       source: observation.source || {},
-      scope: observation.scope || { level: "repository" }
+      scope: observation.scope || { level: "repository" },
+      capturePolicy: policyResult.policy
     };
-    this.validateObservation(obs);
+
+    const applied = this.capturePolicy.applyPolicy(obs, policyResult);
+    if (!applied) return null;
+
+    this.validateObservation(applied);
     const filePath = this.getObservationsFile(projectId);
     
     const { valid: existing } = this.readObservations(filePath);
-    existing.push(obs);
+    existing.push(applied);
     this.writeAtomic(filePath, existing.map(o => JSON.stringify(o)).join("\n") + "\n");
     
-    return obs;
+    return applied;
   }
 
   search(projectId, query = {}) {
