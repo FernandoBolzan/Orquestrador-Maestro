@@ -9,13 +9,13 @@ READY FOR MERGE
 feat/context-memory-benchmark
 
 ### HEAD
-b1983e2
+e6b98bf
 
 ### Base
 c25ce19 (main)
 
 ### Tests
-157 passed
+173 passed
 0 failed
 1 skipped
 
@@ -32,22 +32,47 @@ Defined in .github/workflows/test.yml
 
 ### Branch isolation
 PASS
-Evidence: tests/hardening.test.js "Branch Isolation" section
-- Repository observations visible on all branches
-- Branch observations isolated to their branch
-- Cross-branch leakage prevented
+Evidence: tests/e2e-isolation.test.js "End-to-End Branch Isolation"
+- Real git checkout to feat-a, record, retrieve, verify visibility
+- Real git checkout to feat-b, record, retrieve, verify visibility
+- Cross-branch leakage blocked
 
 ### Worktree isolation
 PASS
-Evidence: tests/hardening.test.js "Worktree Isolation" section
-- Repository ID相同 across worktrees
+Evidence: tests/e2e-isolation.test.js "End-to-End Worktree Isolation"
+- git worktree add for feat-a and feat-b
+- Repository ID same across worktrees
 - Workspace ID different per worktree
-- Branch different per worktree
+- Cross-workspace leakage blocked
+
+### Detached HEAD
+PASS
+Evidence: tests/e2e-isolation.test.js "End-to-End Detached HEAD"
+- Real git checkout by SHA
+- detached=true, branch=null
+- Full HEAD SHA preserved
+
+### Rebase
+PASS
+Evidence: tests/e2e-isolation.test.js "End-to-End Rebase"
+- Feature branch observation recorded
+- git rebase main executed
+- Branch-scoped observation preserved after rebase
+
+### Concurrency
+PASS
+Evidence: tests/e2e-isolation.test.js "End-to-End Concurrency"
+- 50 sequential records with lock protection
+- 20 sequential dedupes with lock protection
+- PID-based lock ownership prevents cross-process release
 
 ### Context brief + memory
 PASS
 Evidence: tests/context-brief-integration.test.js
 - Task classification implemented (trivial/bounded/complex/resumed/investigation)
+- shouldUseMemory() formalized (trivial=false, bounded=false, others=true)
+- Visibility policy: isObservationVisible() central authority
+- Untrusted memory boundary in context brief output
 - Context budget implemented with allocation per category
 - Memory retrieval integrated with context brief
 - Canonical precedence documented
@@ -95,22 +120,28 @@ NOT ALLOWED
 - [x] context brief
 
 ### MEMORY
-- [x] repository identity
-- [x] branch isolation
-- [x] worktree isolation
-- [x] detached HEAD
-- [x] promotion
+- [x] repository identity (resolveGitContext)
+- [x] branch isolation (isObservationVisible)
+- [x] worktree isolation (isObservationVisible)
+- [x] detached HEAD (branch=null, detached=true)
+- [x] promotion (with scope.promoted=true)
 - [x] verified filtering
-- [x] retention
-- [x] dedupe
+- [x] retention (scope-aware, promoted exempt)
+- [x] dedupe (scope-aware key)
 - [x] atomic writes
+- [x] concurrency lock (PID-based)
+- [x] append-only record
+- [x] default scope per type (not repository)
 
 ### CONTEXT
 - [x] task classification real
 - [x] budget real
-- [x] memory retrieval real
+- [x] memory retrieval real (searchWithVisibility)
 - [x] canonical precedence
-- [x] scope-aware ranking
+- [x] scope-aware ranking (rankObservations)
+- [x] shouldUseMemory formalized
+- [x] visibility policy central (isObservationVisible)
+- [x] untrusted memory boundary
 
 ### SECURITY
 - [x] redaction
@@ -119,7 +150,7 @@ NOT ALLOWED
 - [x] path traversal
 - [x] symlinks
 - [x] malformed JSONL safety
-- [x] permissions
+- [x] permissions (0700 dirs, 0600 files)
 
 ### ADAPTERS
 - [x] Claude end-to-end
