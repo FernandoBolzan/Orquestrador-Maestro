@@ -445,14 +445,18 @@ class Memory {
       };
     }
 
-    const fs2 = require("node:fs");
     const dir = path.dirname(destPath);
-    if (!fs2.existsSync(dir)) {
-      fs2.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
 
     const entry = `\n\n## ${obs.type}: ${obs.summary}\n\n${obs.details || ""}\n\n- Source: observation ${obs.id}\n- Promoted at: ${new Date().toISOString()}\n- Branch: ${obs.scope?.branch || "unknown"}\n`;
-    fs2.appendFileSync(destPath, entry, "utf8");
+    
+    let existingContent = "";
+    if (fs.existsSync(destPath)) {
+      existingContent = fs.readFileSync(destPath, "utf8");
+    }
+    this.writeAtomic(destPath, existingContent + entry);
 
     return {
       observation: obs,
