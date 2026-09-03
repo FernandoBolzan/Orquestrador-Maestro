@@ -6,6 +6,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 
 const LOCK_STALE_MS = 30000;
+const LOCK_MAX_AGE_MS = 300000;
 const LOCK_RETRY_MS = 50;
 const LOCK_MAX_RETRIES = 100;
 
@@ -32,15 +33,16 @@ function acquireLock(lockPath) {
           const age = Date.now() - lockAge;
 
           if (age > LOCK_STALE_MS) {
-            let ownerAlive = false;
+            let shouldBreak = false;
             try {
               process.kill(lock.pid, 0);
-              ownerAlive = true;
+              const lockAge = Date.now() - new Date(lock.createdAt).getTime();
+              if (lockAge > LOCK_MAX_AGE_MS) shouldBreak = true;
             } catch {
-              ownerAlive = false;
+              shouldBreak = true;
             }
 
-            if (!ownerAlive) {
+            if (shouldBreak) {
               try {
                 fs.unlinkSync(lockPath);
                 continue;

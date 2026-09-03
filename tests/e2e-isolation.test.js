@@ -315,7 +315,7 @@ describe("End-to-End Canonical Conflict", () => {
     fs.mkdirSync(path.join(projectRoot, "DEV"), { recursive: true });
     fs.writeFileSync(path.join(projectRoot, "DEV", "README.md"), "# Project\nFramework: React", "utf8");
 
-    const projectId = "canonical-conflict-test";
+    const projectId = memory.resolveRepositoryId(projectRoot);
     memory.record(projectId, {
       type: "decision",
       summary: "Framework = Vue",

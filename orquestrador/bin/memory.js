@@ -422,7 +422,8 @@ class Memory {
       if (err.code !== "ENOENT") throw err;
     }
 
-    const isSafeDest = SAFE_DESTINATIONS.some(d => destination.startsWith(d));
+    const normalizedDest = path.normalize(destination);
+    const isSafeDest = SAFE_DESTINATIONS.some(d => normalizedDest === d || normalizedDest.startsWith(d + "/"));
     if (!isSafeDest) {
       throw new Error(`Destination must be one of: ${SAFE_DESTINATIONS.join(", ")}`);
     }
