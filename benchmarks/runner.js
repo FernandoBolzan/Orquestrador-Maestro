@@ -139,9 +139,15 @@ class BenchmarkRunner {
   buildContext(scenario, condition) {
     let context = `Task: ${scenario.prompt}\n\n`;
     
-    if (condition === "maestro-core" || condition === "maestro-memory") {
+    if (condition === "maestro-core") {
       context += `Rules: Follow Orquestrador Maestro rules.\n`;
       context += `Context: Use minimal sufficient context.\n`;
+      context += `Memory: Not available (core mode).\n`;
+    } else if (condition === "maestro-memory") {
+      context += `Rules: Follow Orquestrador Maestro rules.\n`;
+      context += `Context: Use minimal sufficient context.\n`;
+      context += `Memory: Available - search and recall relevant past observations.\n`;
+      context += `Scope: repository, branch, workspace.\n`;
     }
     
     if (scenario.fixture && scenario.fixture.files) {
