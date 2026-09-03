@@ -9,6 +9,7 @@ const { execSync } = require("node:child_process");
 
 const MEMORY_SCHEMA = require("../schemas/MEMORY_SCHEMA.json");
 const OBSERVATION_TYPES = MEMORY_SCHEMA.properties.type.enum;
+const { classifyTask } = require("../lib/task-classifier.js");
 
 const SAFE_DESTINATIONS = [
   "DEV/CONTEXT.md",
@@ -119,7 +120,8 @@ class Memory {
 
   isAncestor(projectRoot, ancestorCommit, descendantCommit) {
     try {
-      execSync(`git merge-base --is-ancestor ${ancestorCommit} ${descendantCommit}`, {
+      const { execFileSync } = require("node:child_process");
+      execFileSync("git", ["merge-base", "--is-ancestor", ancestorCommit, descendantCommit], {
         cwd: projectRoot,
         encoding: "utf8",
         stdio: "pipe"
@@ -183,6 +185,7 @@ class Memory {
   redactContent(content) {
     if (typeof content !== "string") return content;
     return content
+      .replace(/(?:mysql|postgres|postgresql|mongodb):\/\/[^\s`"']+/gi, "[CONNECTION_STRING_REDACTED]")
       .replace(/(api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|authorization|bearer)\s*[:=]\s*[^\s`"']+/giu, "$1=[REDACTED]")
       .replace(/(?:[A-Za-z]:[\\/]|\/Users\/|\/home\/|\/root\/)[^\s`"']+/gu, "[PATH_REDACTED]")
       .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, "[EMAIL_REDACTED]")
@@ -190,9 +193,22 @@ class Memory {
       .replace(/\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, "[SSN_REDACTED]")
       .replace(/eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[JWT_REDACTED]")
       .replace(/-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----[\s\S]*?-----END\s+(RSA\s+)?PRIVATE\s+KEY-----/g, "[PRIVATE_KEY_REDACTED]")
-      .replace(/(?:mysql|postgres|mongodb):\/\/[^\s`"']+/gi, "[CONNECTION_STRING_REDACTED]")
       .replace(/(?:sk-|pk-|rk-)[A-Za-z0-9]{20,}/g, "[API_KEY_REDACTED]")
-      .replace(/ghp_[A-Za-z0-9]{36}/g, "[GITHUB_TOKEN_REDACTED]");
+      .replace(/ghp_[A-Za-z0-9]{36}/g, "[GITHUB_TOKEN_REDACTED]")
+      .replace(/cookie\s*[:=]\s*[^\s`"']+/gi, "[COOKIE_REDACTED]")
+      .replace(/(?:AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID)\s*[:=]\s*[^\s`"']+/gi, "[AWS_KEY_REDACTED]")
+      .replace(/(?:GOOGLE_APPLICATION_CREDENTIALS|GITHUB_TOKEN)\s*[:=]\s*[^\s`"']+/gi, "[CREDENTIAL_REDACTED]")
+      .replace(/\.env[^a-zA-Z0-9]/gi, "[ENV_FILE_REDACTED]");
+  }
+
+  containsPrivateContent(content) {
+    if (typeof content !== "string") return false;
+    return /<private>[\s\S]*?<\/private>/i.test(content);
+  }
+
+  stripPrivateContent(content) {
+    if (typeof content !== "string") return content;
+    return content.replace(/<private>[\s\S]*?<\/private>/gi, "").trim();
   }
 
   validateObservation(obs) {
@@ -229,22 +245,28 @@ class Memory {
   }
 
   readObservations(filePath) {
-    if (!fs.existsSync(filePath)) return [];
+    if (!fs.existsSync(filePath)) return { valid: [], malformed: 0, malformedLines: [] };
     const content = fs.readFileSync(filePath, "utf8");
     const lines = content.split("\n").filter(Boolean);
     const valid = [];
+    const malformedLines = [];
     let malformed = 0;
     for (const line of lines) {
       try {
         valid.push(JSON.parse(line));
       } catch {
         malformed++;
+        malformedLines.push(line);
       }
     }
-    return valid;
+    return { valid, malformed, malformedLines };
   }
 
   record(projectId, observation) {
+    if (this.containsPrivateContent(observation.summary) || this.containsPrivateContent(observation.details || "")) {
+      throw new Error("Private content cannot be persisted to memory");
+    }
+    
     this.ensureProjectDir(projectId);
     const obs = {
       schemaVersion: this.schemaVersion,
@@ -263,13 +285,18 @@ class Memory {
     };
     this.validateObservation(obs);
     const filePath = this.getObservationsFile(projectId);
-    fs.appendFileSync(filePath, JSON.stringify(obs) + "\n", { encoding: "utf8", mode: 0o600 });
+    
+    const { valid: existing } = this.readObservations(filePath);
+    existing.push(obs);
+    this.writeAtomic(filePath, existing.map(o => JSON.stringify(o)).join("\n") + "\n");
+    
     return obs;
   }
 
   search(projectId, query = {}) {
     const filePath = this.getObservationsFile(projectId);
-    let observations = this.readObservations(filePath);
+    const { valid: initialObservations } = this.readObservations(filePath);
+    let observations = [...initialObservations];
 
     if (query.type) {
       observations = observations.filter(obs => obs.type === query.type);
@@ -325,7 +352,7 @@ class Memory {
 
   show(projectId, observationId) {
     const filePath = this.getObservationsFile(projectId);
-    const observations = this.readObservations(filePath);
+    const { valid: observations } = this.readObservations(filePath);
     return observations.find(obs => obs.id === observationId) || null;
   }
 
@@ -355,8 +382,14 @@ class Memory {
     if (!destPath.startsWith(path.resolve(projectRoot))) {
       throw new Error("Destination must be within project root");
     }
-    if (destPath.includes("..")) {
-      throw new Error("Path traversal not allowed");
+
+    try {
+      const realDestPath = fs.realpathSync(path.dirname(destPath));
+      if (!realDestPath.startsWith(path.resolve(projectRoot))) {
+        throw new Error("Symlink escape detected");
+      }
+    } catch (err) {
+      if (err.code !== "ENOENT") throw err;
     }
 
     const isSafeDest = SAFE_DESTINATIONS.some(d => destination.startsWith(d));
@@ -392,14 +425,14 @@ class Memory {
 
   stats(projectId) {
     const filePath = this.getObservationsFile(projectId);
-    const observations = this.readObservations(filePath);
+    const { valid: observations, malformed } = this.readObservations(filePath);
     const byType = {};
     let verified = 0;
     for (const obs of observations) {
       byType[obs.type] = (byType[obs.type] || 0) + 1;
       if (obs.verified) verified++;
     }
-    return { total: observations.length, byType, verified, unverified: observations.length - verified };
+    return { total: observations.length, byType, verified, unverified: observations.length - verified, malformed };
   }
 
   listProjects() {
@@ -413,7 +446,7 @@ class Memory {
 
   dedupe(projectId) {
     const filePath = this.getObservationsFile(projectId);
-    const observations = this.readObservations(filePath);
+    const { valid: observations, malformed, malformedLines } = this.readObservations(filePath);
     const initialCount = observations.length;
     const seen = new Map();
     const deduped = [];
@@ -441,8 +474,9 @@ class Memory {
       }
     }
 
-    this.writeAtomic(filePath, deduped.map(obs => JSON.stringify(obs)).join("\n") + "\n");
-    return { deduped: initialCount - deduped.length, remaining: deduped.length };
+    const lines = [...deduped.map(obs => JSON.stringify(obs)), ...malformedLines];
+    this.writeAtomic(filePath, lines.join("\n") + "\n");
+    return { deduped: initialCount - deduped.length, remaining: deduped.length, malformed };
   }
 
   consolidate(projectId, observationIds, consolidatedObs) {
@@ -467,16 +501,17 @@ class Memory {
     this.validateObservation(consolidated);
 
     const filePath = this.getObservationsFile(projectId);
-    const allObservations = this.readObservations(filePath);
+    const { valid: allObservations, malformedLines } = this.readObservations(filePath);
     const filtered = allObservations.filter(obs => !observationIds.includes(obs.id));
     filtered.push(consolidated);
-    this.writeAtomic(filePath, filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n");
+    const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
+    this.writeAtomic(filePath, lines.join("\n") + "\n");
     return consolidated;
   }
 
   retention(projectId, options = {}) {
     const filePath = this.getObservationsFile(projectId);
-    const observations = this.readObservations(filePath);
+    const { valid: observations, malformed, malformedLines } = this.readObservations(filePath);
     const initialCount = observations.length;
     const now = new Date();
     const maxAgeDays = options.maxAgeDays || 90;
@@ -495,8 +530,9 @@ class Memory {
       filtered = [...verified, ...unverified.slice(0, maxCount - verified.length)];
     }
 
-    this.writeAtomic(filePath, filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n");
-    return { retained: filtered.length, removed: initialCount - filtered.length };
+    const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
+    this.writeAtomic(filePath, lines.join("\n") + "\n");
+    return { retained: filtered.length, removed: initialCount - filtered.length, malformed };
   }
 
   cleanup(projectId) {
@@ -507,7 +543,7 @@ class Memory {
 
   prune(projectId, options = {}) {
     const filePath = this.getObservationsFile(projectId);
-    const observations = this.readObservations(filePath);
+    const { valid: observations, malformed, malformedLines } = this.readObservations(filePath);
     const initialCount = observations.length;
     let filtered = [...observations];
 
@@ -517,16 +553,17 @@ class Memory {
     }
 
     if (options.keepVerified !== false) {
-      const verified = observations.filter(obs => obs.verified);
+      const verified = filtered.filter(obs => obs.verified);
       const unverified = filtered.filter(obs => !obs.verified);
-      if (options.keepRecent) {
+      if (options.keepRecent && verified.length < options.keepRecent) {
         const keepCount = Math.min(options.keepRecent, verified.length);
         filtered = [...verified.slice(0, keepCount), ...unverified];
       }
     }
 
-    this.writeAtomic(filePath, filtered.map(obs => JSON.stringify(obs)).join("\n") + "\n");
-    return { pruned: initialCount - filtered.length, remaining: filtered.length };
+    const lines = [...filtered.map(obs => JSON.stringify(obs)), ...malformedLines];
+    this.writeAtomic(filePath, lines.join("\n") + "\n");
+    return { pruned: initialCount - filtered.length, remaining: filtered.length, malformed };
   }
 
   printHelp() {

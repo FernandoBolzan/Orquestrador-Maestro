@@ -1,9 +1,6 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-
 class Adapter {
   constructor(name, options = {}) {
     this.name = name;
@@ -44,6 +41,7 @@ class Adapter {
   }
 
   processEvent(rawEvent) {
+    if (!rawEvent || typeof rawEvent !== "object") return null;
     if (!this.shouldRecord(rawEvent)) return null;
     
     const normalized = this.normalizeEvent(rawEvent);
@@ -70,7 +68,7 @@ class ClaudeAdapter extends Adapter {
 
     return {
       type: typeMap[rawEvent.type] || "discovery",
-      summary: rawEvent.summary || rawEvent.description || `${rawEvent.type} event`,
+      summary: rawEvent.summary ?? rawEvent.description ?? `${rawEvent.type} event`,
       details: rawEvent.details || rawEvent.content || null,
       files: rawEvent.files || (rawEvent.file_path ? [rawEvent.file_path] : []),
       tags: rawEvent.tags || [this.name, rawEvent.type],

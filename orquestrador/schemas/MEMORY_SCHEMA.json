@@ -78,6 +78,29 @@
         "commit": { "type": "string" }
       },
       "description": "Source context"
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["repository", "workspace", "branch"],
+          "description": "Scope level"
+        },
+        "branch": { "type": "string" },
+        "workspaceId": { "type": "string" },
+        "repositoryId": { "type": "string" }
+      },
+      "required": ["level"],
+      "description": "Observation scope"
+    },
+    "branch": {
+      "type": "string",
+      "description": "Git branch (for branch-scoped observations)"
+    },
+    "workspaceId": {
+      "type": "string",
+      "description": "Workspace identifier"
     }
   }
 }

@@ -447,6 +447,24 @@ function runMemoryCommand(args) {
   }
 }
 
+function parseArg(args, name) {
+  const idx = args.indexOf(name);
+  if (idx === -1) return null;
+  const val = args[idx + 1];
+  if (!val || val.startsWith("--")) return null;
+  return val;
+}
+
+function parseArgEqual(args, name) {
+  const prefix = `${name}=`;
+  const found = args.find(a => a.startsWith(prefix));
+  return found ? found.slice(prefix.length) : null;
+}
+
+function getArg(args, name) {
+  return parseArg(args, name) || parseArgEqual(args, name);
+}
+
 function runBenchmarkCommand(args) {
   const [subcommand = "list", ...rest] = args;
   const runner = require(path.join(rootDir, "benchmarks", "runner.js"));
@@ -459,8 +477,8 @@ function runBenchmarkCommand(args) {
   }
 
   if (subcommand === "run") {
-    const scenarioId = memory.getArg(rest, "--scenario");
-    const condition = memory.getArg(rest, "--condition") || "vanilla";
+    const scenarioId = getArg(rest, "--scenario");
+    const condition = getArg(rest, "--condition") || "vanilla";
     if (!scenarioId) {
       const scenarios = benchmarkRunner.listScenarios();
       console.log(JSON.stringify({ scenarios, conditions: ["vanilla", "maestro-core", "maestro-memory"] }, null, 2));

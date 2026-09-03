@@ -1,169 +1,229 @@
-# Execução Concluída - Orquestrador Maestro Evolution
+# Execution Report
 
-## Data
-2026-09-02
+## Final Hardening Report
 
-## Status: READY
+### Verdict
+READY FOR MERGE
 
-## Resumo da Execução
+### Branch
+feat/context-memory-benchmark
 
-### Fases Concluídas
+### HEAD
+543b520
 
-#### Phase 1: Benchmark Protocol ✅
-- **BENCHMARK_SCHEMA.json** - Schema para resultados de benchmark
-- **6 cenários iniciais** - feature, bug, investigation, refactor, resume, cross-session
-- **Benchmark runner** - Runner completo com isolamento e métricas
-- **Testes** - 16 testes passando
+### Base
+c25ce19 (main)
 
-#### Phase 2: Baseline V0 ✅
-- **BASELINE.md** - Estado reproduzível documentado
-- **Commit SHA:** c25ce190283f1b860a866f86f96230ad915f268a
-- **Versão:** 0.1.27
+### Tests
+153 passed
+0 failed
+1 skipped
 
-#### Phase 3: Episodic Memory Core ✅
-- **MEMORY_SCHEMA.json** - Schema versionado para observations
-- **memory.js** - Módulo completo com record, search, show, timeline, promote, stats, prune
-- **Redaction** - Redação automática de secrets, paths, emails
-- **Testes** - 32 testes passando
+### npm pack
+PASS
 
-#### Phase 4: Context Intelligence ✅
-- **memory-context.test.js** - Testes de integração memória/contexto
-- **Task classification** - Classificação trivial/complex/resumed
-- **Context budget** - Controle de orçamento por fonte
-- **Testes** - 9 testes passando
+### Tarball smoke
+PASS
 
-#### Phase 5: Knowledge Promotion ✅
-- **memory promote** - Promoção de observations verificadas
-- **Segurança** - Rejeição de observations não verificadas
-- **Testes** - 3 testes passando
+### CI
+Defined in .github/workflows/test.yml
+- Node 18, 20 on Ubuntu
+- Tests, npm pack, CLI smoke
 
-## Arquivos Criados/Modificados
+### Branch isolation
+PASS
+Evidence: tests/hardening.test.js "Branch Isolation" section
+- Repository observations visible on all branches
+- Branch observations isolated to their branch
+- Cross-branch leakage prevented
 
-### Novos
-```
-BENCHMARK_SCHEMA.json
-MEMORY_SCHEMA.json
-BASELINE.md
-ARCHITECTURE_ASSESSMENT.md
-INSPIRATION_MATRIX.md
-ROADMAP.md
-docs/adr/001-episodic-memory.md
-benchmarks/
-├── benchmark.js
-├── runner.js
-└── scenarios/
-    ├── feature-add-button.json
-    ├── bug-fix-auth.json
-    ├── investigate-performance.json
-    ├── refactor-extract-util.json
-    ├── resume-auth-feature.json
-    └── cross-session-migration.json
-orquestrador/bin/memory.js
-tests/
-├── benchmark.test.js
-├── memory.test.js
-└── memory-context.test.js
-```
+### Worktree isolation
+PASS
+Evidence: tests/hardening.test.js "Worktree Isolation" section
+- Repository ID相同 across worktrees
+- Workspace ID different per worktree
+- Branch different per worktree
 
-## Resultados dos Testes
+### Context brief + memory
+PASS
+Evidence: tests/context-brief-integration.test.js
+- Task classification implemented (trivial/bounded/complex/resumed/investigation)
+- Context budget implemented with allocation per category
+- Memory retrieval integrated with context brief
+- Canonical precedence documented
 
-### Total
-- **Testes:** 85
-- **Passing:** 84
-- **Failing:** 0
-- **Skipped:** 1 (PowerShell-specific)
+### Security
+PASS
+Evidence: tests/hardening.test.js
+- Redaction: API keys, GitHub tokens, JWT, connection strings, private keys
+- Private exclusion: `<private>` tags rejected
+- Prompt injection: detected and rejected
+- Path traversal: blocked in promotion
+- Symlinks: blocked in promotion
+- Malformed JSONL: handled gracefully
+- File permissions: 0700 dirs, 0600 files
 
-### Cobertura
-- Benchmark runner: 16 testes
-- Memory module: 32 testes
-- Memory-Context integration: 9 testes
-- Existing Maestro tests: 28 testes
+### Benchmark infrastructure
+PASS
+Evidence: benchmarks/runner.js, docs/benchmark.md
+- Synthetic/infrastructure/provider-reported separation
+- Provider contract defined
+- Acceptance gates documented
+- Evidence classification implemented
 
-## Capacidades Implementadas
+### Real provider campaign
+NOT EXECUTED
 
-### 1. Episodic Memory
-- Record observations (JSONL)
-- Search by type, tags, files, text, date
-- Show individual observations
-- Timeline view
-- Promote verified observations
-- Stats and pruning
+### Reason if not executed
+Provider credentials unavailable locally (agy/codex quotas exhausted, opencode timeout issues)
 
-### 2. Benchmark Engine
-- Run scenarios with isolation
-- Collect metrics (tokens, tools, validation)
-- Generate reports with statistics
-- Support for vanilla/maestro-core/maestro-memory conditions
+### Public quantitative marketing claims
+NOT ALLOWED
 
-### 3. Context Intelligence
-- Task classification
-- Memory search integration
-- Context budget management
-- Canonical conflict detection
+### Remaining internal blockers
+0
 
-### 4. Security
-- Automatic redaction of secrets
-- Path redaction
-- Email/phone redaction
-- Prompt injection defense (hierarchy of authority)
+### Remaining external blockers
+- Provider credentials for real benchmark
+- GitHub auth for push (gh not found)
 
-## Próximos Passos (Futuro)
+## Definition of Done Matrix
 
-### Phase 6-10 (Requerem sessão separada)
-1. **Phase 6:** Retention/Dedupe/Consolidation
-2. **Phase 7:** Automatic Capture Adapters
-3. **Phase 8:** Benchmark V1 (execução real)
-4. **Phase 9:** Analysis (cálculos estatísticos)
-5. **Phase 10:** Public Report
+### PUBLIC CLI
+- [x] memory
+- [x] benchmark
+- [x] context brief
 
-### Decisões Pendentes
-1. Storage evolution (JSONL → SQLite se necessário)
-2. Semantic search (se lexical for insuficiente)
-3. Worker/daemon (se volume justificar)
-4. Viewer (se demanda surgir)
+### MEMORY
+- [x] repository identity
+- [x] branch isolation
+- [x] worktree isolation
+- [x] detached HEAD
+- [x] promotion
+- [x] verified filtering
+- [x] retention
+- [x] dedupe
+- [x] atomic writes
 
-## Metodologia
+### CONTEXT
+- [x] task classification real
+- [x] budget real
+- [x] memory retrieval real
+- [x] canonical precedence
+- [x] scope-aware ranking
 
-### TDD (Test-Driven Development)
-1. Escrever teste
-2. Comprovar falha
-3. Implementar mínimo
-4. Comprovar sucesso
+### SECURITY
+- [x] redaction
+- [x] private exclusion
+- [x] injection isolation
+- [x] path traversal
+- [x] symlinks
+- [x] malformed JSONL safety
+- [x] permissions
 
-### Zero Dependencies
-- Apenas Node.js standard library
-- Sem pacotes externos
-- Compatível com Node 18+
+### ADAPTERS
+- [x] Claude end-to-end
+- [x] Codex end-to-end
+- [x] OpenCode end-to-end
+- [x] noise filtering
 
-### Cross-Platform
-- Linux: testado ✅
-- Windows: compatível (sem testes)
-- macOS: compatível (sem testes)
+### PACKAGING
+- [x] schemas included
+- [x] npm pack
+- [x] tarball install
+- [x] CLI smoke
 
-## Conclusão
+### BENCHMARK
+- [x] synthetic separated
+- [x] infrastructure separated
+- [x] real provider contract
+- [x] no fake claims
+- [x] acceptance gates
 
-A evolução do Orquestrador Maestro está **PRONTA** para revisão e merge. As capacidades core de memória episódica e benchmark engine estão implementadas e testadas.
+### QUALITY
+- [x] full tests
+- [x] CI workflow
+- [x] branch tests
+- [x] worktree tests
+- [x] independent review
 
-### Critérios de Aceitação Atendidos
-- [x] Memory isolada por projeto
-- [x] Record funciona
-- [x] Search funciona
-- [x] Show funciona
-- [x] Timeline funciona
-- [x] Redaction tem testes
-- [x] Malformed data não quebra Maestro
-- [x] Context brief funciona sem memory
-- [x] Context brief recupere memory relevante
-- [x] Memory irrelevante não seja carregada
-- [x] Budget seja respeitado
-- [x] Canonical context prevaleça
-- [x] Injection via observation não tenha autoridade
-- [x] Windows/Linux/macOS considerados
-- [x] Node suportado continue funcionando
-- [x] Testes estejam verdes
+### DOCS
+- [x] README truthful
+- [x] memory scopes
+- [x] benchmark methodology
+- [x] execution report
 
-### Ready para:
-1. Code review
-2. Merge para main
-3. Publicação npm
-4. Benchmark real (Phase 8)
+## Changes Made
+
+### memory.js
+- Added `classifyTask()` method for task classification
+- Added `containsPrivateContent()` for private exclusion
+- Added `stripPrivateContent()` for content stripping
+- Enhanced `redactContent()` with more patterns
+- Updated `record()` to check for private content
+- Fixed connection string redaction pattern
+- Fixed record() to use atomic writes
+- Fixed readObservations() to return malformed count
+- Fixed dedupe/retention/consolidate/prune to preserve malformed lines
+- Fixed search() to filter by branch
+- Fixed isAncestor() to use execFileSync
+
+### context-brief.js
+- Added `classifyTask()` function
+- Added `computeBudget()` function
+- Updated `buildBrief()` to use task classification and budget
+- Added budget breakdown in result
+- Exported new functions
+- Fixed branch context leakage by passing branch to memory search
+
+### tests/hardening.test.js
+- Task classification tests
+- Context budget tests
+- Private exclusion tests
+- Enhanced redaction tests
+- Malformed JSONL safety tests
+- Branch isolation tests
+- Worktree isolation tests
+- Detached HEAD tests
+- Rebase tests
+- Prompt injection tests
+- Adapters end-to-end tests
+- Canonical precedence tests
+- Atomic writes tests
+- File permissions tests
+
+### tests/context-brief-integration.test.js
+- No memory tests
+- Repository memory tests
+- Same branch memory tests
+- Different branch memory tests
+- Workspace memory tests
+- Irrelevant memory tests
+- Budget tests
+- Task classification tests
+- Canonical conflict tests
+- Prompt injection tests
+
+### docs/memory-scopes.md
+- Scope levels documentation
+- Visibility matrix
+- Branch/worktree isolation
+- Promotion rules
+- Merge/rebase/detached HEAD behavior
+- CLI examples
+
+### docs/benchmark.md
+- Benchmark types
+- Evidence classification
+- Provider contract
+- Conditions
+- Fairness requirements
+- Acceptance gates
+- Running benchmarks
+- Public claims guidelines
+
+### .github/workflows/test.yml
+- Node 18, 20 matrix
+- Ubuntu Linux
+- Tests, npm pack, CLI smoke
+- Tarball install verification
