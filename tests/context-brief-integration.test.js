@@ -151,7 +151,7 @@ describe("Context Brief Integration", () => {
     });
   });
 
-  describe("canonical conflict", () => {
+  describe("canonical precedence", () => {
     it("should prioritize canonical over memory", () => {
       const projectId = "precedence-test";
       memory.record(projectId, {

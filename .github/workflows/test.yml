@@ -11,12 +11,12 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Node ${{ matrix.node-version }} on ${{ matrix.os }}
+  test-full:
+    name: Full tests — Node ${{ matrix.node-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        node-version: [18, 20]
+        node-version: [18, 20, 22]
         os: [ubuntu-latest]
     steps:
       - name: Checkout
@@ -42,6 +42,88 @@ jobs:
       - name: Install from tarball
         run: |
           TARBALL=$(ls *.tgz)
+          npm install -g "$TARBALL"
+
+      - name: CLI smoke tests
+        run: |
+          orquestrador-maestro version
+          orquestrador-maestro memory --help
+          orquestrador-maestro memory status
+          orquestrador-maestro benchmark --help
+          orquestrador-maestro context brief --help
+
+      - name: Cleanup
+        if: always()
+        run: npm uninstall -g @iapro/orquestrador-maestro-cli 2>/dev/null || true
+
+  test-windows:
+    name: Smoke tests — Node ${{ matrix.node-version }} on Windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Run tests (subset)
+        run: npm test -- --test-name-pattern="generateId|record|search|show|stats|listProjects|validateObservation|task classification|canonical precedence|prompt injection"
+
+      - name: Create tarball
+        run: npm pack
+
+      - name: Install from tarball
+        run: |
+          $TARBALL = Get-ChildItem *.tgz | Select-Object -First 1
+          npm install -g "$TARBALL"
+
+      - name: CLI smoke tests
+        run: |
+          orquestrador-maestro version
+          orquestrador-maestro memory --help
+          orquestrador-maestro memory status
+          orquestrador-maestro benchmark --help
+          orquestrador-maestro context brief --help
+
+      - name: Cleanup
+        if: always()
+        run: npm uninstall -g @iapro/orquestrador-maestro-cli 2>$null
+
+  test-macos:
+    name: Smoke tests — Node ${{ matrix.node-version }} on macOS
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Run tests (subset)
+        run: npm test -- --test-name-pattern="generateId|record|search|show|stats|listProjects|validateObservation|task classification|canonical precedence|prompt injection"
+
+      - name: Create tarball
+        run: npm pack
+
+      - name: Install from tarball
+        run: |
+          TARBALL=$(ls *.tgz | head -1)
           npm install -g "$TARBALL"
 
       - name: CLI smoke tests

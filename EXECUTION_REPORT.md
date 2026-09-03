@@ -9,13 +9,13 @@ READY FOR MERGE
 feat/context-memory-benchmark
 
 ### HEAD
-e6b98bf
+965555c
 
 ### Base
-c25ce19 (main)
+c25ce19 (main) — tagged as `benchmark-baseline-core-0.1.27`
 
 ### Tests
-173 passed
+193 passed
 0 failed
 1 skipped
 
@@ -27,8 +27,9 @@ PASS
 
 ### CI
 Defined in .github/workflows/test.yml
-- Node 18, 20 on Ubuntu
-- Tests, npm pack, CLI smoke
+- Ubuntu: Node 18, 20, 22 — full tests, npm pack, CLI smoke
+- Windows: Node 20, 22 — smoke tests
+- macOS: Node 20, 22 — smoke tests
 
 ### Branch isolation
 PASS
@@ -62,9 +63,10 @@ Evidence: tests/e2e-isolation.test.js "End-to-End Rebase"
 ### Concurrency
 PASS
 Evidence: tests/e2e-isolation.test.js "End-to-End Concurrency"
-- 50 sequential records with lock protection
-- 20 sequential dedupes with lock protection
-- PID-based lock ownership prevents cross-process release
+- 5 workers × 20 records = 100 observations (truly parallel via spawn)
+- All workers reported unique IDs
+- 0 malformed records
+- Lock protection verified
 
 ### Context brief + memory
 PASS
@@ -82,11 +84,12 @@ PASS
 Evidence: tests/hardening.test.js
 - Redaction: API keys, GitHub tokens, JWT, connection strings, private keys
 - Private exclusion: `<private>` tags rejected
-- Prompt injection: detected and rejected
+- Prompt injection: detected and rejected (stateless regex)
 - Path traversal: blocked in promotion
 - Symlinks: blocked in promotion
 - Malformed JSONL: handled gracefully
 - File permissions: 0700 dirs, 0600 files
+- xKiro HTTPS enforcement
 
 ### Benchmark infrastructure
 PASS
@@ -95,6 +98,7 @@ Evidence: benchmarks/runner.js, docs/benchmark.md
 - Provider contract defined
 - Acceptance gates documented
 - Evidence classification implemented
+- Per-run isClaimEligibleRun() for cross-run contamination prevention
 
 ### Real provider campaign
 NOT EXECUTED
@@ -126,18 +130,20 @@ NOT ALLOWED
 - [x] detached HEAD (branch=null, detached=true)
 - [x] promotion (with scope.promoted=true)
 - [x] verified filtering
-- [x] retention (scope-aware, promoted exempt)
+- [x] retention (scope-aware, promoted exempt, negative slice safe)
+- [x] prune (keepVerified protected before keepRecent slice)
 - [x] dedupe (scope-aware key)
 - [x] atomic writes
-- [x] concurrency lock (PID-based)
+- [x] concurrency lock (PID + ownerId + liveness + max-age)
 - [x] append-only record
 - [x] default scope per type (not repository)
+- [x] accent normalization in task classifier
 
 ### CONTEXT
-- [x] task classification real
-- [x] budget real
+- [x] task classification real (NFD accent normalization)
+- [x] budget real (maxChars enforced)
 - [x] memory retrieval real (searchWithVisibility)
-- [x] canonical precedence
+- [x] canonical precedence (not "conflict detection")
 - [x] scope-aware ranking (rankObservations)
 - [x] shouldUseMemory formalized
 - [x] visibility policy central (isObservationVisible)
@@ -146,20 +152,23 @@ NOT ALLOWED
 ### SECURITY
 - [x] redaction
 - [x] private exclusion
-- [x] injection isolation
-- [x] path traversal
+- [x] injection isolation (stateless regex, no lastIndex)
+- [x] path traversal (normalize before whitelist)
 - [x] symlinks
 - [x] malformed JSONL safety
 - [x] permissions (0700 dirs, 0600 files)
+- [x] xKiro HTTPS enforcement
 
 ### ADAPTERS
 - [x] Claude end-to-end
 - [x] Codex end-to-end
 - [x] OpenCode end-to-end
-- [x] noise filtering
+- [x] noise filtering (read/grep/glob/ls/pwd/cat excluded)
+- [x] scope-aware (projectRoot, gitContext, taskId)
+- [x] GenericAdapter type mapping
 
 ### PACKAGING
-- [x] schemas included
+- [x] schemas included (MEMORY_SCHEMA, BENCHMARK_SCHEMA with evidence field)
 - [x] npm pack
 - [x] tarball install
 - [x] CLI smoke
@@ -170,19 +179,23 @@ NOT ALLOWED
 - [x] real provider contract
 - [x] no fake claims
 - [x] acceptance gates
+- [x] per-run claim eligibility
+- [x] infrastructure runs never claim-eligible
 
 ### QUALITY
-- [x] full tests
-- [x] CI workflow
+- [x] full tests (193 pass)
+- [x] CI workflow (multiplatform)
 - [x] branch tests
 - [x] worktree tests
-- [x] independent review
+- [x] independent review (2 rounds)
+- [x] true parallel concurrency (spawn)
+- [x] regression tests for all hardenings
 
 ### DOCS
 - [x] README truthful
-- [x] memory scopes
-- [x] benchmark methodology
-- [x] execution report
+- [x] memory scopes (default scope matrix, detached behavior)
+- [x] benchmark methodology (provider API smoke disclaimer)
+- [x] execution report (this file)
 
 ## Changes Made
 
@@ -201,6 +214,8 @@ NOT ALLOWED
 - Added CapturePolicy integration (ALLOW/REDACT/METADATA_ONLY/DROP)
 - Added sanitizeTags/sanitizeSource for REDACT policy
 - Added preserve malformed lines in write-back
+- Fixed retention negative slice (Math.max(0, ...))
+- Fixed prune keepVerified (partition before slice)
 
 ### context-brief.js
 - Added `classifyTask()` function (now shared via lib/task-classifier.js)
@@ -209,6 +224,7 @@ NOT ALLOWED
 - Added budget breakdown in result
 - Exported new functions
 - Fixed branch context leakage by passing branch to memory search
+- buildBrief accepts options.memory for testability
 
 ### lib/capture-policy.js (new)
 - CapturePolicy class with ALLOW/REDACT/METADATA_ONLY/DROP
@@ -219,41 +235,68 @@ NOT ALLOWED
 ### lib/task-classifier.js (new)
 - Shared classifyTask() for context-brief and memory
 - Trivial/bounded/complex/resumed/investigation categories
+- NFD accent normalization for Portuguese
 
-### memory.js scope resolution
-- resolveScope() auto-populates repositoryId/branch/workspaceId
-- resolveProjectFromArgs() resolves to repositoryId via resolveRepositoryId()
+### lib/git-context.js (new)
+- Unified git context resolver
+- resolveGitContext(), resolveRepositoryId(), resolveBranch(), resolveHeadCommit()
+- isAncestor() for commit ancestry check
 
-### tests/hardening.test.js
-- Task classification tests
-- Context budget tests
-- Private exclusion tests
-- Enhanced redaction tests
-- Malformed JSONL safety tests
-- Branch isolation tests
-- Worktree isolation tests
-- Detached HEAD tests
-- Rebase tests
-- Prompt injection tests
-- Adapters end-to-end tests
-- Canonical precedence tests
-- Atomic writes tests
-- File permissions tests
+### lib/visibility.js (new)
+- isObservationVisible() central authority
+- resolveObservationScope() with default scope per type
+- rankObservations() for scope-aware ranking
+- Detached HEAD → commit scope upgrade
+- Attempt without taskId → branch fallback
 
-### tests/context-brief-integration.test.js
-- No memory tests
-- Repository memory tests
-- Same branch memory tests
-- Different branch memory tests
-- Workspace memory tests
-- Irrelevant memory tests
-- Budget tests
-- Task classification tests
-- Canonical conflict tests
-- Prompt injection tests
+### lib/lock.js
+- PID + ownerId + liveness check + max-age 5min
+- Stale recovery verifies identity before unlink
+
+### adapters/index.js
+- Adapter base class with projectRoot, gitContext, taskId support
+- Shared DEFAULT_OBSERVATION_TYPE_MAP
+- GenericAdapter uses type mapping
+- Noise filtering for read/grep/glob/ls/pwd/cat
+
+### schemas/MEMORY_SCHEMA.json
+- 5 scope levels (repository, branch, task, commit, workspace)
+- headCommit, taskId, consolidatedFrom, promoted fields
+
+### schemas/BENCHMARK_SCHEMA.json
+- Added evidence field (type, publicClaimEligible, reproducible, isolated)
+
+### benchmarks/runner.js
+- Added isClaimEligibleRun() for per-run claim eligibility
+- Evidence gate prevents cross-run contamination
+
+### scripts/test-xkiro.js
+- Added validateBaseUrl() with HTTPS enforcement
+
+### tests/e2e-isolation.test.js
+- True parallel concurrency (spawn + Promise.all)
+- Canonical precedence (renamed from "conflict")
+- Default scope E2E tests
+
+### tests/merge-blocker-regression.test.js (new)
+- 23 regression tests for all hardenings
+- Prompt injection stateless (10 consecutive calls)
+- Retention negative slice fix
+- Prune keepVerified fix
+- Task classifier accent normalization
+- Scope validation
+- Stale lock race prevention
+- Adapter noise filtering
+- Context budget enforcement
+- Infrastructure claim eligibility
+- xKiro HTTPS validation
+- GenericAdapter type mapping
+- Default scope E2E
 
 ### docs/memory-scopes.md
 - Scope levels documentation
+- Default scope matrix
+- Detached behavior
 - Visibility matrix
 - Branch/worktree isolation
 - Promotion rules
@@ -269,9 +312,9 @@ NOT ALLOWED
 - Acceptance gates
 - Running benchmarks
 - Public claims guidelines
+- Provider API smoke disclaimer
 
 ### .github/workflows/test.yml
-- Node 18, 20 matrix
-- Ubuntu Linux
-- Tests, npm pack, CLI smoke
-- Tarball install verification
+- Ubuntu: Node 18, 20, 22 matrix — full tests
+- Windows: Node 20, 22 — smoke tests
+- macOS: Node 20, 22 — smoke tests

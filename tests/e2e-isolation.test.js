@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
-const { execSync, execFileSync } = require("node:child_process");
+const { execSync, execFileSync, spawn } = require("node:child_process");
 
 const { Memory } = require("../orquestrador/bin/memory.js");
 const { resolveGitContext } = require("../orquestrador/lib/git-context.js");
@@ -251,7 +251,7 @@ describe("End-to-End Concurrency", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("should handle concurrent record operations without data loss", () => {
+  it("should handle concurrent record operations without data loss", async () => {
     const projectId = "concurrent-test";
     memory.ensureProjectDir(projectId);
 
@@ -260,22 +260,45 @@ describe("End-to-End Concurrency", () => {
     const projectRoot = path.resolve(__dirname, "..");
     const workerScript = path.join(__dirname, "worker-record.js");
 
-    const results = [];
-    for (let w = 0; w < workers; w++) {
-      const out = execFileSync(process.execPath, [workerScript, projectRoot, tmpDir, projectId, String(w), String(perWorker)], {
-        encoding: "utf8",
-        timeout: 30000
+    const spawnWorker = (workerId) => new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, [workerScript, projectRoot, tmpDir, projectId, String(workerId), String(perWorker)], {
+        stdio: ["ignore", "pipe", "pipe"]
       });
-      results.push(JSON.parse(out.trim()));
-    }
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (data) => { stdout += data; });
+      child.stderr.on("data", (data) => { stderr += data; });
+      child.on("close", (code) => {
+        if (code !== 0) {
+          reject(new Error(`Worker ${workerId} failed (code ${code}): ${stderr}`));
+        } else {
+          try {
+            resolve(JSON.parse(stdout.trim()));
+          } catch (e) {
+            reject(new Error(`Worker ${workerId} invalid output: ${stdout}`));
+          }
+        }
+      });
+      child.on("error", reject);
+    });
+
+    const startAll = Date.now();
+    const results = await Promise.all(
+      Array.from({ length: workers }, (_, i) => spawnWorker(i))
+    );
+    const elapsed = Date.now() - startAll;
 
     const totalRecorded = results.reduce((sum, r) => sum + r.recorded, 0);
-    assert.equal(totalRecorded, workers * perWorker);
+    assert.equal(totalRecorded, workers * perWorker, `Expected ${workers * perWorker} records, got ${totalRecorded} (elapsed: ${elapsed}ms)`);
 
     const filePath = memory.getObservationsFile(projectId);
     const { valid, malformed } = memory.readObservations(filePath);
     assert.equal(valid.length, workers * perWorker);
     assert.equal(malformed, 0);
+
+    const workerIds = results.map(r => r.workerId);
+    const uniqueWorkers = new Set(workerIds);
+    assert.equal(uniqueWorkers.size, workers, "All workers should have reported");
   });
 
   it("should handle concurrent dedupe without corruption", () => {
@@ -297,7 +320,7 @@ describe("End-to-End Concurrency", () => {
   });
 });
 
-describe("End-to-End Canonical Conflict", () => {
+describe("End-to-End Canonical Precedence", () => {
   let tmpDir;
   let memory;
 

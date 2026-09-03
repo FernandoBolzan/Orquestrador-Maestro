@@ -136,7 +136,7 @@ describe("Memory-Context Integration", () => {
     });
   });
 
-  describe("canonical conflict detection", () => {
+  describe("canonical precedence", () => {
     it("should detect conflicts between observations", () => {
       const projectId = "test-project";
       
