@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" font-family="Segoe UI, system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="memGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="benchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34d399;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="adapterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fbbf24;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="600" fill="url(#bgGrad)" rx="12"/>
+
+  <!-- Title -->
+  <text x="450" y="45" text-anchor="middle" fill="#f8fafc" font-size="22" font-weight="700" letter-spacing="0.5">Orquestrador Maestro — Architecture Overview</text>
+  <text x="450" y="68" text-anchor="middle" fill="#94a3b8" font-size="12">Context Intelligence &amp; Episodic Memory System</text>
+
+  <!-- Core Layer -->
+  <rect x="50" y="100" width="800" height="120" rx="10" fill="url(#coreGrad)" opacity="0.15" stroke="#6366f1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="70" y="125" fill="#a5b4fc" font-size="11" font-weight="600" letter-spacing="1">CORE LAYER</text>
+
+  <!-- Core boxes -->
+  <rect x="70" y="140" width="150" height="65" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="145" y="165" text-anchor="middle" fill="#c7d2fe" font-size="11" font-weight="600">Git Context</text>
+  <text x="145" y="182" text-anchor="middle" fill="#94a3b8" font-size="9">Repository, Branch</text>
+  <text x="145" y="195" text-anchor="middle" fill="#94a3b8" font-size="9">Workspace, Head</text>
+
+  <rect x="240" y="140" width="150" height="65" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="315" y="165" text-anchor="middle" fill="#c7d2fe" font-size="11" font-weight="600">Task Classifier</text>
+  <text x="315" y="182" text-anchor="middle" fill="#94a3b8" font-size="9">NFD Normalization</text>
+  <text x="315" y="195" text-anchor="middle" fill="#94a3b8" font-size="9">Intent Detection</text>
+
+  <rect x="410" y="140" width="150" height="65" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="485" y="165" text-anchor="middle" fill="#c7d2fe" font-size="11" font-weight="600">Visibility Policy</text>
+  <text x="485" y="182" text-anchor="middle" fill="#94a3b8" font-size="9">Scope Ranking</text>
+  <text x="485" y="195" text-anchor="middle" fill="#94a3b8" font-size="9">Branch Filtering</text>
+
+  <rect x="580" y="140" width="150" height="65" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="655" y="165" text-anchor="middle" fill="#c7d2fe" font-size="11" font-weight="600">Concurrency Lock</text>
+  <text x="655" y="182" text-anchor="middle" fill="#94a3b8" font-size="9">PID + Identity</text>
+  <text x="655" y="195" text-anchor="middle" fill="#94a3b8" font-size="9">Liveness Check</text>
+
+  <rect x="750" y="140" width="80" height="65" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="790" y="165" text-anchor="middle" fill="#c7d2fe" font-size="11" font-weight="600">CLI</text>
+  <text x="790" y="182" text-anchor="middle" fill="#94a3b8" font-size="9">20+</text>
+  <text x="790" y="195" text-anchor="middle" fill="#94a3b8" font-size="9">commands</text>
+
+  <!-- Arrows from core to memory -->
+  <line x1="220" y1="220" x2="220" y2="260" stroke="#6366f1" stroke-width="2" marker-end="url(#arrowPurple)"/>
+  <line x1="450" y1="220" x2="450" y2="260" stroke="#6366f1" stroke-width="2" marker-end="url(#arrowPurple)"/>
+  <line x1="680" y1="220" x2="680" y2="260" stroke="#6366f1" stroke-width="2" marker-end="url(#arrowPurple)"/>
+
+  <!-- Memory Layer -->
+  <rect x="50" y="260" width="520" height="160" rx="10" fill="url(#memGrad)" opacity="0.15" stroke="#06b6d4" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="70" y="285" fill="#67e8f9" font-size="11" font-weight="600" letter-spacing="1">EPISODIC MEMORY</text>
+
+  <rect x="70" y="300" width="120" height="55" rx="8" fill="#083344" stroke="#06b6d4" stroke-width="1.5"/>
+  <text x="130" y="322" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">JSONL Store</text>
+  <text x="130" y="340" text-anchor="middle" fill="#94a3b8" font-size="8">observations.jsonl</text>
+
+  <rect x="200" y="300" width="120" height="55" rx="8" fill="#083344" stroke="#06b6d4" stroke-width="1.5"/>
+  <text x="260" y="322" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">Search Engine</text>
+  <text x="260" y="340" text-anchor="middle" fill="#94a3b8" font-size="8">Type + Tags + Text</text>
+
+  <rect x="330" y="300" width="120" height="55" rx="8" fill="#083344" stroke="#06b6d4" stroke-width="1.5"/>
+  <text x="390" y="322" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">Promotion</text>
+  <text x="390" y="340" text-anchor="middle" fill="#94a3b8" font-size="8">→ DEV/ Files</text>
+
+  <rect x="70" y="365" width="120" height="45" rx="8" fill="#083344" stroke="#06b6d4" stroke-width="1.5"/>
+  <text x="130" y="392" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">Consolidation</text>
+
+  <rect x="200" y="365" width="120" height="45" rx="8" fill="#083344" stroke="#06b6d4" stroke-width="1.5"/>
+  <text x="260" y="392" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">Retention</text>
+
+  <rect x="330" y="365" width="120" height="45" rx="8" fill="#083344" stroke="#06b6d4" stroke-width="1.5"/>
+  <text x="390" y="392" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">Prune + Dedupe</text>
+
+  <!-- Benchmark Layer -->
+  <rect x="590" y="260" width="260" height="160" rx="10" fill="url(#benchGrad)" opacity="0.15" stroke="#10b981" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="610" y="285" fill="#6ee7b7" font-size="11" font-weight="600" letter-spacing="1">BENCHMARK ENGINE</text>
+
+  <rect x="610" y="300" width="220" height="55" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="720" y="322" text-anchor="middle" fill="#a7f3d0" font-size="10" font-weight="600">Scenario Runner</text>
+  <text x="720" y="340" text-anchor="middle" fill="#94a3b8" font-size="8">6 scenarios × 3 conditions</text>
+
+  <rect x="610" y="365" width="105" height="45" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="662" y="392" text-anchor="middle" fill="#a7f3d0" font-size="10" font-weight="600">Validation</text>
+
+  <rect x="725" y="365" width="105" height="45" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="777" y="392" text-anchor="middle" fill="#a7f3d0" font-size="10" font-weight="600">Evidence Gate</text>
+
+  <!-- Adapter Layer -->
+  <rect x="50" y="450" width="800" height="100" rx="10" fill="url(#adapterGrad)" opacity="0.15" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="70" y="475" fill="#fcd34d" font-size="11" font-weight="600" letter-spacing="1">ADAPTER LAYER — Scope-Aware Integration</text>
+
+  <rect x="70" y="490" width="100" height="45" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="120" y="517" text-anchor="middle" fill="#fde68a" font-size="10" font-weight="600">Codex</text>
+
+  <rect x="180" y="490" width="100" height="45" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="230" y="517" text-anchor="middle" fill="#fde68a" font-size="10" font-weight="600">Claude</text>
+
+  <rect x="290" y="490" width="100" height="45" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="340" y="517" text-anchor="middle" fill="#fde68a" font-size="10" font-weight="600">OpenCode</text>
+
+  <rect x="400" y="490" width="100" height="45" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="450" y="517" text-anchor="middle" fill="#fde68a" font-size="10" font-weight="600">Goose</text>
+
+  <rect x="510" y="490" width="100" height="45" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="560" y="517" text-anchor="middle" fill="#fde68a" font-size="10" font-weight="600">Junie</text>
+
+  <rect x="620" y="490" width="100" height="45" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="670" y="517" text-anchor="middle" fill="#fde68a" font-size="10" font-weight="600">OpenHands</text>
+
+  <rect x="730" y="490" width="100" height="45" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="780" y="517" text-anchor="middle" fill="#fde68a" font-size="10" font-weight="600">xKiro</text>
+
+  <!-- Data flow arrows -->
+  <defs>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1"/>
+    </marker>
+    <marker id="arrowCyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#06b6d4"/>
+    </marker>
+  </defs>
+
+  <!-- Memory to Dev -->
+  <path d="M 260 420 L 260 450" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowCyan)" stroke-dasharray="5,3"/>
+  <text x="280" y="440" fill="#67e8f9" font-size="8">DEV/</text>
+
+  <!-- Footer -->
+  <text x="450" y="580" text-anchor="middle" fill="#475569" font-size="10">Zero dependencies • Node.js standard library only • 193 tests passing</text>
+</svg>

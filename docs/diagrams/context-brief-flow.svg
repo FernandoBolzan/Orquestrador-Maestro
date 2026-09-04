@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" font-family="Segoe UI, system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <filter id="sh4" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="450" fill="url(#bg4)" rx="12"/>
+
+  <text x="450" y="35" text-anchor="middle" fill="#f8fafc" font-size="18" font-weight="700">Context Brief Integration Flow</text>
+  <text x="450" y="55" text-anchor="middle" fill="#94a3b8" font-size="11">How context-brief.js builds the briefing with episodic memory</text>
+
+  <!-- Input -->
+  <rect x="30" y="80" width="150" height="100" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5" filter="url(#sh4)"/>
+  <text x="105" y="105" text-anchor="middle" fill="#a5b4fc" font-size="11" font-weight="600">Input</text>
+  <text x="105" y="125" text-anchor="middle" fill="#94a3b8" font-size="9">projectPath</text>
+  <text x="105" y="140" text-anchor="middle" fill="#94a3b8" font-size="9">task (intent)</text>
+  <text x="105" y="155" text-anchor="middle" fill="#94a3b8" font-size="9">options.memory</text>
+  <text x="105" y="170" text-anchor="middle" fill="#94a3b8" font-size="9">budget tokens</text>
+
+  <!-- Arrow -->
+  <defs>
+    <marker id="arr4" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#6366f1"/>
+    </marker>
+  </defs>
+  <line x1="180" y1="130" x2="220" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#arr4)"/>
+
+  <!-- Step 1: Git Context -->
+  <rect x="220" y="80" width="130" height="100" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" filter="url(#sh4)"/>
+  <text x="285" y="105" text-anchor="middle" fill="#c7d2fe" font-size="10" font-weight="600">1. Git Context</text>
+  <text x="285" y="125" text-anchor="middle" fill="#94a3b8" font-size="8">getGitContext()</text>
+  <text x="285" y="140" text-anchor="middle" fill="#94a3b8" font-size="8">repo, branch, ws</text>
+  <text x="285" y="155" text-anchor="middle" fill="#94a3b8" font-size="8">head, detached</text>
+  <text x="285" y="170" text-anchor="middle" fill="#94a3b8" font-size="8">workspaceId</text>
+
+  <!-- Arrow -->
+  <line x1="350" y1="130" x2="390" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#arr4)"/>
+
+  <!-- Step 2: Visibility -->
+  <rect x="390" y="80" width="130" height="100" rx="8" fill="#083344" stroke="#06b6d4" stroke-width="1.5" filter="url(#sh4)"/>
+  <text x="455" y="105" text-anchor="middle" fill="#a5f3fc" font-size="10" font-weight="600">2. Visibility</text>
+  <text x="455" y="125" text-anchor="middle" fill="#94a3b8" font-size="8">getVisibleObservations()</text>
+  <text x="455" y="140" text-anchor="middle" fill="#94a3b8" font-size="8">scope ranking</text>
+  <text x="455" y="155" text-anchor="middle" fill="#94a3b8" font-size="8">branch filter</text>
+  <text x="455" y="170" text-anchor="middle" fill="#94a3b8" font-size="8">verified boost</text>
+
+  <!-- Arrow -->
+  <line x1="520" y1="130" x2="560" y2="130" stroke="#06b6d4" stroke-width="2" marker-end="url(#arr4)"/>
+
+  <!-- Step 3: Task Classifier -->
+  <rect x="560" y="80" width="130" height="100" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5" filter="url(#sh4)"/>
+  <text x="625" y="105" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">3. Task Class</text>
+  <text x="625" y="125" text-anchor="middle" fill="#94a3b8" font-size="8">classifyTask()</text>
+  <text x="625" y="140" text-anchor="middle" fill="#94a3b8" font-size="8">trivial/bounded</text>
+  <text x="625" y="155" text-anchor="middle" fill="#94a3b8" font-size="8">complex/resumed</text>
+  <text x="625" y="170" text-anchor="middle" fill="#94a3b8" font-size="8">investigation</text>
+
+  <!-- Arrow -->
+  <line x1="690" y1="130" x2="730" y2="130" stroke="#10b981" stroke-width="2" marker-end="url(#arr4)"/>
+
+  <!-- Step 4: Build Brief -->
+  <rect x="730" y="80" width="140" height="100" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" filter="url(#sh4)"/>
+  <text x="800" y="105" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="600">4. Build Brief</text>
+  <text x="800" y="125" text-anchor="middle" fill="#94a3b8" font-size="8">buildBrief()</text>
+  <text x="800" y="140" text-anchor="middle" fill="#94a3b8" font-size="8">DEV/ files</text>
+  <text x="800" y="155" text-anchor="middle" fill="#94a3b8" font-size="8">memory results</text>
+  <text x="800" y="170" text-anchor="middle" fill="#94a3b8" font-size="8">budget trim</text>
+
+  <!-- Output -->
+  <rect x="30" y="220" width="840" height="100" rx="10" fill="#1e293b" stroke="#6366f1" stroke-width="1.5" filter="url(#sh4)"/>
+  <text x="450" y="245" text-anchor="middle" fill="#a5b4fc" font-size="12" font-weight="700">Output: Context Brief</text>
+
+  <rect x="50" y="260" width="120" height="45" rx="6" fill="#1e1b4b" stroke="#6366f1" stroke-width="1"/>
+  <text x="110" y="287" text-anchor="middle" fill="#c7d2fe" font-size="9" font-weight="600">git context</text>
+
+  <rect x="180" y="260" width="120" height="45" rx="6" fill="#083344" stroke="#06b6d4" stroke-width="1"/>
+  <text x="240" y="287" text-anchor="middle" fill="#a5f3fc" font-size="9" font-weight="600">observations</text>
+
+  <rect x="310" y="260" width="120" height="45" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+  <text x="370" y="287" text-anchor="middle" fill="#a7f3d0" font-size="9" font-weight="600">task class</text>
+
+  <rect x="440" y="260" width="120" height="45" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+  <text x="500" y="287" text-anchor="middle" fill="#fde68a" font-size="9" font-weight="600">DEV/ state</text>
+
+  <rect x="570" y="260" width="120" height="45" rx="6" fill="#1e293b" stroke="#ef4444" stroke-width="1"/>
+  <text x="630" y="287" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="600">files context</text>
+
+  <rect x="700" y="260" width="120" height="45" rx="6" fill="#1e293b" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="760" y="287" text-anchor="middle" fill="#c4b5fd" font-size="9" font-weight="600">budget status</text>
+
+  <!-- Arrow down -->
+  <line x1="450" y1="180" x2="450" y2="220" stroke="#475569" stroke-width="2" marker-end="url(#arr4)"/>
+
+  <!-- Memory integration note -->
+  <rect x="30" y="350" width="840" height="80" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="1" filter="url(#sh4)"/>
+  <text x="50" y="375" fill="#67e8f9" font-size="11" font-weight="600">Memory Integration</text>
+  <text x="50" y="395" fill="#94a3b8" font-size="10">• Observations from current branch are prioritized</text>
+  <text x="50" y="410" fill="#94a3b8" font-size="10">• Verified observations receive ranking boost</text>
+  <text x="450" y="395" fill="#94a3b8" font-size="10">• Budget-aware trimming prevents context overflow</text>
+  <text x="450" y="410" fill="#94a3b8" font-size="10">• Task class influences observation selection</text>
+</svg>

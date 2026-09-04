@@ -1,6 +1,6 @@
 {
   "name": "@iapro/orquestrador-maestro-cli",
-  "version": "0.1.27",
+  "version": "0.2.0",
   "description": "CLI npm para instalar, atualizar, verificar e remover o Orquestrador Maestro no usuário atual, com skills nativas enxutas e biblioteca externa para reduzir tokens.",
   "bin": {
     "orquestrador-maestro": "bin/orquestrador-maestro.js"
@@ -69,13 +69,20 @@
     "install.ps1",
     "install.sh",
     "orquestrador/*.json",
+    "orquestrador/schemas/",
     "orquestrador/*.md",
     "orquestrador/*.ps1",
     "orquestrador/*.sh",
     "orquestrador/bin/",
+    "orquestrador/lib/",
+    "orquestrador/adapters/",
     "orquestrador/blueprints/",
     "orquestrador/personas/",
     "orquestrador/skills/",
+    "runtime/",
+    "benchmarks/*.js",
+    "benchmarks/scenarios/",
+    "benchmarks/runner.js",
     "scripts/*.js",
     "scripts/*.py",
     "scripts/*.ps1",
@@ -90,6 +97,8 @@
     "outdated:all": "node scripts/audit-dependencies.js outdated",
     "pack:dry-run": "npm pack --dry-run",
     "test": "node --test tests/*.test.js",
+    "test:smoke": "node scripts/test-smoke.js",
+    "test:xkiro": "node scripts/test-xkiro.js",
     "validate": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-public.ps1 && powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-skills.ps1"
   },
   "config": {
@@ -97,7 +106,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FernandoBolzan/Orquestrador-Maestro.git"
+    "url": "git+https://github.com/IAPro-Community/Orquestrador-Maestro.git"
   },
   "keywords": [
     "iapro",
@@ -119,11 +128,20 @@
     "hooks"
   ],
   "author": "Grupo IAPro",
-  "homepage": "https://github.com/FernandoBolzan/Orquestrador-Maestro#readme",
+  "homepage": "https://github.com/IAPro-Community/Orquestrador-Maestro#readme",
   "bugs": {
-    "url": "https://github.com/FernandoBolzan/Orquestrador-Maestro/issues"
+    "url": "https://github.com/IAPro-Community/Orquestrador-Maestro/issues"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "optionalDependencies": {
+    "@opentui/core": "^0.5.1"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "@xterm/headless": "^5.5.0",
+    "node-notifier": "^10.0.1",
+    "node-pty": "^1.1.0"
   }
 }

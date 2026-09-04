@@ -28,3 +28,5 @@ node_modules/
 dist/
 build/
 security-reports/
+benchmarks/results/
+*.tgz

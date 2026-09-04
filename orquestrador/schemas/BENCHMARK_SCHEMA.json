@@ -1,0 +1,172 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Orquestrador Maestro Benchmark Result",
+  "description": "Schema for benchmark run results",
+  "type": "object",
+  "required": ["benchmark", "condition", "run", "model", "provider", "repoCommit", "promptHash", "environment", "usage", "context", "tools", "validation", "evidence"],
+  "properties": {
+    "benchmark": {
+      "type": "string",
+      "description": "Scenario identifier (e.g., resume-auth-001)"
+    },
+    "condition": {
+      "type": "string",
+      "enum": ["vanilla", "maestro-core", "maestro-memory"],
+      "description": "Test condition"
+    },
+    "run": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Run number for this scenario/condition"
+    },
+    "model": {
+      "type": "string",
+      "description": "AI model used"
+    },
+    "provider": {
+      "type": "string",
+      "description": "AI provider (e.g., anthropic, openai)"
+    },
+    "repoCommit": {
+      "type": "string",
+      "description": "Git commit SHA of the repository"
+    },
+    "promptHash": {
+      "type": "string",
+      "description": "SHA-256 hash of the task prompt"
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "os": { "type": "string" },
+        "nodeVersion": { "type": "string" },
+        "platform": { "type": "string" },
+        "arch": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "description": "Token usage metrics",
+      "properties": {
+        "inputTokens": {
+          "type": ["integer", "null"],
+          "description": "Input tokens (provider-reported or null)"
+        },
+        "outputTokens": {
+          "type": ["integer", "null"],
+          "description": "Output tokens (provider-reported or null)"
+        },
+        "cachedTokens": {
+          "type": ["integer", "null"],
+          "description": "Cached tokens (provider-reported or null)"
+        },
+        "reasoningTokens": {
+          "type": ["integer", "null"],
+          "description": "Reasoning tokens (provider-reported or null)"
+        },
+        "totalTokens": {
+          "type": ["integer", "null"],
+          "description": "Total tokens (provider-reported or null)"
+        },
+        "tokenSource": {
+          "type": "string",
+          "enum": ["provider-reported", "tokenizer-estimated", "context-character-count", "not-applicable", "unknown"],
+          "description": "Source of token measurement"
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Context size metrics",
+      "properties": {
+        "chars": {
+          "type": "integer",
+          "description": "Total characters in context"
+        },
+        "bytes": {
+          "type": "integer",
+          "description": "Total bytes in context"
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "description": "Tool usage metrics",
+      "properties": {
+        "calls": {
+          "type": "integer",
+          "description": "Total tool calls"
+        },
+        "filesRead": {
+          "type": "integer",
+          "description": "Files read"
+        },
+        "filesModified": {
+          "type": "integer",
+          "description": "Files modified"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "description": "Validation results",
+      "properties": {
+        "passed": {
+          "type": "boolean",
+          "description": "Whether acceptance criteria passed"
+        },
+        "testsPassed": {
+          "type": "integer",
+          "description": "Number of tests passed"
+        },
+        "testsFailed": {
+          "type": "integer",
+          "description": "Number of tests failed"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "durationMs": {
+          "type": "integer",
+          "description": "Execution duration in milliseconds"
+        },
+        "retries": {
+          "type": "integer",
+          "description": "Number of retries"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Evidence gate metadata for claim eligibility",
+      "required": ["executionType", "publicClaimEligible"],
+      "properties": {
+        "executionType": {
+          "type": "string",
+          "enum": ["synthetic", "infrastructure", "real-execution"],
+          "description": "Execution classification: synthetic (fixture validation), infrastructure (setup/teardown), real-execution (actual AI model call)"
+        },
+        "publicClaimEligible": {
+          "type": "boolean",
+          "description": "Whether this run is eligible for public claims. Must be explicitly true."
+        },
+        "reproducible": {
+          "type": "boolean",
+          "description": "Whether the result is reproducible"
+        },
+        "isolated": {
+          "type": "boolean",
+          "description": "Whether the run was isolated from other runs"
+        }
+      }
+    }
+  }
+}

@@ -6,7 +6,7 @@ O Orquestrador Maestro organiza regras, contexto, skills, hooks, perfis de ferra
 
 > O Orquestrador não é um modelo de IA, não hospeda agentes e não substitui Codex, Claude, OpenCode, Cursor, Gemini, Grok, MiMo Code, Kimi Code, Windsurf, Antigravity ou outras ferramentas. Ele prepara o ambiente para que essas ferramentas trabalhem com um contrato comum.
 
-[GitHub](https://github.com/FernandoBolzan/Orquestrador-Maestro) · [Pacote npm](https://www.npmjs.com/package/@iapro/orquestrador-maestro-cli) · [Changelog](CHANGELOG.md)
+[GitHub](https://github.com/IAPro-Community/Orquestrador-Maestro) · [Pacote npm](https://www.npmjs.com/package/@iapro/orquestrador-maestro-cli) · [Changelog](CHANGELOG.md)
 
 ## Para quem este projeto é
 
@@ -64,6 +64,46 @@ orquestrador-maestro workflow-state approve --project-path . --task-id task/minh
 orquestrador-maestro workflow-state advance --project-path . --task-id task/minha-tarefa --to-step plan
 ~~~
 
+## Benchmark: medição de contexto
+
+### Como rodar na sua máquina
+
+~~~bash
+# Clonar o repositório
+git clone https://github.com/IAPro-Community/Orquestrador-Maestro.git
+cd Orquestrador-Maestro
+
+# Rodar todos os testes
+npm test
+
+# Rodar o benchmark real (requer API keys)
+node benchmarks/real-ai-benchmark.js
+
+# Ver resultados
+cat benchmarks/results/real/real-ai-benchmark-report.json
+~~~
+
+### O que esta medição demonstra
+
+Existem dois tipos de benchmark:
+
+- **Sintético/infraestrutura** (`npm test`): valida cenários com fixtures locais. Não executa modelo de IA nem coleta tokens de provider.
+- **Provider API smoke** (`node benchmarks/real-ai-benchmark.js`): chama APIs reais (Anthropic/OpenAI) usando `ANTHROPIC_API_KEY` e `OPENAI_API_KEY`. Coleta tokens reportados pelo provider. Não é elegível para afirmações de performance do Maestro (`publicClaimEligible: false`).
+
+Ambos os tipos não medem qualidade de código, produtividade, custo ou redução de bugs. Os resultados variam com o commit, ambiente e cenários; portanto não devem ser usados como promessa geral de desempenho.
+
+Os cenários e o código estão em [`benchmarks/scenarios/`](benchmarks/scenarios/) e [`benchmarks/real-ai-benchmark.js`](benchmarks/real-ai-benchmark.js). Os resultados do provider smoke são gerados localmente em `benchmarks/results/ai-real/` e não fazem parte do pacote público.
+
+### Smoke test opcional com xKiro
+
+Para validar uma integração OpenAI-compatible sem incluir credenciais no código, configure `XKIRO_API_KEY` no ambiente ou em um `.env` local e execute:
+
+~~~bash
+XKIRO_MODEL=qwen/qwen3-vl-plus:free npm run test:xkiro
+~~~
+
+O script usa `qwen/qwen3-vl-plus:free` por padrão, aceita `XKIRO_MODEL` para outro modelo e exibe somente status, modelo, resposta e uso. Ele não mede qualidade de agentes, produtividade ou economia. Consulte a [documentação de Chat Completions do xKiro](https://docs.xkiro.com/api/chat-completions/) para o contrato da API.
+
 ## Comece em dois minutos
 
 ### Instalação recomendada por npm
@@ -83,13 +123,13 @@ O pacote npm instala a CLI. Os arquivos do usuário só são alterados quando in
 Windows PowerShell:
 
 ~~~powershell
-irm https://raw.githubusercontent.com/FernandoBolzan/Orquestrador-Maestro/main/scripts/bootstrap-install.ps1 | iex
+irm https://raw.githubusercontent.com/IAPro-Community/Orquestrador-Maestro/main/scripts/bootstrap-install.ps1 | iex
 ~~~
 
 Linux ou macOS:
 
 ~~~bash
-curl -fsSL https://raw.githubusercontent.com/FernandoBolzan/Orquestrador-Maestro/main/scripts/bootstrap-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/IAPro-Community/Orquestrador-Maestro/main/scripts/bootstrap-install.sh | bash
 ~~~
 
 Para uma instalação normal, não use sudo nem abra o PowerShell como Administrador. Os bootstraps configuram a instalação no perfil do usuário, ajustam o PATH, instalam a CLI e executam a verificação.
@@ -99,7 +139,7 @@ Para uma instalação normal, não use sudo nem abra o PowerShell como Administr
 Windows:
 
 ~~~powershell
-git clone https://github.com/FernandoBolzan/Orquestrador-Maestro.git
+git clone https://github.com/IAPro-Community/Orquestrador-Maestro.git
 Set-Location Orquestrador-Maestro
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-install.ps1
@@ -108,7 +148,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-install.ps1
 Linux ou macOS:
 
 ~~~bash
-git clone https://github.com/FernandoBolzan/Orquestrador-Maestro.git
+git clone https://github.com/IAPro-Community/Orquestrador-Maestro.git
 cd Orquestrador-Maestro
 bash install.sh
 bash scripts/verify-install.sh
@@ -268,6 +308,41 @@ orquestrador-maestro adapters render junie --project-path . --apply
 
 O `render` usa simulação por padrão; `--apply` é obrigatório para gravar. Ele cria somente arquivos de instrução, skills e agentes do projeto, preservando arquivos existentes. Não instala a ferramenta, não escolhe modelo ou provedor e não gerencia login, credenciais, MCP, extensões, sessões, cache, logs ou histórico. OpenHands continua exigindo seu ambiente suportado, incluindo WSL no Windows.
 
+## Arquitetura
+
+![Architecture Overview](docs/diagrams/architecture-overview.svg)
+
+### Componentes Principais
+
+| Componente | Descrição |
+|------------|-----------|
+| **Git Context Resolver** | Resolve repository, workspace, branch, detached, head commit em uma única chamada |
+| **Task Classifier** | Classifica intent em trivial/bounded/complex/resumed/investigation com NFD normalization |
+| **Visibility Policy** | Filtra e rankeia observações por scope (repository → workspace → branch) |
+| **Concurrency Lock** | PID-based lock com identity verification e liveness check |
+| **Episodic Memory** | JSONL store com search, timeline, consolidation, retention, prune |
+| **Context Brief** | Monta briefing com DEV/ files, memory observations, e budget trimming |
+| **Adapter Layer** | Integração scope-aware com Codex, Claude, OpenCode, Goose, Junie, OpenHands, xKiro |
+| **Benchmark Engine** | 6 cenários × 3 condições × 5 repetições com evidence gate |
+
+### Memory Scopes
+
+![Memory Scopes](docs/diagrams/memory-scopes.svg)
+
+As observações são automaticamente escopadas por Repository → Workspace → Branch. A política de visibilidade filtra e rankeia por scope mais específico, com boost para observações verificadas.
+
+### Benchmark Flow
+
+![Benchmark Flow](docs/diagrams/benchmark-flow.svg)
+
+O benchmark compara 3 condições (Vanilla, Maestro Core, Maestro Memory) em 6 cenários sintéticos, com 5 repetições cada. A métrica principal é tokens por tarefa concluída com sucesso.
+
+### Context Brief Flow
+
+![Context Brief Flow](docs/diagrams/context-brief-flow.svg)
+
+O context brief monta o briefing integrando git context, visibility policy, task classifier, DEV/ files e memory observations, com budget trimming para evitar overflow.
+
 Depois da instalação, uma solicitação útil para qualquer IA é:
 
 ~~~text
@@ -275,6 +350,82 @@ Use o Orquestrador Maestro instalado neste usuário.
 Leia primeiro o contrato global, depois o AGENTS.md do projeto e a pasta DEV/, se existirem.
 Consulte o roteador de skills, resolva a tarefa com o menor contexto suficiente,
 verifique o resultado e não faça commit nem push sem minha autorização.
+~~~
+
+## Memória Episódica
+
+### O que é
+
+A memória episódica permite registrar e buscar decisões, problemas, descobertas e implementações ao longo do tempo. Cada observação é salva em JSONL e pode ser buscada por tipo, tags ou texto. Observações são automaticamente escopadas por branch, workspace ou tarefa.
+
+### Como usar
+
+~~~bash
+# Registrar uma decisão
+orquestrador-maestro memory record \
+  --project meu-projeto \
+  --type decision \
+  --summary "Usei JWT para autenticação" \
+  --tags "auth,jwt" \
+  --verified
+
+# Registrar um problema
+orquestrador-maestro memory record \
+  --project meu-projeto \
+  --type problem \
+  --summary "Bug no refresh token" \
+  --details "TokenService permite múltiplos refreshes" \
+  --files "src/services/TokenService.ts" \
+  --tags "bug,security"
+
+# Buscar observações
+orquestrador-maestro memory search \
+  --project meu-projeto \
+  --search "auth"
+
+# Ver timeline
+orquestrador-maestro memory timeline \
+  --project meu-projeto
+
+# Ver estatísticas
+orquestrador-maestro memory stats \
+  --project meu-projeto
+~~~
+
+### Tipos de observação
+
+| Tipo | Uso |
+|------|-----|
+| `decision` | Decisões arquiteturais e de design |
+| `discovery` | Descobertas durante exploração |
+| `problem` | Bugs e problemas encontrados |
+| `implementation` | Implementações e mudanças de código |
+| `verification` | Resultados de testes e validações |
+| `risk` | Riscos identificados |
+| `dependency` | Dependências e integrações |
+| `attempt` | Tentativas de execução (comandos, testes) |
+| `failure` | Falhas e erros |
+| `environment` | Configurações de ambiente |
+| `workaround` | Soluções temporárias |
+
+### Exemplo prático
+
+~~~bash
+# 1. Registrar decisão
+$ orquestrador-maestro memory record --project auth --type decision --summary "JWT para APIs"
+→ obs_dbd7d7ee59754ab6
+
+# 2. Registrar problema
+$ orquestrador-maestro memory record --project auth --type problem --summary "Refresh token bug"
+→ obs_7809825090b6d182
+
+# 3. Buscar
+$ orquestrador-maestro memory search --project auth --search "token"
+→ [2 observações encontradas]
+
+# 4. Verificar
+$ orquestrador-maestro memory stats --project auth
+→ { total: 2, byType: { decision: 1, problem: 1 }, verified: 1 }
 ~~~
 
 ## Referência da CLI
@@ -288,8 +439,25 @@ orquestrador-maestro init-dev --project-path PATH
 orquestrador-maestro compact-worklog --project-path PATH --keep N
 orquestrador-maestro check-dev-gates --project-path PATH --max-entries N --strict
 orquestrador-maestro context brief --project-path PATH --task TEXT
+orquestrador-maestro workflow-lock <generate|validate> [opcoes]
+orquestrador-maestro workflow-state <init|get|validate|approve|advance> [opcoes]
 orquestrador-maestro adapters <list|paths|validate> [id]
 orquestrador-maestro adapters render <junie|goose|openhands> --project-path PATH [--dry-run|--apply]
+orquestrador-maestro memory record --project PATH --type TYPE --summary TEXT [opcoes]
+orquestrador-maestro memory search --project PATH [--search TEXT] [--type TYPE] [--branch BRANCH]
+orquestrador-maestro memory show --project PATH --id OBS_ID
+orquestrador-maestro memory timeline --project PATH [--limit N]
+orquestrador-maestro memory stats --project PATH
+orquestrador-maestro memory list-projects
+orquestrador-maestro memory promote --id OBS_ID --destination PATH [--apply]
+orquestrador-maestro memory status [--project PATH]
+orquestrador-maestro memory dedupe --project PATH
+orquestrador-maestro memory retention --project PATH [--max-age-days N] [--max-count N]
+orquestrador-maestro memory prune --project PATH [--keep-recent N] [--keep-verified]
+orquestrador-maestro memory consolidate --project PATH --ids OBS_ID,OBS_ID
+orquestrador-maestro memory cleanup --project PATH
+orquestrador-maestro benchmark list
+orquestrador-maestro benchmark run --scenario ID --condition CONDITION
 orquestrador-maestro changelog [--full]
 orquestrador-maestro list-targets
 orquestrador-maestro dry-run
@@ -356,7 +524,7 @@ orquestrador-maestro telemetry test
 orquestrador-maestro telemetry disable
 ~~~
 
-Quando habilitada, a implementação envia apenas metadados operacionais mínimos, como comando, plataforma, arquitetura, versão major do Node.js, sucesso e identificador anônimo. Não envia prompts, conteúdo de projetos, caminhos locais, tokens, logs ou nome do usuário. Consulte docs/npm-package.md e docs/privacy-model.md para os limites atuais.
+Quando habilitada, a implementação envia apenas metadados operacionais mínimos, como comando, plataforma, arquitetura, versão major do Node.js, sucesso e identificador anônimo. Não envia prompts, conteúdo de projetos, caminhos locais, tokens, logs ou nome do usuário. Consulte [`docs/npm-package.md`](docs/npm-package.md) e [`docs/privacy-model.md`](docs/privacy-model.md) para os limites atuais.
 
 O repositório público é sanitizado. Não devem entrar no snapshot:
 
@@ -392,12 +560,12 @@ home/                     Contrato global sanitizado para instalação
 
 Arquivos que controlam o comportamento do núcleo:
 
-- orquestrador/rules.md: contrato global de qualidade, segurança e hierarquia.
-- orquestrador/maestro.md: ciclo observar → rotear → selecionar → agir → verificar → reportar.
-- orquestrador/PERSISTENCE.md: contrato de continuidade entre sessões e ferramentas.
-- orquestrador/hooks.md: roteamento compacto dos hooks operacionais.
-- orquestrador/PROGRAM_ENTRYPOINTS.json: mapa de entrada por ferramenta.
-- orquestrador/SKILL_INSTALL_POLICY.json: política de bibliotecas e raízes nativas.
+- [`orquestrador/rules.md`](orquestrador/rules.md): contrato global de qualidade, segurança e hierarquia.
+- [`orquestrador/maestro.md`](orquestrador/maestro.md): ciclo observar → rotear → selecionar → agir → verificar → reportar.
+- [`orquestrador/PERSISTENCE.md`](orquestrador/PERSISTENCE.md): contrato de continuidade entre sessões e ferramentas.
+- [`orquestrador/hooks.md`](orquestrador/hooks.md): roteamento compacto dos hooks operacionais.
+- [`orquestrador/PROGRAM_ENTRYPOINTS.json`](orquestrador/PROGRAM_ENTRYPOINTS.json): mapa de entrada por ferramenta.
+- [`orquestrador/SKILL_INSTALL_POLICY.json`](orquestrador/SKILL_INSTALL_POLICY.json): política de bibliotecas e raízes nativas.
 
 ## Desenvolvimento e contribuição
 
@@ -421,7 +589,7 @@ npm run audit
 
 O fluxo de contribuição é:
 
-1. Leia CONTRIBUTING.md e as regras do repositório.
+1. Leia [`CONTRIBUTING.md`](CONTRIBUTING.md) e as regras do repositório.
 2. Preserve a separação entre fonte local, snapshot público e perfis instaláveis.
 3. Não publique dados privados ou caminhos reais.
 4. Se mudar uma skill compartilhada, sincronize e valide o catálogo.
@@ -452,19 +620,19 @@ O fluxo de contribuição é:
 
 Se uma ferramenta não encontrar o Orquestrador:
 
-1. Rode orquestrador-maestro verify ou o verificador do repositório.
+1. Rode `orquestrador-maestro verify` ou o [verificador do repositório](scripts/verify-install.sh).
 2. Confirme que .orquestrador e AGENTS.md existem no home correto.
 3. Reinicie a ferramenta para que ela releia as regras globais.
-4. Confira o entrypoint específico em docs/installation.md.
+4. Confira o entrypoint específico em [`docs/installation.md`](docs/installation.md).
 
-Se a instalação estiver incompleta, use doctor e depois verify. Se houver erro de permissão no npm, evite misturar uma instalação antiga feita como Administrador/root com uma instalação normal; reinstale no perfil do usuário conforme docs/installation-troubleshooting.md.
+Se a instalação estiver incompleta, use `doctor` e depois `verify`. Se houver erro de permissão no npm, evite misturar uma instalação antiga feita como Administrador/root com uma instalação normal; reinstale no perfil do usuário conforme [`docs/installation-troubleshooting.md`](docs/installation-troubleshooting.md).
 
 Se aparecer texto quebrado, confirme que os arquivos estão em UTF-8 e rode validate-public.ps1 antes de publicar.
 
 ## Licença e responsabilidade
 
-Consulte a licença e os avisos do repositório antes de redistribuir. Revise instruções, permissões, skills e integrações antes de aplicá-las em produção. O mantenedor e o usuário continuam responsáveis por autorizar alterações, proteger credenciais e validar o comportamento da ferramenta de IA escolhida.
+Este snapshot não contém um arquivo `LICENSE`; os direitos de redistribuição e uso não devem ser presumidos. Revise [`CONTRIBUTING.md`](CONTRIBUTING.md), as instruções, permissões, skills e integrações antes de redistribuir ou aplicar em produção. O mantenedor e o usuário continuam responsáveis por autorizar alterações, proteger credenciais e validar o comportamento da ferramenta de IA escolhida.
 
 ---
 
-Última revisão editorial: 2026-08-12.
+Última revisão editorial: 2026-09-02.

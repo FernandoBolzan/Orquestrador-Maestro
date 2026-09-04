@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Orquestrador Maestro Observation",
+  "description": "Schema for episodic memory observations",
+  "type": "object",
+  "required": ["schemaVersion", "id", "timestamp", "project", "type", "summary"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "enum": [1],
+      "description": "Schema version"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^obs_[a-f0-9]{16}$",
+      "description": "Unique observation ID"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    },
+    "project": {
+      "type": "string",
+      "description": "Project identifier"
+    },
+    "taskId": {
+      "type": "string",
+      "description": "Optional task identifier"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "decision",
+        "discovery",
+        "problem",
+        "attempt",
+        "failure",
+        "implementation",
+        "verification",
+        "risk",
+        "dependency",
+        "environment",
+        "workaround"
+      ],
+      "description": "Observation type"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Short summary of the observation"
+    },
+    "details": {
+      "type": ["string", "null"],
+      "description": "Detailed explanation"
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Related files"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Searchable tags"
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this observation has been verified"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "tool": { "type": "string" },
+        "session": { "type": "string" },
+        "commit": { "type": "string" }
+      },
+      "description": "Source context"
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["repository", "branch", "workspace", "commit", "task"],
+          "description": "Scope level"
+        },
+        "repositoryId": { "type": "string" },
+        "branch": { "type": ["string", "null"] },
+        "workspaceId": { "type": "string" },
+        "headCommit": { "type": "string" },
+        "taskId": { "type": "string" },
+        "promoted": { "type": "boolean" }
+      },
+      "required": ["level"],
+      "description": "Observation scope"
+    },
+    "capturePolicy": {
+      "type": "string",
+      "enum": ["ALLOW", "REDACT", "METADATA_ONLY", "DROP"],
+      "description": "Capture policy applied to this observation"
+    },
+    "consolidatedFrom": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Observation IDs consolidated into this one"
+    }
+  }
+}

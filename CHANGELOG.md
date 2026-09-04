@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.2.0 - 2026-09-04
+
+Esta é uma atualização maior, que incorpora a maior parte da evolução proposta nos PRs #5, #6 e #7. O PR #7 é o eixo principal da entrega, especialmente pela memória episódica, pelo benchmark e pela ampliação da CLI.
+
+### O que mudou para quem usa o Maestro
+
+- O Maestro agora consegue guardar decisões, descobertas, problemas e resultados importantes do projeto para reutilizá-los em sessões futuras.
+- O contexto passa a ser filtrado por projeto, workspace, branch e tarefa, reduzindo a chance de misturar informações de trabalhos diferentes.
+- A CLI ganhou comandos para registrar, pesquisar, consultar linha do tempo, promover, deduplicar, consolidar, limpar e verificar a memória.
+- A CLI ganhou comandos de benchmark para listar cenários, executar medições e validar fixtures.
+- Tarefas complexas podem ser refinadas e divididas em etapas antes da execução, com planos persistidos e revisão explícita.
+- O runtime central organiza projetos, workspaces, terminais, providers, missões, execuções, eventos e recuperação após falhas.
+- Providers como Codex, Claude, OpenCode e AGY passam a seguir uma interface comum, facilitando a troca e a comparação de agentes.
+- O Maestro acompanha o ciclo da execução e oferece verificação posterior para confirmar se o resultado atende ao objetivo.
+- Foi adicionada uma interface de cockpit/TUI para acompanhar projetos, tarefas, skills, atenção, gates e terminais quando o ambiente suportar esse modo.
+- Mudanças arquiteturais ou de maior risco podem passar por um gate específico antes de serem executadas, sem alterar o fluxo legado por padrão.
+- Workflows, tarefas, eventos, gates humanos, retries, artefatos e workspaces ganharam contratos declarativos e compatíveis com os formatos anteriores.
+
+### Benchmark e evidência
+
+- O benchmark inclui cenários reproduzíveis, condições comparáveis e validação de evidência para evitar conclusões baseadas em execuções inválidas.
+- A CLI oferece `benchmark list`, `benchmark run` e `benchmark validate`.
+- O benchmark sintético usa fixtures locais e não exige chaves de API.
+- O smoke test de providers reais é opcional e exige credenciais configuradas pelo mantenedor; seus resultados ficam locais e não são publicados.
+- Os resultados devem ser interpretados como evidência para cenários específicos, não como promessa geral de qualidade, economia ou produtividade.
+
+### Compatibilidade, segurança e qualidade
+
+- Os comandos e fluxos legados continuam disponíveis; as capacidades novas são aditivas e opt-in quando envolvem planejamento, gates ou integrações externas.
+- A memória local não publica prompts, conteúdo de projeto, tokens, logs ou caminhos privados.
+- O lock de memória ganhou verificação de processo, liveness, identidade e expiração configurável para operações concorrentes.
+- Foram corrigidos casos de retenção, poda, deduplicação, escopo de branch, validação HTTPS, URLs base e detecção de injeção em prompts.
+- A integração contínua passou a cobrir Linux, Windows e macOS, com testes completos no Linux e smoke tests nos demais sistemas.
+- Verificação local desta entrega: 635 testes aprovados, 0 falhas e 10 testes ignorados por dependências/limitações específicas de ambiente; validações pública, de skills, empacotamento e ciclo instalado aprovadas.
+
+### Migração
+
+- Usuários da versão anterior podem atualizar com `npm update -g @iapro/orquestrador-maestro-cli`.
+- Depois da atualização, execute `orquestrador-maestro changelog`, `orquestrador-maestro update`, `orquestrador-maestro verify` e `orquestrador-maestro doctor`.
+- Para usar a memória e o contexto por projeto, inicialize ou mantenha a estrutura `DEV/` do projeto conforme a documentação.
+- Nenhuma chave de API é necessária para usar a memória local, o planejamento determinístico, a CLI ou o benchmark sintético.
+
+### Detalhes técnicos e correções incluídas
+
+- **Unified Git Context Resolver**: consolidates repository, workspace, branch, detached, and head commit into a single `getGitContext()` call across all entry points.
+- **Branch-Based Scoping**: observations automatically inherit branch, workspace, and task context for visibility and search filtering.
+- **Visibility Policy**: scope-aware ranking that filters observations by repository, workspace, and branch; promotes verified and marked-as-done observations.
+- **Task Classifier**: classifies intent into `trivial`, `bounded`, `complex`, `resumed`, `investigation` with NFD accent normalization for cross-platform consistency.
+- **Concurrency Lock**: PID-based lock with identity verification, liveness checks, and configurable max-age (default 5 minutes) for safe parallel operations.
+- **Memory CLI Commands**: `record`, `search`, `show`, `timeline`, `stats`, `list-projects`, `status`, `promote`, `dedupe`, `retention`, `prune`, `consolidate`, `cleanup`.
+- **Benchmark CLI Commands**: `list`, `run`, `validate` for scenario execution and fixture validation.
+- **Adapter Scope Awareness**: adapters now receive `projectRoot`, `gitContext`, and `taskId` for scope-aware behavior; `DEFAULT_OBSERVATION_TYPE_MAP` centralized in adapters/index.js.
+- **Benchmark Engine Hardening**: `isClaimEligibleRun()` per-run eligibility check, benchmark schema `evidence` field for reproducibility tracking.
+- **Merge-Blocker Cleanup**: prompt injection regex (removed `g` flag), retention negative slice protection (`Math.max(0, ...)`), prune `keepVerified` partition logic, stale lock identity verification, xKiro HTTPS validation, `validateBaseUrl()`.
+- **CI Multiplatform**: Ubuntu (Node 18/20/22) full tests, Windows (Node 20/22) smoke, macOS (Node 20/22) smoke.
+- **Test Suite**: 193 tests passing, 0 failures, 1 skipped; regression test suite covering all hardenings.
+- **Runtime e CLI**: integração aditiva das camadas de runtime, providers, planejamento, verificação, workspaces, terminais e cockpit.
+- **Documentation fixes**: corrected benchmark file paths, CLI examples using `orquestrador-maestro memory` CLI, added missing memory commands to CLI reference, fixed `head` → `headCommit` in memory-scopes.md, updated ai-memory-integration.md to mention built-in episodic memory.
+
 ## 0.1.27 - 2026-08-30
 
 ### Novos CLIs de programação assistida

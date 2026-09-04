@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-family="Segoe UI, system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="vanilla" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#64748b;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#64748b;stop-opacity:0.1"/>
+    </linearGradient>
+    <linearGradient id="core" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.1"/>
+    </linearGradient>
+    <linearGradient id="memory" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:0.1"/>
+    </linearGradient>
+    <filter id="sh3" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="500" fill="url(#bg3)" rx="12"/>
+
+  <text x="450" y="35" text-anchor="middle" fill="#f8fafc" font-size="18" font-weight="700">Benchmark Design: 6 × 3 × 5</text>
+  <text x="450" y="55" text-anchor="middle" fill="#94a3b8" font-size="11">6 Scenarios × 3 Conditions × 5 Repetitions = 90 Runs</text>
+
+  <!-- Scenarios Column -->
+  <text x="80" y="85" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600" letter-spacing="1">SCENARIOS</text>
+
+  <rect x="30" y="100" width="100" height="40" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="80" y="125" text-anchor="middle" fill="#e2e8f0" font-size="10">auth-api</text>
+
+  <rect x="30" y="150" width="100" height="40" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="80" y="175" text-anchor="middle" fill="#e2e8f0" font-size="10">db-migration</text>
+
+  <rect x="30" y="200" width="100" height="40" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="80" y="225" text-anchor="middle" fill="#e2e8f0" font-size="10">bug-fix</text>
+
+  <rect x="30" y="250" width="100" height="40" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="80" y="275" text-anchor="middle" fill="#e2e8f0" font-size="10">resume-task</text>
+
+  <rect x="30" y="300" width="100" height="40" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="80" y="325" text-anchor="middle" fill="#e2e8f0" font-size="10">multi-file</text>
+
+  <rect x="30" y="350" width="100" height="40" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="80" y="375" text-anchor="middle" fill="#e2e8f0" font-size="10">config-change</text>
+
+  <!-- Conditions Column -->
+  <text x="350" y="85" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600" letter-spacing="1">CONDITIONS</text>
+
+  <rect x="180" y="110" width="340" height="60" rx="8" fill="url(#vanilla)" stroke="#64748b" stroke-width="1.5" filter="url(#sh3)"/>
+  <text x="200" y="135" fill="#cbd5e1" font-size="12" font-weight="700">Vanilla</text>
+  <text x="200" y="152" fill="#94a3b8" font-size="9">No Maestro • Raw AI CLI • No context management</text>
+
+  <rect x="180" y="185" width="340" height="60" rx="8" fill="url(#core)" stroke="#6366f1" stroke-width="1.5" filter="url(#sh3)"/>
+  <text x="200" y="210" fill="#a5b4fc" font-size="12" font-weight="700">Maestro Core</text>
+  <text x="200" y="227" fill="#94a3b8" font-size="9">Rules + DEV/ + Workflow • No episodic memory</text>
+
+  <rect x="180" y="260" width="340" height="60" rx="8" fill="url(#memory)" stroke="#06b6d4" stroke-width="1.5" filter="url(#sh3)"/>
+  <text x="200" y="285" fill="#67e8f9" font-size="12" font-weight="700">Maestro Memory</text>
+  <text x="200" y="302" fill="#94a3b8" font-size="9">Core + Episodic Memory + Context Brief</text>
+
+  <!-- Metric -->
+  <text x="700" y="85" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600" letter-spacing="1">PRIMARY METRIC</text>
+
+  <rect x="580" y="110" width="240" height="80" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="2" filter="url(#sh3)"/>
+  <text x="700" y="140" text-anchor="middle" fill="#fcd34d" font-size="14" font-weight="700">Tokens per Task</text>
+  <text x="700" y="160" text-anchor="middle" fill="#94a3b8" font-size="10">concluded successfully</text>
+  <text x="700" y="178" text-anchor="middle" fill="#64748b" font-size="9">not raw token count</text>
+
+  <!-- Repetitions -->
+  <rect x="580" y="210" width="240" height="50" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5" filter="url(#sh3)"/>
+  <text x="700" y="235" text-anchor="middle" fill="#6ee7b7" font-size="12" font-weight="700">5 Repetitions</text>
+  <text x="700" y="250" text-anchor="middle" fill="#94a3b8" font-size="9">median value • variance reported</text>
+
+  <!-- Flow arrows -->
+  <defs>
+    <marker id="arr3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <line x1="130" y1="130" x2="180" y2="130" stroke="#475569" stroke-width="1.5" marker-end="url(#arr3)"/>
+  <line x1="130" y1="170" x2="180" y2="215" stroke="#475569" stroke-width="1.5" marker-end="url(#arr3)"/>
+  <line x1="130" y1="370" x2="180" y2="290" stroke="#475569" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+  <line x1="520" y1="140" x2="580" y2="140" stroke="#475569" stroke-width="1.5" marker-end="url(#arr3)"/>
+  <line x1="520" y1="215" x2="580" y2="235" stroke="#475569" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+  <!-- Evidence Gate -->
+  <rect x="580" y="285" width="240" height="70" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5" filter="url(#sh3)"/>
+  <text x="700" y="310" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="600">Evidence Gate</text>
+  <text x="700" y="328" text-anchor="middle" fill="#94a3b8" font-size="9">isClaimEligibleRun() per-run</text>
+  <text x="700" y="343" text-anchor="middle" fill="#94a3b8" font-size="9">publicClaimEligible: false (simulated)</text>
+
+  <!-- Warning box -->
+  <rect x="40" y="420" width="820" height="60" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1" filter="url(#sh3)"/>
+  <text x="60" y="445" fill="#fcd34d" font-size="11" font-weight="600">⚠️ Scope Control</text>
+  <text x="60" y="462" fill="#94a3b8" font-size="10">Benchmark results are local-only. No quantitative public claims without provider-reported data. Baseline tag is historical evidence, not the B×C experiment.</text>
+</svg>

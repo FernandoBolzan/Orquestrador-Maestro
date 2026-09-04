@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-const { spawnSync } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -13,7 +13,14 @@ const rootDir = path.resolve(__dirname, "..");
 const packageJson = require(path.join(rootDir, "package.json"));
 const contextBrief = require(path.join(rootDir, "orquestrador", "bin", "context-brief.js"));
 const workflowLock = require(path.join(rootDir, "orquestrador", "bin", "workflow-lock.js"));
+const { resolveGitContext } = require(path.join(rootDir, "orquestrador", "lib", "git-context.js"));
 const workflowState = require(path.join(rootDir, "orquestrador", "bin", "workflow-state.js"));
+const { Memory } = require(path.join(rootDir, "orquestrador", "bin", "memory.js"));
+const { MaestroApplication } = require(path.join(rootDir, "runtime", "application"));
+const { createBridge, createStdioServer, runtimePaths, startSocketRuntime } = require(path.join(rootDir, "runtime", "bridge"));
+const { SocketMaestroClient } = require(path.join(rootDir, "runtime", "client", "socket-maestro-client"));
+const { createProtocolV2Server } = require(path.join(rootDir, "runtime", "protocol", "protocol-v2"));
+const { startTui } = require(path.join(rootDir, "runtime", "tui"));
 const telemetryTimeoutMs = 1200;
 const telemetryConsentVersion = 1;
 
@@ -55,10 +62,51 @@ Uso:
   orquestrador-maestro compact-worklog [--project-path PATH] [--keep N]
   orquestrador-maestro check-dev-gates [--project-path PATH] [--max-entries N] [--strict]
   orquestrador-maestro context brief [--project-path PATH] [--task TEXT] [--max-chars N] [--json]
+  orquestrador-maestro run [--provider ID] [--profile ID] [--workspace PATH] "tarefa"
+  orquestrador-maestro go|plan [--auto] [--project-path PATH] "objetivo"
+  orquestrador-maestro runtime [--project-path PATH]
+  orquestrador-maestro tui [--project-path PATH] [--classic]
+  orquestrador-maestro projects|missions|terminal|providers|skills [opcoes]
+  orquestrador-maestro memory record [--project PATH] --type TYPE --summary TEXT [opcoes]
+  orquestrador-maestro memory search [--project PATH] [--search TEXT] [--type TYPE] [--verified] [--unverified]
+  orquestrador-maestro memory show [--project PATH] --id ID
+  orquestrador-maestro memory timeline [--project PATH] [--limit N]
+  orquestrador-maestro memory promote [--project PATH] --id ID --destination PATH [--apply]
+  orquestrador-maestro memory stats [--project PATH]
+  orquestrador-maestro memory status
+  orquestrador-maestro memory cleanup [--project PATH]
+  orquestrador-maestro benchmark list
+  orquestrador-maestro benchmark run [--scenario ID] [--condition CONDITION]
+  orquestrador-maestro benchmark real
+  orquestrador-maestro benchmark ai-real [--claude] [--openai]
+  orquestrador-maestro run [--provider ID] [--profile ID] [--policy ID] [--workspace PATH] "tarefa"
+  orquestrador-maestro go [--auto] [--plan] [--provider ID] [--interviewer ID] [--project-path PATH] "tarefa"
+  orquestrador-maestro plan [--auto] [--plan] [--provider ID] [--interviewer ID] [--project-path PATH] "tarefa"
+  orquestrador-maestro runs [--project-path PATH]
+  orquestrador-maestro run show <id> [--project-path PATH]
+  orquestrador-maestro run inspect <id> [--project-path PATH]
+  orquestrador-maestro run cancel <id> [--project-path PATH]
+  orquestrador-maestro projects
+  orquestrador-maestro project add <caminho>
+  orquestrador-maestro project show <id> [--project-path PATH]
+  orquestrador-maestro missions [--project-path PATH]
+  orquestrador-maestro mission create [--project-path PATH] "objetivo"
+  orquestrador-maestro mission show <id> [--project-path PATH]
+  orquestrador-maestro terminal list [--project-path PATH]
+  orquestrador-maestro terminals [--project-path PATH]
+  orquestrador-maestro terminal agent <codex|claude|opencode|agy> [--project-path PATH]
+  orquestrador-maestro terminal shell [--project-path PATH] -- <comando> [argumentos]
+  orquestrador-maestro terminal attach <id> [--project-path PATH]
+  orquestrador-maestro terminal close <id> [--project-path PATH]
+  orquestrador-maestro terminal start [--project-path PATH] -- <comando> [argumentos]
+  orquestrador-maestro terminal stop <id> [--project-path PATH]
+  orquestrador-maestro tui [--project-path PATH] [--classic]
+  orquestrador-maestro skills list [--project-path PATH]
+  orquestrador-maestro providers list [--project-path PATH]
+  orquestrador-maestro bridge --stdio [--project-path PATH]
+  orquestrador-maestro runtime [--project-path PATH]
   orquestrador-maestro adapters <list|paths|validate> [id]
   orquestrador-maestro adapters render <junie|goose|openhands> --project-path PATH [--dry-run|--apply]
-  orquestrador-maestro workflow-lock <generate|validate> [opcoes]
-  orquestrador-maestro workflow-state <init|get|validate|approve|advance> [opcoes]
   orquestrador-maestro changelog [--full]
   orquestrador-maestro uninstall [opcoes]
   orquestrador-maestro list-targets [opcoes]
@@ -71,7 +119,7 @@ Opcoes de install/update/uninstall:
   --core-only                 Instala somente .orquestrador e AGENTS.md
   --only <component>          Limita a um componente: core, codex, agents,
                               claude, opencode, cursor, gemini, windsurf,
-                              antigravity, mimo, kimi, grok
+                              antigravity
   --no-tool-profiles          Nao instala perfis globais das ferramentas
   --skip-community-skills     Nao copia a biblioteca comunitaria offload
   --skip-skill-sync           Nao roda o sync de skills
@@ -88,6 +136,7 @@ Opcoes de verify:
 
 Opcoes de doctor:
   --home-path <path>          Diagnostica outro home
+  --repair-ui                 Mostra a correção para Bun/OpenTUI/node-pty
 
 Opcoes de init-dev:
   --project-path <path>       Cria a hierarquia DEV recomendada no projeto
@@ -103,23 +152,6 @@ Opcoes de check-dev-gates:
 
 Opcoes de changelog:
   --full                      Mostra o historico completo embutido no pacote
-
-Opcoes de workflow-lock:
-  --project-path <path>       Projeto consumidor
-  --task-id task/<slug>       Identificador estável da tarefa
-  --workflow <name>           Workflow declarativo (padrão: plan-build-verify)
-  --out <relative-path>       Saída em DEV/WORKFLOWS/
-  --force                     Permite sobrescrever lock existente
-
-Opcoes de workflow-state:
-  --project-path <path>       Projeto consumidor
-  --lockfile <relative-path>  Lock em DEV/WORKFLOWS/
-  --task-id task/<slug>       Identificador estável da tarefa
-  --kind <plan|review|release|side-effect>  Tipo de aprovação
-  --by <name>                 Responsável pela aprovação
-  --to-step <step>            Próxima etapa para advance
-  --force                     Permite reinicializar state existente
-  --json                      Imprime state completo em JSON
 
 Exemplos:
   npm install -g @iapro/orquestrador-maestro-cli
@@ -210,6 +242,11 @@ function commandExists(filePath) {
   return fs.existsSync(filePath);
 }
 
+function executableAvailable(command) {
+  const result = spawnSync(command, ["--version"], { stdio: "ignore", shell: false });
+  return !result.error && result.status === 0;
+}
+
 function runInstall(args, injectedFlags = []) {
   const isWindows = process.platform === "win32";
   const script = path.join(rootDir, isWindows ? "install.ps1" : "install.sh");
@@ -245,9 +282,11 @@ function runVerify(args) {
 function parseDoctorArgs(args) {
   const normalized = normalizeArgs(args);
   let homePath = "";
+  let repairUi = false;
 
   for (let i = 0; i < normalized.length; i += 1) {
     const arg = normalized[i];
+    if (arg === "--repair-ui") { repairUi = true; continue; }
     if (arg === "--home-path") {
       const value = normalized[i + 1];
       if (!value || value.startsWith("--")) {
@@ -260,7 +299,7 @@ function parseDoctorArgs(args) {
     throw new Error(`Parametro desconhecido: ${arg}`);
   }
 
-  return homePath;
+  return { homePath, repairUi };
 }
 
 function runDoctor(args) {
@@ -269,11 +308,12 @@ function runDoctor(args) {
     throw new Error(`Diagnostico nao encontrado: ${script}`);
   }
 
-  const homePath = parseDoctorArgs(args);
+  const { homePath, repairUi } = parseDoctorArgs(args);
   const psArgs = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
   if (homePath) {
     psArgs.push("-HomePath", homePath);
   }
+  if (repairUi) psArgs.push("-RepairUi");
 
   if (process.platform === "win32") {
     return run("powershell", psArgs);
@@ -323,6 +363,464 @@ function runToolAdapters(args) {
     throw new Error(`Manifesto de adaptadores nao encontrado: ${script}`);
   }
   return run(process.execPath, [script, ...args], { cwd: process.cwd() });
+}
+
+function resolveProjectPath(explicitProject) {
+  if (explicitProject) return explicitProject;
+  return process.cwd();
+}
+
+function runMemoryCommand(args) {
+  const memory = new Memory();
+  const [subcommand = "help", ...rest] = args;
+
+  if (subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
+    memory.printHelp();
+    return 0;
+  }
+
+  if (subcommand === "status") {
+    const projectPath = memory.resolveProjectRootFromArgs(rest, process.cwd());
+    const gitCtx = resolveGitContext(projectPath);
+    const stats = memory.stats(gitCtx.repositoryId);
+    console.log(JSON.stringify({
+      repository: gitCtx.remote || gitCtx.projectRoot,
+      repositoryId: gitCtx.repositoryId,
+      workspaceId: gitCtx.workspaceId,
+      branch: gitCtx.branch,
+      detached: gitCtx.detached,
+      head: gitCtx.headCommit,
+      vcs: gitCtx.vcs,
+      memory: {
+        repository: stats.total,
+        byType: stats.byType,
+        verified: stats.verified
+      }
+    }, null, 2));
+    return 0;
+  }
+
+  const project = memory.resolveProjectFromArgs(rest, process.cwd());
+  const projectRoot = memory.resolveProjectRootFromArgs(rest, process.cwd());
+
+  switch (subcommand) {
+    case "record": {
+      const type = memory.getArg(rest, "--type");
+      const summary = memory.getArg(rest, "--summary");
+      if (!type || !summary) {
+        throw new Error("--type and --summary are required");
+      }
+      const obs = memory.record(project, {
+        type,
+        summary,
+        details: memory.getArg(rest, "--details"),
+        files: memory.getArgList(rest, "--files"),
+        tags: memory.getArgList(rest, "--tags"),
+        verified: rest.includes("--verified"),
+        taskId: memory.getArg(rest, "--task"),
+        scope: memory.resolveScope(project, rest, projectRoot),
+        gitContext: resolveGitContext(projectRoot)
+      }, { projectRoot, gitContext: resolveGitContext(projectRoot) });
+      console.log(JSON.stringify(obs, null, 2));
+      return 0;
+    }
+    case "search": {
+      const results = memory.search(project, {
+        type: memory.getArg(rest, "--type"),
+        tags: memory.getArgList(rest, "--tags"),
+        search: memory.getArg(rest, "--search"),
+        from: memory.getArg(rest, "--from"),
+        to: memory.getArg(rest, "--to"),
+        limit: memory.getArgNumber(rest, "--limit"),
+        verified: rest.includes("--verified") ? true : rest.includes("--unverified") ? false : undefined,
+        branch: memory.getArg(rest, "--branch"),
+        scope: memory.getArg(rest, "--scope")
+      });
+      console.log(JSON.stringify(results, null, 2));
+      return 0;
+    }
+    case "show": {
+      const id = memory.getArg(rest, "--id");
+      if (!id) throw new Error("--id is required");
+      const obs = memory.show(project, id);
+      if (!obs) { console.error("Observation not found"); return 1; }
+      console.log(JSON.stringify(obs, null, 2));
+      return 0;
+    }
+    case "timeline": {
+      const timeline = memory.timeline(project, {
+        from: memory.getArg(rest, "--from"),
+        to: memory.getArg(rest, "--to"),
+        limit: memory.getArgNumber(rest, "--limit") || 50
+      });
+      console.log(JSON.stringify(timeline, null, 2));
+      return 0;
+    }
+    case "promote": {
+      const id = memory.getArg(rest, "--id");
+      const destination = memory.getArg(rest, "--destination");
+      if (!id || !destination) throw new Error("--id and --destination are required");
+      const apply = rest.includes("--apply");
+      const result = memory.promote(project, id, destination, { apply, projectRoot });
+      console.log(JSON.stringify(result, null, 2));
+      return 0;
+    }
+    case "stats": {
+      const stats = memory.stats(project);
+      console.log(JSON.stringify(stats, null, 2));
+      return 0;
+    }
+    case "cleanup": {
+      const result = memory.cleanup(project);
+      console.log(JSON.stringify(result, null, 2));
+      return 0;
+    }
+    default:
+      throw new Error(`Unknown memory subcommand: ${subcommand}`);
+  }
+}
+
+function parseArg(args, name) {
+  const idx = args.indexOf(name);
+  if (idx === -1) return null;
+  const val = args[idx + 1];
+  if (!val || val.startsWith("--")) return null;
+  return val;
+}
+
+function parseArgEqual(args, name) {
+  const prefix = `${name}=`;
+  const found = args.find(a => a.startsWith(prefix));
+  return found ? found.slice(prefix.length) : null;
+}
+
+function getArg(args, name) {
+  return parseArg(args, name) || parseArgEqual(args, name);
+}
+
+function runBenchmarkCommand(args) {
+  const [subcommand = "list", ...rest] = args;
+  const runner = require(path.join(rootDir, "benchmarks", "runner.js"));
+  const benchmarkRunner = new runner.BenchmarkRunner();
+
+  if (subcommand === "list") {
+    const scenarios = benchmarkRunner.listScenarios();
+    console.log(JSON.stringify(scenarios, null, 2));
+    return 0;
+  }
+
+  if (subcommand === "run") {
+    const scenarioId = getArg(rest, "--scenario");
+    const condition = getArg(rest, "--condition") || "vanilla";
+    if (!scenarioId) {
+      const scenarios = benchmarkRunner.listScenarios();
+      console.log(JSON.stringify({ scenarios, conditions: ["vanilla", "maestro-core", "maestro-memory"] }, null, 2));
+      return 0;
+    }
+    return benchmarkRunner.runScenario(scenarioId, condition, 1).then(result => {
+      console.log(JSON.stringify(result, null, 2));
+      return 0;
+    });
+  }
+
+  if (subcommand === "real") {
+    const { RealBenchmarkRunner } = require(path.join(rootDir, "benchmarks", "real-benchmark.js"));
+    const realRunner = new RealBenchmarkRunner();
+    const results = realRunner.runAll();
+    const report = realRunner.generateReport(results);
+    console.log(JSON.stringify(report, null, 2));
+    return 0;
+  }
+
+  if (subcommand === "ai-real") {
+    const { RealAIBenchmark } = require(path.join(rootDir, "benchmarks", "real-ai-benchmark.js"));
+    const providers = [];
+    if (rest.includes("--claude")) providers.push("claude");
+    if (rest.includes("--openai")) providers.push("openai");
+    if (providers.length === 0) throw new Error("Informe --claude ou --openai; este comando usa APIs reais e pode gerar custos.");
+    return new RealAIBenchmark().runAll(providers).then((results) => {
+      console.log(JSON.stringify(results, null, 2));
+      return 0;
+    });
+  }
+
+  throw new Error(`Unknown benchmark subcommand: ${subcommand}`);
+}
+
+function parseRuntimeArgs(args, allowed = [], booleanFlags = []) {
+  const options = { projectPath: process.cwd(), values: [] };
+  const normalized = normalizeArgs(args);
+  for (let index = 0; index < normalized.length; index += 1) {
+    const arg = normalized[index];
+    if (!arg.startsWith("--")) { options.values.push(arg); continue; }
+    if (!allowed.includes(arg) && !booleanFlags.includes(arg)) throw new Error(`Parametro desconhecido: ${arg}`);
+    const key = arg.slice(2).replace(/-([a-z])/gu, (_, letter) => letter.toUpperCase());
+    if (booleanFlags.includes(arg)) {
+      options[key] = true;
+      continue;
+    }
+    const value = normalized[index + 1];
+    if (!value || value.startsWith("--")) throw new Error(`Parametro ${arg} exige um valor.`);
+    options[key] = value;
+    index += 1;
+  }
+  return options;
+}
+
+async function createRuntimeApplication(projectPath) {
+  const app = new MaestroApplication({ projectRoot: projectPath });
+  await app.initialize();
+  const { AttentionQueue } = require(path.join(rootDir, "runtime", "attention", "attention-queue"));
+  const { AttentionProducers } = require(path.join(rootDir, "runtime", "attention", "attention-producers"));
+  const { TaskGraphPersistence } = require(path.join(rootDir, "runtime", "planner", "task-graph-persistence"));
+  const { RunTerminalBridge } = require(path.join(rootDir, "runtime", "runs", "run-terminal-bridge"));
+  const project = await app.inspectProject({ projectPath: app.projectRoot });
+  app.attention = new AttentionQueue({ store: app.store, record: (type, data) => app.record(null, type, data) });
+  app.attentionProducers = new AttentionProducers({ queue: app.attention, projectId: project.id });
+  app.taskGraphs = new TaskGraphPersistence({ store: app.store });
+  app.runTerminals = new RunTerminalBridge({ app, store: app.store, terminals: app.terminals, terminalSessions: app.terminalSessions, graphs: app.taskGraphs });
+  return app;
+}
+
+async function handleRunCommand(args) {
+  const [subcommand, ...rest] = args;
+  if (subcommand === "show" || subcommand === "inspect") {
+    const options = parseRuntimeArgs(rest, ["--project-path"]);
+    const runId = options.values[0];
+    if (!runId || options.values.length !== 1) throw new Error("Uso: maestro run inspect <id> [--project-path PATH]");
+    const inspection = await (await createRuntimeApplication(options.projectPath)).inspectRun(runId);
+    if (!inspection) throw new Error(`Run nao encontrado: ${runId}`);
+    console.log(JSON.stringify(inspection, null, 2)); return 0;
+  }
+  if (subcommand === "cancel") {
+    const options = parseRuntimeArgs(rest, ["--project-path"]);
+    const runId = options.values[0];
+    if (!runId || options.values.length !== 1) throw new Error("Uso: maestro run cancel <id> [--project-path PATH]");
+    const cancelled = await (await createRuntimeApplication(options.projectPath)).cancelRun(runId);
+    if (!cancelled) throw new Error(`Run ativo nao encontrado: ${runId}`);
+    console.log(`Cancelamento solicitado para ${runId}.`); return 0;
+  }
+  const options = parseRuntimeArgs(args, ["--provider", "--profile", "--policy", "--workspace", "--project-path", "--model", "--mode", "--agent", "--sandbox"]);
+  const description = options.values.join(" ").trim();
+  if (!description) throw new Error("Informe a tarefa: maestro run [opcoes] \"tarefa\"");
+  const outcome = await (await createRuntimeApplication(options.projectPath)).executeRun({
+    description, providerId: options.provider, profileId: options.profile, policyId: options.policy,
+    workspacePath: options.workspace || options.projectPath, model: options.model, mode: options.mode, agent: options.agent, sandbox: options.sandbox
+  });
+  console.log(JSON.stringify({ run: outcome.run, verification: outcome.verification, changes: outcome.changes }, null, 2));
+  return outcome.run.status === "completed" ? 0 : 1;
+}
+
+async function handleRunsCommand(args) {
+  const options = parseRuntimeArgs(args, ["--project-path"]);
+  if (options.values.length > 0) throw new Error("Uso: maestro runs [--project-path PATH]");
+  console.log(JSON.stringify(await (await createRuntimeApplication(options.projectPath)).listRuns({ projectPath: options.projectPath }), null, 2));
+  return 0;
+}
+
+async function handleProjectsCommand(args) {
+  if (args.length !== 0) throw new Error("Uso: maestro projects");
+  console.log(JSON.stringify(await (await createRuntimeApplication(process.cwd())).listProjects(), null, 2));
+  return 0;
+}
+
+async function handleProjectCommand(args) {
+  const [subcommand, ...rest] = args;
+
+  if (subcommand === "inspect") {
+    const options = parseRuntimeArgs(rest, ["--project-path"]);
+    const targetPath = options.projectPath || process.cwd();
+    const { inspectProject } = require(path.join(rootDir, "runtime", "inspector", "project-inspector"));
+    const snapshot = await inspectProject(targetPath, "local");
+    console.log(JSON.stringify(snapshot, null, 2));
+    return 0;
+  }
+
+  if (subcommand === "add") {
+    if (rest.length !== 1 || rest[0].startsWith("--")) throw new Error("Uso: maestro project add <caminho>");
+    console.log(JSON.stringify(await (await createRuntimeApplication(process.cwd())).registerProject({ projectPath: rest[0] }), null, 2)); return 0;
+  }
+  if (subcommand !== "show") throw new Error("Uso: maestro project show <id> [--project-path PATH] ou maestro project inspect [--project-path PATH]");
+  const options = parseRuntimeArgs(rest, ["--project-path"]);
+  if (options.values.length > 1) throw new Error("Uso: maestro project show <id> [--project-path PATH]");
+  const project = await (await createRuntimeApplication(options.projectPath)).inspectProject({ projectId: options.values[0], projectPath: options.projectPath });
+  console.log(JSON.stringify(project, null, 2)); return 0;
+}
+
+async function handleMissionsCommand(args) {
+  const options = parseRuntimeArgs(args, ["--project-path"]);
+  if (options.values.length) throw new Error("Uso: maestro missions [--project-path PATH]");
+  const app = await createRuntimeApplication(options.projectPath);
+  const project = await app.inspectProject({ projectPath: options.projectPath });
+  console.log(JSON.stringify(await app.listMissions({ projectId: project.id }), null, 2));
+  return 0;
+}
+
+async function handleMissionCommand(args) {
+  const [subcommand, ...rest] = args;
+  const options = parseRuntimeArgs(rest, ["--project-path"]);
+  if (subcommand === "create") {
+    if (options.values.length !== 1) throw new Error('Uso: maestro mission create [--project-path PATH] "objetivo"');
+    const mission = await (await createRuntimeApplication(options.projectPath)).createMission({ workspacePath: options.projectPath, objective: options.values[0] });
+    console.log(JSON.stringify(mission, null, 2));
+    return 0;
+  }
+  if (subcommand === "show") {
+    if (options.values.length !== 1) throw new Error("Uso: maestro mission show <id> [--project-path PATH]");
+    const mission = await (await createRuntimeApplication(options.projectPath)).getMission(options.values[0]);
+    if (!mission) throw new Error(`Missão não encontrada: ${options.values[0]}`);
+    console.log(JSON.stringify(mission, null, 2));
+    return 0;
+  }
+  throw new Error("Uso: maestro mission <create|show>");
+}
+
+async function handleTerminalCommand(args) {
+  const [subcommand, ...rest] = args;
+  if (subcommand === "list") {
+    const options = parseRuntimeArgs(rest, ["--project-path"]);
+    if (options.values.length) throw new Error("Uso: maestro terminal list [--project-path PATH]");
+    const app = await createRuntimeApplication(options.projectPath);
+    const project = await app.inspectProject({ projectPath: options.projectPath });
+    console.log(JSON.stringify(await app.listTerminalSessions({ projectId: project.id }), null, 2)); return 0;
+  }
+  if (subcommand === "agent" || subcommand === "shell") {
+    const separator = rest.indexOf("--");
+    const options = parseRuntimeArgs(separator === -1 ? rest : rest.slice(0, separator), ["--project-path"]);
+    const values = options.values;
+    if (subcommand === "agent") {
+      const providerId = values[0];
+      if (!providerId || values.length !== 1 || separator !== -1) throw new Error("Uso: maestro terminal agent <codex|claude|opencode|agy> [--project-path PATH]");
+      const session = await (await createRuntimeApplication(options.projectPath)).createTerminalSession({ workspacePath: options.projectPath, kind: "agent", providerId, backend: "pty" });
+      console.log(JSON.stringify(session, null, 2)); return 0;
+    }
+    if (separator === -1 || separator === rest.length - 1 || values.length) throw new Error("Uso: maestro terminal shell [--project-path PATH] -- <comando> [argumentos]");
+    const [command, ...commandArgs] = rest.slice(separator + 1);
+    const session = await (await createRuntimeApplication(options.projectPath)).createTerminalSession({ workspacePath: options.projectPath, kind: "shell", command, args: commandArgs, backend: "pty" });
+    console.log(JSON.stringify(session, null, 2)); return 0;
+  }
+  if (subcommand === "attach" || subcommand === "close") {
+    const options = parseRuntimeArgs(rest, ["--project-path"]); const terminalId = options.values[0];
+    if (!terminalId || options.values.length !== 1) throw new Error(`Uso: maestro terminal ${subcommand} <id> [--project-path PATH]`);
+    const app = await createRuntimeApplication(options.projectPath);
+    const successful = subcommand === "attach" ? await app.attachTerminalSession(terminalId) : await app.closeTerminalSession(terminalId);
+    if (!successful) throw new Error(`Sessão não encontrada ou não está disponível: ${terminalId}`);
+    if (subcommand === "close") console.log(`Sessão encerrada: ${terminalId}.`);
+    return 0;
+  }
+  if (subcommand === "stop") {
+    const options = parseRuntimeArgs(rest, ["--project-path"]); const terminalId = options.values[0];
+    if (!terminalId || options.values.length !== 1) throw new Error("Uso: maestro terminal stop <id> [--project-path PATH]");
+    if (!await (await createRuntimeApplication(options.projectPath)).stopTerminal(terminalId)) throw new Error(`Terminal ativo nao encontrado: ${terminalId}`);
+    console.log(`Encerramento solicitado para ${terminalId}.`); return 0;
+  }
+  if (subcommand === "start") {
+    const separator = rest.indexOf("--");
+    if (separator === -1 || separator === rest.length - 1) throw new Error("Uso: maestro terminal start [--project-path PATH] -- <comando> [argumentos]");
+    const options = parseRuntimeArgs(rest.slice(0, separator), ["--project-path"]);
+    const [command, ...commandArgs] = rest.slice(separator + 1);
+    if (options.values.length) throw new Error("Uso: maestro terminal start [--project-path PATH] -- <comando> [argumentos]");
+    const app = await createRuntimeApplication(options.projectPath);
+    const terminal = await app.startTerminal({ workspacePath: options.projectPath, command, args: commandArgs });
+    console.log(`Comando gerenciado iniciado: ${terminal.id}. Aguarde a conclusão; para sessão ao vivo, use \`maestro tui\` ou a extensão VS Code.`);
+    const completed = await app.waitTerminal(terminal.id);
+    console.log(JSON.stringify(completed, null, 2)); return completed?.status === "completed" ? 0 : 1;
+  }
+  throw new Error("Uso: maestro terminal <list|agent|shell|attach|close|start|stop>");
+}
+
+async function handleTerminalsCommand(args) {
+  const options = parseRuntimeArgs(args, ["--project-path"]);
+  if (options.values.length) throw new Error("Uso: maestro terminals [--project-path PATH]");
+  const app = await createRuntimeApplication(options.projectPath);
+  const project = await app.inspectProject({ projectPath: options.projectPath });
+  console.log(JSON.stringify(await app.listTerminalSessions({ projectId: project.id }), null, 2));
+  return 0;
+}
+
+async function handleTuiCommand(args) {
+  const classic = args.includes("--classic");
+  const options = parseRuntimeArgs(args.filter((arg) => arg !== "--classic"), ["--project-path"]);
+  if (options.values.length) throw new Error("Uso: maestro tui [--project-path PATH]");
+  if (classic) { await startTui(await createRuntimeApplication(options.projectPath), { classic: true }); return 0; }
+  const projectRoot = path.resolve(options.projectPath);
+  const paths = runtimePaths(projectRoot);
+  let externalRuntime = false;
+  if (fs.existsSync(paths.tokenPath)) {
+    const probe = new SocketMaestroClient({ socketPath: paths.socketPath, token: fs.readFileSync(paths.tokenPath, "utf8").trim(), watchdog: false, requestTimeoutMs: 500 });
+    try { await probe.initialize(); externalRuntime = true; } catch { externalRuntime = false; } finally { probe.close(); }
+  }
+  if (!externalRuntime) {
+    const daemon = spawn(process.execPath, [__filename, "runtime", "--project-path", projectRoot], { detached: true, stdio: "ignore", shell: false });
+    daemon.unref();
+    const deadline = Date.now() + 5_000;
+    while (!externalRuntime && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      if (!fs.existsSync(paths.tokenPath)) continue;
+      const probe = new SocketMaestroClient({ socketPath: paths.socketPath, token: fs.readFileSync(paths.tokenPath, "utf8").trim(), watchdog: false, requestTimeoutMs: 500 });
+      try { await probe.initialize(); externalRuntime = true; } catch { externalRuntime = false; } finally { probe.close(); }
+    }
+    if (!externalRuntime) throw new Error("O runtime canônico não iniciou dentro de 5 segundos.");
+  }
+  const visualHost = {
+    projectRoot,
+    terminalCapabilities: () => ({ tui: { bun: executableAvailable("bun"), opentui: (() => { try { require.resolve("@opentui/core"); return true; } catch { return false; } })() } })
+  };
+  await startTui(visualHost, { classic: false }); return 0;
+}
+
+function createRuntimeBridge(app, projectRoot) {
+  return createBridge({ projectRoot, services: {
+    projectInspector: { inspect: (params) => app.inspectProject(params) }, skillRegistry: app.skills,
+    providerRegistry: { list: () => app.listProviders() }, runtime: app,
+    runStore: { listRuns: (filters) => app.listRuns(filters), getRun: (id) => app.getRun(id), listArtifacts: (filters) => app.listArtifacts(filters), getArtifact: (id) => app.getArtifact(id), getVerification: (runId) => app.getVerification(runId) }
+  } });
+}
+
+async function handleSkillsCommand(args) {
+  const options = parseRuntimeArgs(args.slice(1), ["--project-path"]);
+  if (args[0] !== "list" || options.values.length > 0) throw new Error("Uso: maestro skills list [--project-path PATH]");
+  console.log(JSON.stringify((await createRuntimeApplication(options.projectPath)).skills.list(), null, 2));
+  return 0;
+}
+
+async function handleProvidersCommand(args) {
+  const options = parseRuntimeArgs(args.slice(1), ["--project-path"]);
+  if (args[0] !== "list" || options.values.length > 0) throw new Error("Uso: maestro providers list [--project-path PATH]");
+  console.log(JSON.stringify(await (await createRuntimeApplication(options.projectPath)).listProviders(), null, 2));
+  return 0;
+}
+
+async function handleBridgeCommand(args) {
+  const hasStdio = args.includes("--stdio");
+  const options = parseRuntimeArgs(args.filter((arg) => arg !== "--stdio"), ["--project-path"]);
+  if (!hasStdio || options.values.length !== 0) throw new Error("Uso: maestro bridge --stdio [--project-path PATH]");
+  const app = await createRuntimeApplication(options.projectPath);
+  const bridge = createBridge({ projectRoot: options.projectPath, services: {
+    projectInspector: { inspect: (params) => app.inspectProject(params) },
+    skillRegistry: app.skills,
+    providerRegistry: { list: () => app.listProviders() },
+    runStore: { listRuns: (filters) => app.listRuns(filters), getRun: (id) => app.getRun(id), listArtifacts: (filters) => app.listArtifacts(filters), getArtifact: (id) => app.getArtifact(id), getVerification: (runId) => app.getVerification(runId) },
+    runtime: app
+  } });
+  createStdioServer(bridge);
+  return new Promise(() => {});
+}
+
+async function handleRuntimeCommand(args) {
+  const options = parseRuntimeArgs(args, ["--project-path"]);
+  if (options.values.length) throw new Error("Uso: maestro runtime [--project-path PATH]");
+  const app = await createRuntimeApplication(options.projectPath);
+  const bridge = createRuntimeBridge(app, options.projectPath);
+  const protocolV2 = createProtocolV2Server({ runtime: app, store: app.store, serverInfo: { name: "maestro-runtime", projectRoot: path.resolve(options.projectPath) } });
+  const runtime = startSocketRuntime(bridge, { projectRoot: options.projectPath, protocolV2 });
+  await runtime.ready;
+  console.log(`Runtime Maestro ativo em ${runtime.paths.socketPath}`);
+  return new Promise((resolve) => {
+    let closing = false;
+    const close = async () => { if (closing) return; closing = true; protocolV2.close(); await runtime.close(); resolve(0); };
+    process.once("SIGINT", close); process.once("SIGTERM", close);
+  });
 }
 
 function getTelemetryConfigPath() {
@@ -687,7 +1185,327 @@ Fluxo recomendado para quem ja tem o Orquestrador instalado:
   return 0;
 }
 
+async function handleGoCommand(args, planningOnly = false) {
+  const options = parseRuntimeArgs(args, ["--project-path", "--provider", "--interviewer", "--max-cost", "--max-parallel"], ["--auto", "--plan"]);
+  const description = options.values.join(" ").trim();
+  if (!description) throw new Error('Informe a intenção: orquestrador-maestro go "tarefa"');
+
+  const core = require(path.join(rootDir, "runtime", "core"));
+  const { IntentRouter } = require(path.join(rootDir, "runtime", "planner", "intent-router"));
+  const { gatherPreflight } = require(path.join(rootDir, "runtime", "planner", "context-preflight"));
+  const { DynamicInterviewer } = require(path.join(rootDir, "runtime", "planner", "dynamic-interviewer"));
+  const { SemanticPlanner } = require(path.join(rootDir, "runtime", "planner", "semantic-planner"));
+  const { PlanApprovalGate } = require(path.join(rootDir, "runtime", "planner", "plan-approval-gate"));
+  const { LegacyExecutionProjection } = require(path.join(rootDir, "runtime", "planner", "legacy-execution-projection"));
+  const { formatTasks } = require(path.join(rootDir, "runtime", "planner", "task-formatter"));
+  const { estimateCost } = require(path.join(rootDir, "runtime", "planner", "model-router"));
+  const { LaneExecutor } = require(path.join(rootDir, "runtime", "planner", "lane-executor"));
+
+  const workspacePath = path.resolve(options.projectPath || process.cwd());
+  const app = await createRuntimeApplication(workspacePath);
+
+  const p = require("@clack/prompts");
+  const notifier = require("node-notifier");
+  p.intro("◆ Orquestrador Maestro");
+
+  const updateTitle = (title) => process.stdout.write(`\x1b]0;Maestro: ${title}\x07`);
+  updateTitle("Inicializando...");
+
+  // Fase 1: Classificação automática via skills
+  const s = p.spinner();
+  s.start("Classificando intenção");
+  const router = new IntentRouter({});
+  const resolved = router.resolve(description);
+
+  if (resolved.primarySkill) {
+    const skillsList = [resolved.primarySkill, ...resolved.chainedSkills].map(sk => sk.id).join(", ");
+    s.stop(`Intenção classificada: ${skillsList} (Profile: ${resolved.profile})`);
+  } else {
+    s.stop("Nenhuma skill específica detectada — usando modo genérico");
+  }
+
+  // Instancia a IntentSession localmente
+  let session;
+  if (!args.includes("--auto")) {
+    session = await app.startIntentSession({ workspacePath, rawIntent: description });
+  }
+
+  // Fase 2: Exploração do codebase
+  updateTitle("Explorando codebase...");
+  s.start("Explorando codebase local");
+  const { ContextEngine } = require(path.join(rootDir, "runtime", "context", "context-engine"));
+  const { SemanticRanker } = require(path.join(rootDir, "runtime", "context", "semantic-ranker"));
+
+  const semanticRanker = new SemanticRanker(app, { localOnly: false });
+  const contextEngine = new ContextEngine({ workspacePath, semanticRanker });
+  const relevantContext = await contextEngine.buildContext(description);
+
+  s.stop(`Codebase explorada. Itens relevantes encontrados: ${relevantContext.items.length}`);
+
+  if (session) {
+    session = await app.updateIntentSession(session.id, { relevantContext });
+  }
+
+  // Fase 3: Entrevista dinâmica (ou batch)
+  updateTitle("Refinamento...");
+  const { AiInterviewer } = require(path.join(rootDir, "runtime", "planner", "ai-interviewer"));
+  const interviewer = new AiInterviewer({
+    resolvedSkills: resolved.allSkills,
+    preflightFacts: relevantContext.items.reduce((acc, item) => ({...acc, [item.key]: item.value}), {}),
+    application: app,
+    intent: description,
+    aiProvider: options.interviewer
+  });
+
+  const spec = args.includes("--auto")
+    ? await interviewer.runBatch()
+    : await interviewer.runInteractive();
+
+  // Fallback interviewers may return per-dimension answers as plain strings;
+  // the MissionBrief contract requires string arrays.
+  const normalizeList = (value) => {
+    if (value === undefined || value === null) return [];
+    if (Array.isArray(value)) return value.filter((entry) => typeof entry === "string" && entry.trim() !== "");
+    return typeof value === "string" && value.trim() !== "" ? [value] : [];
+  };
+
+  let approvedBrief = null;
+  if (session) {
+    approvedBrief = await app.approveMissionBrief(session.id, {
+      objective: spec.answers?.intent || description,
+      requirements: normalizeList(spec.answers?.requirements),
+      userDecisions: normalizeList(spec.answers?.userDecisions),
+      constraints: normalizeList(spec.answers?.constraints),
+      relevantContext: JSON.stringify(spec.answers)
+    });
+  } else {
+    approvedBrief = core.createMissionBrief({
+      id: `brief-${crypto.randomUUID()}`,
+      intentSessionId: `session-${crypto.randomUUID()}`,
+      objective: spec.answers?.intent || description,
+      requirements: normalizeList(spec.answers?.requirements),
+      userDecisions: normalizeList(spec.answers?.userDecisions),
+      constraints: normalizeList(spec.answers?.constraints),
+      relevantContext: JSON.stringify(spec.answers)
+    });
+  }
+
+  // Fase 4: Planejamento semântico
+  updateTitle("Montando plano de engenharia...");
+  s.start("Montando plano de engenharia");
+
+  const providers = await app.listProviders();
+  const availableProviders = providers.filter((p) => p.installed).map((p) => p.id);
+  const selectedProviderId = options.provider || (availableProviders.includes("opencode") ? "opencode" : availableProviders[0]);
+
+  if (!selectedProviderId) {
+    s.stop("Nenhum provedor de execução disponível.");
+    throw new Error("MISSING_EXECUTION_TARGET: No installed provider available for execution");
+  }
+
+  const planner = new SemanticPlanner({
+    application: app,
+    plannerTarget: { providerId: selectedProviderId, model: "default", local: selectedProviderId === "opencode" },
+    localOnly: selectedProviderId === "opencode"
+  });
+
+  const planResult = await planner.plan({
+    missionBrief: approvedBrief,
+    missionId: approvedBrief.id,
+    taskRelevantContext: relevantContext,
+    resolvedSkills: resolved.allSkills,
+    allowFallback: true
+  });
+
+  const { TaskGraphPersistence } = require(path.join(rootDir, "runtime", "planner", "task-graph-persistence"));
+  const { PlanPersistenceHooks } = require(path.join(rootDir, "runtime", "planner", "plan-persistence-hooks"));
+  const graphs = new TaskGraphPersistence({ store: app.store });
+  const project = await app.inspectProject({ projectPath: workspacePath });
+  const persistenceHooks = new PlanPersistenceHooks({
+    graphs,
+    getGraphInput: () => ({
+      graphId: planResult.taskGraph.id,
+      projectId: project.id,
+      planningMode: planResult.planningMode,
+      tasks: planResult.taskGraph.tasks.map((task) => task.metadata?.semantic || task)
+    })
+  });
+
+  const executionTarget = { providerId: selectedProviderId, model: "default" };
+  let tasks = planResult.taskGraph.tasks.map((st) =>
+    LegacyExecutionProjection.projectTask(st.metadata?.semantic || st, { executionTarget })
+  );
+
+  s.stop(`Plano de engenharia montado (${tasks.length} tarefas, modo: ${planResult.planningMode})`);
+
+  const maxWidth = process.stdout.columns || 80;
+  p.note(formatTasks(tasks, maxWidth), "Plano de Engenharia");
+
+  // Fase 4.5: Plan Approval Gate
+  if (args.includes("--auto")) {
+    const autoEval = PlanApprovalGate.evaluateAutoApproval({
+      validationResult: { valid: true, blockers: [] },
+      planningMode: planResult.planningMode
+    }, { autoFallbackAllowed: false });
+
+    if (!autoEval.approved) {
+      await persistenceHooks.onRejected({ missionId: approvedBrief.id, taskGraphId: planResult.taskGraph.id, approval: autoEval });
+      await app.attentionProducers.humanApprovalRequest({ missionId: approvedBrief.id, taskGraphId: planResult.taskGraph.id, evalResult: autoEval, projectId: project.id });
+      p.cancel(`Execução automática rejeitada: ${autoEval.reason}`);
+      return 1;
+    }
+    await persistenceHooks.onApproved({ missionId: approvedBrief.id, taskGraphId: planResult.taskGraph.id, approval: autoEval });
+    if (planningOnly) {
+      await app.createMission({ workspacePath, objective: approvedBrief.objective, status: "awaiting_approval", startedAt: new Date().toISOString() });
+      s.stop("Plano aprovado");
+      updateTitle("Plano aprovado");
+      p.outro("◆ Plano de engenharia aprovado — nenhuma execução será realizada (modo plan)");
+      return 0;
+    }
+  } else {
+    let planApproved = false;
+    while (!planApproved) {
+      const action = await p.select({
+        message: "Como deseja prosseguir com o plano?",
+        options: [
+          { value: "aprovar", label: "Aprovar plano de engenharia" },
+          { value: "inspecionar", label: "Inspecionar critérios de aceite" },
+          { value: "refinar", label: "Refinar missão (Retornar ao M2)" },
+          { value: "cancelar", label: "Cancelar operação" }
+        ]
+      });
+
+      if (p.isCancel(action) || action === "cancelar") {
+        p.cancel("Operação cancelada pelo usuário.");
+        return 0;
+      } else if (action === "aprovar") {
+        const humanApproval = PlanApprovalGate.recordHumanApproval({ taskGraphId: planResult.taskGraph.id, userDecision: "approved" });
+        await persistenceHooks.onApproved({ missionId: approvedBrief.id, taskGraphId: planResult.taskGraph.id, approval: humanApproval });
+        planApproved = true;
+        if (planningOnly) {
+          await app.createMission({ workspacePath, objective: approvedBrief.objective, status: "awaiting_approval", startedAt: new Date().toISOString() });
+          s.stop("Plano aprovado");
+          updateTitle("Plano aprovado");
+          p.outro("◆ Plano de engenharia aprovado — nenhuma execução será realizada (modo plan)");
+          return 0;
+        }
+      } else if (action === "inspecionar") {
+        const details = planResult.taskGraph.tasks.map(t => {
+          const s = t.metadata?.semantic || t;
+          return `• ${s.title}\n  Objetivo: ${s.objective}\n  Critérios: ${(s.acceptanceCriteria || []).join(", ") || "Padrão"}`;
+        }).join("\n\n");
+        p.note(details, "Detalhes das Tarefas");
+      } else if (action === "refinar") {
+        p.cancel("Retornando ao refinamento de missão.");
+        return 0;
+      }
+    }
+  }
+
+  // Fase 5: Execução
+  updateTitle("Executando tarefas...");
+  const mission = await app.createMission({ workspacePath, objective: spec.answers?.intent || description, status: "running", startedAt: new Date().toISOString() });
+  const executor = new LaneExecutor({ application: app, maxParallel: parseInt(options.maxParallel, 10) || 3 });
+  const { TaskLifecycleMonitor } = require(path.join(rootDir, "runtime", "planner", "task-lifecycle-monitor"));
+  const lifecycleMonitor = TaskLifecycleMonitor.attach({ executor, app, graphs, store: app.store });
+
+  const runningTasks = new Set();
+  const updateSpinner = () => {
+    if (runningTasks.size === 0) {
+      s.message("Aguardando tarefas...");
+    } else {
+      const runningNames = Array.from(runningTasks).join(", ");
+      s.message(`Executando (${runningTasks.size}/${tasks.length}): ${runningNames}`);
+    }
+  };
+
+  executor.on("task.started", (e) => {
+    runningTasks.add(e.id);
+    updateSpinner();
+    p.log.info(`▶ Iniciando: ${e.label} — ${e.provider}+${e.model ? e.model.split("/").pop() : "default"}`);
+  });
+
+  executor.on("task.completed", (e) => {
+    runningTasks.delete(e.id);
+    updateSpinner();
+    p.log.success(`✓ Concluído: ${e.label}`);
+  });
+
+  executor.on("task.failed", (e) => {
+    runningTasks.delete(e.id);
+    updateSpinner();
+    p.log.error(`✗ Falha: ${e.label}: ${e.error}`);
+  });
+
+  s.start("Inicializando execução...");
+  const results = await executor.execute(tasks, mission.id);
+  lifecycleMonitor.detach();
+  s.stop("Execução concluída");
+
+  const failures = Object.values(results).filter((r) => r.status === "failed");
+
+  if (failures.length) {
+    updateTitle("Concluído (com falhas)");
+    notifier.notify({ title: "Maestro CLI", message: "Missão concluída com algumas falhas.", sound: true });
+    p.outro("◆ Missão parcialmente concluída (houve falhas)");
+    return 1;
+  } else {
+    updateTitle("Concluído!");
+    notifier.notify({ title: "Maestro CLI", message: "Missão concluída com sucesso! 🚀", sound: true });
+    p.outro("◆ Missão concluída com sucesso! 🚀");
+    return 0;
+  }
+}
+
+async function handleContextCommand(args) {
+  if (args[0] !== "inspect") {
+    throw new Error("Uso: orquestrador-maestro context inspect --intent \"<intent>\" [--project-path PATH]");
+  }
+
+  const options = parseRuntimeArgs(args.slice(1), ["--project-path", "--intent"]);
+  const intent = options.intent || "";
+  const workspacePath = path.resolve(options.projectPath || process.cwd());
+
+  const app = await createRuntimeApplication(workspacePath);
+
+  const { ContextEngine } = require(path.join(rootDir, "runtime", "context", "context-engine"));
+  const { SemanticRanker } = require(path.join(rootDir, "runtime", "context", "semantic-ranker"));
+
+  const semanticRanker = new SemanticRanker(app, { localOnly: false });
+  const contextEngine = new ContextEngine({ workspacePath, semanticRanker });
+
+  console.log(`Construindo contexto para intenção: "${intent}"\n`);
+  const relevantContext = await contextEngine.buildContext(intent);
+
+  let currentKind = "";
+  for (const item of relevantContext.items) {
+    if (currentKind !== item.kind) {
+      currentKind = item.kind;
+      console.log(`\n=== ${currentKind} ===`);
+    }
+    console.log(`✓ ${item.key} (confidence: ${item.confidence}, relevance: ${item.relevance})`);
+    for (const source of item.sources) {
+      console.log(`  └─ Source: ${source.type} ${source.path ? `(${source.path})` : ""}`);
+    }
+  }
+  return 0;
+}
+
 async function dispatch(command, args) {
+  if (command === "go" || command === "plan") {
+    return handleGoCommand(args, command === "plan");
+  }
+
+  if (command === "context") {
+    if (args[0] === "inspect") {
+      return handleContextCommand(args);
+    }
+    return contextBrief.main(args);
+  }
+
+  if (command === "workflow-lock") return workflowLock.main(args);
+  if (command === "workflow-state") return workflowState.main(args);
+
   if (command === "--help" || command === "-h" || command === "help") {
     printHelp();
     return 0;
@@ -739,20 +1557,35 @@ async function dispatch(command, args) {
     return runDevContextHelper("check-dev-gates", args);
   }
 
-  if (command === "context") {
-    return contextBrief.main(args);
+  if (command === "run") return handleRunCommand(args);
+  if (command === "runs") return handleRunsCommand(args);
+  if (command === "projects") return handleProjectsCommand(args);
+  if (command === "project") return handleProjectCommand(args);
+  if (command === "missions") return handleMissionsCommand(args);
+  if (command === "mission") return handleMissionCommand(args);
+  if (command === "terminal") return handleTerminalCommand(args);
+  if (command === "terminals") return handleTerminalsCommand(args);
+  if (command === "tui") return handleTuiCommand(args);
+  if (command === "skills") return handleSkillsCommand(args);
+  if (command === "providers") return handleProvidersCommand(args);
+  if (command === "bridge") return handleBridgeCommand(args);
+  if (command === "runtime") return handleRuntimeCommand(args);
+
+  if (command === "memory") {
+    if (args.includes("--help") || args.includes("-h")) {
+      const memory = new Memory();
+      memory.printHelp();
+      return 0;
+    }
+    return runMemoryCommand(args);
+  }
+
+  if (command === "benchmark") {
+    return runBenchmarkCommand(args);
   }
 
   if (command === "adapters") {
     return runToolAdapters(args);
-  }
-
-  if (command === "workflow-lock") {
-    return workflowLock.main(args);
-  }
-
-  if (command === "workflow-state") {
-    return workflowState.main(args);
   }
 
   if (command === "changelog") {
