@@ -167,7 +167,6 @@ Exemplos:
   orquestrador-maestro install
   orquestrador-maestro verify
   orquestrador-maestro changelog
-  npm update -g @iapro/orquestrador-maestro-cli
   orquestrador-maestro update
   orquestrador-maestro doctor
   orquestrador-maestro init-dev --project-path .
@@ -256,11 +255,100 @@ function executableAvailable(command) {
   return !result.error && result.status === 0;
 }
 
+function getNpmCommand() {
+  return process.platform === "win32" ? "npm.cmd" : "npm";
+}
+
+function resolveGlobalCliPath() {
+  const result = spawnSync(getNpmCommand(), ["root", "-g"], {
+    encoding: "utf8",
+    shell: false
+  });
+
+  if (result.error || result.status !== 0) {
+    throw new Error("Nao foi possivel localizar o diretorio global do npm.");
+  }
+
+  const globalRoot = result.stdout.trim();
+  if (!globalRoot) {
+    throw new Error("O npm nao retornou o diretorio global dos pacotes.");
+  }
+
+  const cliPath = path.join(globalRoot, "@iapro", "orquestrador-maestro-cli", "bin", "orquestrador-maestro.js");
+  if (!fs.existsSync(cliPath)) {
+    throw new Error(`CLI global atualizada nao encontrada: ${cliPath}`);
+  }
+  return cliPath;
+}
+
+function runCliUpdate(args) {
+  if (process.env.ORQUESTRADOR_MAESTRO_SKIP_CLI_UPDATE === "1") {
+    return null;
+  }
+
+  console.log(`Atualizando a CLI npm para ${packageJson.name}@latest...`);
+  const result = spawnSync(getNpmCommand(), [
+    "install", "-g", `${packageJson.name}@latest`, "--force", "--prefer-online"
+  ], { stdio: "inherit", shell: false });
+
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`A atualizacao da CLI npm falhou (codigo ${result.status}).`);
+  }
+
+  const cliPath = resolveGlobalCliPath();
+  const childEnv = { ...process.env, ORQUESTRADOR_MAESTRO_SKIP_CLI_UPDATE: "1" };
+  return spawnSync(process.execPath, [cliPath, "update", ...args], {
+    cwd: process.cwd(),
+    env: childEnv,
+    stdio: "inherit",
+    shell: false
+  });
+}
+
 function runInstall(args, injectedFlags = []) {
   const isWindows = process.platform === "win32";
   const script = path.join(rootDir, isWindows ? "install.ps1" : "install.sh");
   if (!commandExists(script)) {
     throw new Error(`Instalador nao encontrado: ${script}`);
+  }
+
+  const isNonInteractive = args.includes("--non-interactive") || injectedFlags.includes("--non-interactive");
+  const isAllTargets = args.includes("--all-targets") || injectedFlags.includes("--all-targets");
+  const hasOnly = args.some(a => a === "--only") || injectedFlags.some(a => a === "--only");
+
+  if (!isNonInteractive && !isAllTargets && !hasOnly && process.stdin.isTTY) {
+    const homePath = getArg(args, "--home-path") || process.env.HOME || process.env.USERPROFILE || os.homedir();
+    const orquestradorDir = path.join(homePath, ".orquestrador");
+    const detections = detectAllTools(homePath);
+    const state = installState.readState(orquestradorDir) || installState.getDefaultState();
+
+    const detected = [];
+    const notDetected = [];
+    for (const [toolId, detection] of Object.entries(detections)) {
+      const def = getToolDefinition(toolId);
+      if (detection.state === "detected" || detection.state === "configured") {
+        detected.push({ id: toolId, name: def.displayName, state: detection.state });
+      } else {
+        notDetected.push({ id: toolId, name: def.displayName, state: detection.state });
+      }
+    }
+
+    if (detected.length > 0) {
+      console.log("\nDetectando ferramentas...\n");
+      for (const d of detected) {
+        const marker = d.state === "detected" ? "+" : "~";
+        console.log(`  ${marker} ${d.name}`);
+      }
+      for (const d of notDetected) {
+        console.log(`  o ${d.name} nao detectado`);
+      }
+
+      console.log("\nFerramentas detectadas serao instaladas.");
+      console.log("Use --all-targets para instalar todos, ou --only codex,claude para selecao manual.\n");
+    }
   }
 
   if (isWindows) {
@@ -505,6 +593,18 @@ function parseArgEqual(args, name) {
 
 function getArg(args, name) {
   return parseArg(args, name) || parseArgEqual(args, name);
+}
+
+function extractPositionalArg(args, knownFlags) {
+  for (let i = args.length - 1; i >= 0; i--) {
+    const a = args[i];
+    if (!a.startsWith("-")) {
+      const prev = i > 0 ? args[i - 1] : null;
+      if (prev && knownFlags.includes(prev)) continue;
+      return a;
+    }
+  }
+  return null;
 }
 
 function runBenchmarkCommand(args) {
@@ -1181,8 +1281,6 @@ function handleChangelogCommand(args) {
   console.log(excerpt);
   console.log(`
 Fluxo recomendado para quem ja tem o Orquestrador instalado:
-  npm update -g @iapro/orquestrador-maestro-cli
-  orquestrador-maestro changelog
   orquestrador-maestro update
   orquestrador-maestro verify
   orquestrador-maestro doctor`);
@@ -1516,6 +1614,7 @@ function handleTargetsCommand(args) {
   if (subcommand === "list" || subcommand === "detect") {
     const detections = detectAllTools(homePath);
     const state = installState.readState(orquestradorDir) || installState.getDefaultState();
+    const jsonFlag = rest.includes("--json");
 
     const rows = [];
     for (const [toolId, detection] of Object.entries(detections)) {
@@ -1537,12 +1636,22 @@ function handleTargetsCommand(args) {
       installState.writeState(orquestradorDir, state);
     }
 
-    console.log(JSON.stringify(rows, null, 2));
+    if (jsonFlag) {
+      console.log(JSON.stringify(rows, null, 2));
+    } else {
+      const header = "Target".padEnd(20) + "Detection".padEnd(16) + "Enabled";
+      const sep = "-".repeat(44);
+      console.log(header);
+      console.log(sep);
+      for (const r of rows) {
+        console.log(r.Target.padEnd(20) + r.Detection.padEnd(16) + r.Enabled);
+      }
+    }
     return 0;
   }
 
   if (subcommand === "add") {
-    const toolId = getArg(rest, null) || rest.find(a => !a.startsWith("-"));
+    const toolId = extractPositionalArg(rest, ["--home-path"]);
     if (!toolId || !isSupportedTool(toolId)) {
       throw new Error(`Invalid target: ${toolId}. Supported: ${listSupportedTools().join(", ")}`);
     }
@@ -1567,7 +1676,7 @@ function handleTargetsCommand(args) {
   }
 
   if (subcommand === "remove") {
-    const toolId = getArg(rest, null) || rest.find(a => !a.startsWith("-"));
+    const toolId = extractPositionalArg(rest, ["--home-path"]);
     if (!toolId || !isSupportedTool(toolId)) {
       throw new Error(`Invalid target: ${toolId}. Supported: ${listSupportedTools().join(", ")}`);
     }
@@ -1588,23 +1697,43 @@ function handleTargetsCommand(args) {
     const state = installState.readState(orquestradorDir) || installState.getDefaultState();
     const enabledTargets = installState.getEnabledTargets(state);
 
+    if (enabledTargets.length === 0) {
+      console.log(JSON.stringify({ synced: [], message: "No enabled targets to sync." }, null, 2));
+      return 0;
+    }
+
     const syncScript = path.join(orquestradorDir, "sync-skills.sh");
-    if (isWindows) {
-      const psSync = path.join(orquestradorDir, "sync-skills.ps1");
-      if (fs.existsSync(psSync)) {
-        for (const target of enabledTargets) {
-          run("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", psSync, "--apply", "--home-path", homePath, "--only", target]);
+    const psSync = path.join(orquestradorDir, "sync-skills.ps1");
+    const scriptExists = isWindows ? fs.existsSync(psSync) : fs.existsSync(syncScript);
+
+    if (!scriptExists) {
+      console.error(`Error: sync script not found: ${isWindows ? psSync : syncScript}`);
+      return 1;
+    }
+
+    const synced = [];
+    const failed = [];
+    for (const target of enabledTargets) {
+      try {
+        const exitCode = isWindows
+          ? run("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", psSync, "--apply", "--home-path", homePath, "--only", target])
+          : run("bash", [syncScript, "--apply", "--home-path", homePath, "--only", target]);
+        if (exitCode === 0) {
+          synced.push(target);
+        } else {
+          failed.push({ target, exitCode });
         }
-      }
-    } else {
-      if (fs.existsSync(syncScript)) {
-        for (const target of enabledTargets) {
-          run("bash", [syncScript, "--apply", "--home-path", homePath, "--only", target]);
-        }
+      } catch (e) {
+        failed.push({ target, error: e.message });
       }
     }
 
-    console.log(JSON.stringify({ synced: enabledTargets }, null, 2));
+    if (failed.length > 0) {
+      console.error(JSON.stringify({ synced, failed }, null, 2));
+      return 1;
+    }
+
+    console.log(JSON.stringify({ synced }, null, 2));
     return 0;
   }
 
@@ -1641,7 +1770,19 @@ async function dispatch(command, args) {
     return 0;
   }
 
-  if (command === "install" || command === "update") {
+  if (command === "install") {
+    return runInstall(args);
+  }
+
+  if (command === "update") {
+    if (args.includes("--dry-run") || args.includes("--list-targets")) {
+      return runInstall(args);
+    }
+    const childResult = runCliUpdate(args);
+    if (childResult) {
+      if (childResult.error) throw childResult.error;
+      return typeof childResult.status === "number" ? childResult.status : 1;
+    }
     return runInstall(args);
   }
 
