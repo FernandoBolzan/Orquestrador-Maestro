@@ -10,6 +10,12 @@ const fs = require("node:fs");
 const path = require("node:path");
 const https = require("node:https");
 const http = require("node:http");
+const crypto = require("node:crypto");
+
+const PROVIDER_MODELS = {
+  claude: "claude-3-5-sonnet-20241022",
+  openai: "gpt-4o"
+};
 
 class RealAIBenchmark {
   constructor(options = {}) {
@@ -36,7 +42,7 @@ class RealAIBenchmark {
     }
 
     const data = JSON.stringify({
-      model: "claude-3-5-sonnet-20241022",
+      model: PROVIDER_MODELS.claude,
       max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }]
     });
@@ -82,7 +88,7 @@ class RealAIBenchmark {
     }
 
     const data = JSON.stringify({
-      model: "gpt-4o",
+      model: PROVIDER_MODELS.openai,
       max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }]
     });
@@ -154,6 +160,26 @@ ${prompt}`;
     const prompt = this.buildPrompt(scenario, withMaestro);
     
     const startTime = Date.now();
+    const model = PROVIDER_MODELS[provider];
+    const promptHash = crypto.createHash("sha256").update(prompt).digest("hex");
+
+    const baseResult = {
+      resultType: "provider-api-smoke",
+      schemaVersion: 1,
+      benchmark: scenario.id,
+      condition,
+      provider,
+      model,
+      promptHash,
+      timestamp: new Date().toISOString(),
+      evidence: {
+        executionType: "real-execution",
+        publicClaimEligible: false,
+        reproducible: false,
+        isolated: false
+      }
+    };
+
     let result;
 
     try {
@@ -165,23 +191,13 @@ ${prompt}`;
         throw new Error(`Provider desconhecido: ${provider}`);
       }
     } catch (error) {
-      return {
-        benchmark: scenario.id,
-        condition,
-        provider,
-        error: error.message,
-        durationMs: Date.now() - startTime
-      };
+      return { ...baseResult, durationMs: Date.now() - startTime, usage: null, error: error.message };
     }
 
     const duration = Date.now() - startTime;
 
     return {
-      benchmark: scenario.id,
-      condition,
-      provider,
-      model: provider === "claude" ? "claude-3-5-sonnet" : "gpt-4o",
-      promptHash: require("node:crypto").createHash("sha256").update(prompt).digest("hex"),
+      ...baseResult,
       usage: {
         inputTokens: result.usage.input_tokens || result.usage.prompt_tokens,
         outputTokens: result.usage.output_tokens || result.usage.completion_tokens,
@@ -193,12 +209,12 @@ ${prompt}`;
       evidence: {
         executionType: "real-execution",
         publicClaimEligible: false,
-        reproducible: true,
-        isolated: true
+        reproducible: false,
+        isolated: false
       },
       content: result.content.substring(0, 500) + "...",
       durationMs: duration,
-      timestamp: new Date().toISOString()
+      error: null
     };
   }
 
@@ -357,4 +373,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { RealAIBenchmark };
+module.exports = { RealAIBenchmark, PROVIDER_MODELS };

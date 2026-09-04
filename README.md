@@ -80,7 +80,7 @@ npm test
 node benchmarks/real-ai-benchmark.js
 
 # Ver resultados
-cat benchmarks/results/real/real-ai-benchmark-report.json
+cat benchmarks/results/ai-real/ai-benchmark-report.json
 ~~~
 
 ### O que esta medição demonstra
@@ -412,7 +412,7 @@ orquestrador-maestro memory stats \
 
 ~~~bash
 # 1. Registrar decisão
-$ orquestrador-maestro memory record --project auth --type decision --summary "JWT para APIs"
+$ orquestrador-maestro memory record --project auth --type decision --summary "JWT para APIs" --verified
 → obs_dbd7d7ee59754ab6
 
 # 2. Registrar problema

@@ -389,6 +389,97 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       releaseLock(lockPath, owner2);
     });
 
+    it("should recover an orphaned stale recovery marker", () => {
+      const { acquireLock, releaseLock } = require("../orquestrador/lib/lock.js");
+      const lockPath = path.join(tmpDir, "orphan-recovery.lock");
+      const past = new Date(Date.now() - 60000);
+
+      fs.writeFileSync(lockPath, JSON.stringify({
+        pid: 999999,
+        createdAt: past.toISOString(),
+        ownerId: "dead-main-owner"
+      }));
+      fs.writeFileSync(`${lockPath}.recovery`, JSON.stringify({
+        pid: 999998,
+        createdAt: past.toISOString(),
+        ownerId: "dead-recovery-owner",
+        recovering: lockPath
+      }));
+      setMtimeSync(lockPath, past);
+      setMtimeSync(`${lockPath}.recovery`, past);
+
+      const { ownerId } = acquireLock(lockPath);
+      const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+      assert.equal(lock.pid, process.pid);
+      assert.equal(lock.ownerId, ownerId);
+      assert.ok(!fs.existsSync(`${lockPath}.recovery`));
+      releaseLock(lockPath, ownerId);
+    });
+
+    it("should not reclaim a live recovery marker based on age", () => {
+      const { acquireLock, releaseLock } = require("../orquestrador/lib/lock.js");
+      const lockPath = path.join(tmpDir, "live-recovery.lock");
+      const past = new Date(Date.now() - 60000);
+
+      fs.writeFileSync(`${lockPath}.recovery`, JSON.stringify({
+        pid: process.pid,
+        createdAt: past.toISOString(),
+        ownerId: "live-recovery-owner",
+        recovering: lockPath
+      }));
+      setMtimeSync(`${lockPath}.recovery`, past);
+
+      assert.throws(() => acquireLock(lockPath), /Failed to acquire lock after timeout/);
+      assert.ok(fs.existsSync(`${lockPath}.recovery`));
+      fs.unlinkSync(`${lockPath}.recovery`);
+      if (fs.existsSync(lockPath)) {
+        const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+        releaseLock(lockPath, lock.ownerId);
+      }
+    });
+
+    it("should serialize two processes around a stale recovery marker", (context, done) => {
+      const lockPath = path.join(tmpDir, "recovery-contention.lock");
+      const resultDir = path.join(tmpDir, "recovery-contention-results");
+      fs.mkdirSync(resultDir, { recursive: true });
+      const past = new Date(Date.now() - 60000);
+      fs.writeFileSync(lockPath, JSON.stringify({ pid: 999997, createdAt: past.toISOString(), ownerId: "dead-main" }));
+      fs.writeFileSync(`${lockPath}.recovery`, JSON.stringify({ pid: 999996, createdAt: past.toISOString(), ownerId: "dead-recovery", recovering: lockPath }));
+      setMtimeSync(lockPath, past);
+      setMtimeSync(`${lockPath}.recovery`, past);
+
+      const workerScript = `
+const { acquireLock, releaseLock } = require(${JSON.stringify(path.resolve(__dirname, "../orquestrador/lib/lock.js"))});
+const fs = require("node:fs");
+const path = require("node:path");
+const lockPath = ${JSON.stringify(lockPath)};
+const resultPath = path.join(${JSON.stringify(resultDir)}, process.argv[2] + ".json");
+try {
+  const { ownerId } = acquireLock(lockPath);
+  const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+  fs.writeFileSync(resultPath, JSON.stringify({ success: true, ownerId, pid: lock.pid }));
+  releaseLock(lockPath, ownerId);
+} catch (error) {
+  fs.writeFileSync(resultPath, JSON.stringify({ success: false, error: error.message }));
+}
+`;
+      const workerFile = path.join(tmpDir, "recovery-contention-worker.js");
+      fs.writeFileSync(workerFile, workerScript);
+      const workers = [spawn(process.execPath, [workerFile, "one"], { stdio: "ignore" }), spawn(process.execPath, [workerFile, "two"], { stdio: "ignore" })];
+      let exits = 0;
+      const onExit = () => {
+        exits++;
+        if (exits !== workers.length) return;
+        const results = ["one", "two"].map(id => JSON.parse(fs.readFileSync(path.join(resultDir, `${id}.json`), "utf8")));
+        assert.equal(results.filter(result => result.success).length, 2);
+        assert.notEqual(results[0].ownerId, results[1].ownerId);
+        assert.ok(!fs.existsSync(lockPath));
+        assert.ok(!fs.existsSync(`${lockPath}.recovery`));
+        done();
+      };
+      workers.forEach(worker => worker.on("exit", onExit));
+    });
+
     it("should handle two-process lock contention correctly", (context, done) => {
       const lockPath = path.join(tmpDir, "concurrent.lock");
       const resultDir = path.join(tmpDir, "results");

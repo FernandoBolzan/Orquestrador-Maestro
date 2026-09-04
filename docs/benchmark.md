@@ -18,12 +18,19 @@ This document describes the benchmark system in Orquestrador Maestro.
 - **Public Claim Eligible**: `false`
 - **Use**: Performance diagnostics
 
-### 3. Real Provider Benchmarks
-- **Purpose**: Measure actual AI efficiency
-- **Data**: Real API calls with provider-reported tokens
-- **Evidence Type**: `provider-reported`
-- **Public Claim Eligible**: `true` (with evidence)
-- **Use**: Marketing and comparison
+### 3. Provider API Smoke
+- **Purpose**: Verify a real provider API call and its response contract
+- **Data**: Real API calls with provider-reported tokens when available
+- **Evidence Type**: `real-execution`
+- **Reproducible**: `false` unless separately proven
+- **Isolated**: `false` unless separately proven
+- **Public Claim Eligible**: `false`
+- **Use**: Provider connectivity and contract diagnostics
+
+### 4. Future Real Maestro A/B/C Campaign
+- **Status**: NOT EXECUTED
+- **Purpose**: Compare the actual Maestro orchestration workflow under controlled conditions
+- **Public quantitative claims**: NOT ALLOWED until that campaign is executed and evidenced
 
 ## Evidence Classification
 
@@ -31,7 +38,7 @@ This document describes the benchmark system in Orquestrador Maestro.
 |---------------|--------|-------------|---------------|
 | `synthetic` | Generated data | None | Not allowed |
 | `infrastructure` | Local measurements | Low | Not allowed |
-| `provider-reported` | API response | High | Allowed with evidence |
+| `provider-reported` | API response | High | Not allowed for product claims in provider smoke |
 | `tokenizer-estimated` | Local tokenizer | Medium | Allowed with caveats |
 
 ## Provider Contract
@@ -124,7 +131,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 node benchmarks/real-ai-benchmark.js
 ```
 
-**Note**: `real-ai-benchmark.js` is a provider API smoke test. It measures raw API response quality, not the Maestro product workflow. It is not eligible for product performance claims (`publicClaimEligible: false`).
+**Note**: `real-ai-benchmark.js` is a provider API smoke test. It calls a real provider and may collect provider-reported token counts, but it does not execute Maestro's actual orchestration workflow. Its `reproducible` and `isolated` evidence flags are `false`, and it is not eligible for product performance claims (`publicClaimEligible: false`). A real Maestro A/B/C campaign has NOT been executed.
 
 ## Public Claims
 
@@ -166,8 +173,8 @@ Results must include:
 7. **Timestamp**: When the benchmark ran
 8. **Commit**: Which code version was tested
 9. **Token source**: `provider-reported` or `tokenizer-estimated`
-10. **Reproducible**: Whether the result is reproducible
-11. **Isolated**: Whether the run was isolated from other runs
+10. **Reproducible**: Whether the result is reproducible; provider smoke reports `false`
+11. **Isolated**: Whether the run was isolated from other runs; provider smoke reports `false`
 
 ## Marketing Guidelines
 

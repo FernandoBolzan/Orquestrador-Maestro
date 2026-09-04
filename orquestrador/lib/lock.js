@@ -9,6 +9,57 @@ const LOCK_STALE_MS = 30000;
 const LOCK_RETRY_MS = 50;
 const LOCK_MAX_RETRIES = 100;
 
+function isPidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function readJsonFile(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8").trim());
+  } catch {
+    return null;
+  }
+}
+
+function tryReclaimStaleRecoveryMarker(recoveryPath) {
+  let stat;
+  try {
+    stat = fs.statSync(recoveryPath);
+  } catch {
+    return false;
+  }
+
+  if (Date.now() - stat.mtimeMs <= LOCK_STALE_MS) return false;
+
+  const marker = readJsonFile(recoveryPath);
+  if (!marker || !Number.isInteger(marker.pid) || !marker.ownerId || isPidAlive(marker.pid)) {
+    return false;
+  }
+
+  const verifiedMarker = readJsonFile(recoveryPath);
+  if (
+    !verifiedMarker
+    || verifiedMarker.ownerId !== marker.ownerId
+    || isPidAlive(verifiedMarker.pid)
+  ) {
+    return false;
+  }
+
+  try {
+    fs.unlinkSync(recoveryPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function acquireLock(lockPath) {
   const dir = path.dirname(lockPath);
   if (!fs.existsSync(dir)) {
@@ -19,6 +70,15 @@ function acquireLock(lockPath) {
   const deadline = Date.now() + LOCK_RETRY_MS * LOCK_MAX_RETRIES;
 
   while (Date.now() < deadline) {
+    const recoveryPath = `${lockPath}.recovery`;
+    if (fs.existsSync(recoveryPath)) {
+      // While recovery exists, no cooperating process may install a main lock.
+      tryReclaimStaleRecoveryMarker(recoveryPath);
+      const jitter = Math.floor(Math.random() * LOCK_RETRY_MS);
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, LOCK_RETRY_MS + jitter);
+      continue;
+    }
+
     try {
       const lockData = JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString(), ownerId });
       fs.writeFileSync(lockPath, lockData, { flag: "wx", mode: 0o600 });
@@ -32,15 +92,7 @@ function acquireLock(lockPath) {
           const age = Date.now() - lockAge;
 
           if (age > LOCK_STALE_MS) {
-            let pidAlive = false;
-            try {
-              process.kill(lock.pid, 0);
-              pidAlive = true;
-            } catch {
-              pidAlive = false;
-            }
-
-            if (!pidAlive) {
+            if (!isPidAlive(lock.pid)) {
               tryRecoverStaleLock(lockPath, lock);
             }
           }
@@ -92,22 +144,14 @@ function tryRecoverStaleLock(lockPath, originalLock) {
       return false;
     }
 
-    let pidAlive = false;
-    try {
-      process.kill(currentLock.pid, 0);
-      pidAlive = true;
-    } catch {
-      pidAlive = false;
-    }
-
-    if (pidAlive) {
+    if (isPidAlive(currentLock.pid)) {
       return false;
     }
 
     try {
       const verifyContent = fs.readFileSync(lockPath, "utf8").trim();
       const verifyLock = JSON.parse(verifyContent);
-      if (verifyLock.ownerId !== originalLock.ownerId) {
+      if (verifyLock.ownerId !== originalLock.ownerId || isPidAlive(verifyLock.pid)) {
         return false;
       }
       fs.unlinkSync(lockPath);
@@ -151,4 +195,11 @@ function getLockPath(filePath) {
   return `${filePath}.lock`;
 }
 
-module.exports = { acquireLock, releaseLock, withLock, getLockPath };
+module.exports = {
+  acquireLock,
+  releaseLock,
+  withLock,
+  getLockPath,
+  isPidAlive,
+  tryReclaimStaleRecoveryMarker
+};
