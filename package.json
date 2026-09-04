@@ -1,6 +1,6 @@
 {
   "name": "@iapro/orquestrador-maestro-cli",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "CLI npm para instalar, atualizar, verificar e remover o Orquestrador Maestro no usuário atual, com skills nativas enxutas e biblioteca externa para reduzir tokens.",
   "bin": {
     "orquestrador-maestro": "bin/orquestrador-maestro.js"
@@ -139,7 +139,7 @@
     "@opentui/core": "^0.5.1"
   },
   "dependencies": {
-    "@clack/prompts": "^1.7.0",
+    "@clack/prompts": "0.11.0",
     "@xterm/headless": "^5.5.0",
     "node-notifier": "10.0.1",
     "node-pty": "^1.1.0"

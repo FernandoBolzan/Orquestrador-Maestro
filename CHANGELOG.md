@@ -4,6 +4,11 @@
 
 As próximas mudanças serão registradas aqui.
 
+## 0.2.2 - 2026-09-04
+
+- Corrigida a compatibilidade do planejador CommonJS com `@clack/prompts` usando a versão CJS suportada `0.11.0`.
+- O workflow de testes Ubuntu agora instala Bun para executar os testes de ciclo de vida da TUI OpenTUI.
+
 ## 0.2.1 - 2026-09-04
 
 - Corrigido o instalador PowerShell para ignorar o estado local em `orquestrador/runtime` e diretórios reparse, evitando cópias gigantes ou travamentos ao instalar a partir de um clone de desenvolvimento.
