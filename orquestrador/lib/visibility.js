@@ -126,6 +126,7 @@ function rankObservations(observations, taskTokens, currentContext, options = {}
       if (obs.scope.level === "branch" && obs.scope.branch === currentContext.branch) score += 4;
       if (obs.scope.level === "workspace" && obs.scope.workspaceId === currentContext.workspaceId) score += 2;
       if (obs.scope.level === "repository") score += 1;
+      if (obs.scope.level === "task" && obs.scope.taskId === options.taskId) score += 6;
     }
 
     if (obs.timestamp) {

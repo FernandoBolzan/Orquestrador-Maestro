@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Memory } = require("../orquestrador/bin/memory.js");
+const { Memory, canonicalizeRelativePath } = require("../orquestrador/bin/memory.js");
 
 describe("Memory", () => {
   let tmpDir;
@@ -17,6 +17,10 @@ describe("Memory", () => {
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("canonicalizes Windows-style relative destinations for safe checks", () => {
+    assert.equal(canonicalizeRelativePath("DEV\\DECISIONS.md", "\\"), "DEV/DECISIONS.md");
   });
 
   describe("generateId", () => {

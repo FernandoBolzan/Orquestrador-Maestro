@@ -688,8 +688,8 @@ try {
 
       // Record task-scoped observation
       memory.record(projectId, {
-        type: "discovery",
-        summary: "Task-specific finding",
+        type: "attempt",
+        summary: "Opaque finding",
         taskId: "task-123",
         source: { tool: "test" }
       }, { projectRoot: gitDir, gitContext });
@@ -704,7 +704,7 @@ try {
       // Search with taskId should prefer task-scoped
       const taskResults = memory.searchWithVisibility(projectId, gitContext, {
         taskId: "task-123",
-        search: "Task-specific",
+        search: "unrelated query",
         rank: true
       });
       assert.ok(taskResults.length >= 1, "Should find task-scoped observation");
@@ -715,14 +715,16 @@ try {
       const gitDir = path.join(tmpDir, "git-task-cli");
       fs.mkdirSync(gitDir, { recursive: true });
       initGit(gitDir);
-      const memory = new Memory({ baseDir: path.join(tmpDir, "mem-cli") });
+      const fakeHome = path.join(tmpDir, "fake-home");
+      const memoryBaseDir = path.join(fakeHome, ".orquestrador", "memory");
+      const memory = new Memory({ baseDir: memoryBaseDir });
       const { resolveGitContext } = require("../orquestrador/lib/git-context.js");
       const gitContext = resolveGitContext(gitDir);
       const projectId = memory.resolveRepositoryId(gitDir);
 
       // Record task-A observation
       memory.record(projectId, {
-        type: "discovery",
+        type: "attempt",
         summary: "Alpha task finding",
         taskId: "task/alpha",
         source: { tool: "test" }
@@ -730,7 +732,7 @@ try {
 
       // Record task-B observation
       memory.record(projectId, {
-        type: "discovery",
+        type: "attempt",
         summary: "Beta task finding",
         taskId: "task/beta",
         source: { tool: "test" }
@@ -744,6 +746,11 @@ try {
       }, { projectRoot: gitDir, gitContext });
 
       const cli = path.resolve(__dirname, "../bin/orquestrador-maestro.js");
+      const childEnv = {
+        ...process.env,
+        HOME: fakeHome,
+        USERPROFILE: fakeHome
+      };
 
       // Run context-brief with --task-id task/alpha (need task text to enable memory)
       const alphaResult = spawnSync(process.execPath, [cli, "context", "brief",
@@ -751,7 +758,7 @@ try {
         "--task", "continue a implementação do dashboard",
         "--task-id", "task/alpha",
         "--json"
-      ], { cwd: path.resolve(__dirname, ".."), encoding: "utf8" });
+      ], { cwd: path.resolve(__dirname, ".."), encoding: "utf8", env: childEnv });
 
       assert.equal(alphaResult.status, 0, `CLI should succeed: ${alphaResult.stderr}`);
       const alphaOutput = JSON.parse(alphaResult.stdout);
@@ -764,7 +771,7 @@ try {
         "--task", "continue a implementação do dashboard",
         "--task-id", "task/beta",
         "--json"
-      ], { cwd: path.resolve(__dirname, ".."), encoding: "utf8" });
+      ], { cwd: path.resolve(__dirname, ".."), encoding: "utf8", env: childEnv });
 
       assert.equal(betaResult.status, 0, `CLI should succeed: ${betaResult.stderr}`);
       const betaOutput = JSON.parse(betaResult.stdout);

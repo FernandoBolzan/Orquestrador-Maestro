@@ -21,6 +21,10 @@ const SAFE_DESTINATIONS = [
   "DEV/RUNBOOKS"
 ];
 
+function canonicalizeRelativePath(relative, separator = path.sep) {
+  return relative.split(separator).join("/");
+}
+
 const PROMPT_INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?previous\s+instructions/i,
   /disregard\s+(all\s+)?prior/i,
@@ -340,6 +344,11 @@ class Memory {
       const searchTokens = this.tokenize(query.search);
       if (searchTokens.length > 0) {
         observations = observations.filter(obs => {
+          const isExactTaskMatch = query.taskId
+            && obs.scope?.level === "task"
+            && obs.scope.taskId === query.taskId;
+          if (isExactTaskMatch) return true;
+
           const obsTokens = this.tokenize(
             (obs.summary || "") + " " + (obs.details || "") + " " + (obs.tags || []).join(" ")
           );
@@ -409,20 +418,30 @@ class Memory {
     const resolvedRoot = resolveProjectRoot(projectRoot) || path.resolve(projectRoot);
     const destPath = path.resolve(resolvedRoot, destination);
 
-    if (!destPath.startsWith(path.resolve(resolvedRoot))) {
+    const relativeDestination = path.relative(resolvedRoot, destPath);
+    if (
+      relativeDestination === ".."
+      || relativeDestination.startsWith(`..${path.sep}`)
+      || path.isAbsolute(relativeDestination)
+    ) {
       throw new Error("Destination must be within project root");
     }
 
     try {
       const realDestPath = fs.realpathSync(path.dirname(destPath));
-      if (!realDestPath.startsWith(path.resolve(resolvedRoot))) {
+      const realRelativeDestination = path.relative(resolvedRoot, realDestPath);
+      if (
+        realRelativeDestination === ".."
+        || realRelativeDestination.startsWith(`..${path.sep}`)
+        || path.isAbsolute(realRelativeDestination)
+      ) {
         throw new Error("Symlink escape detected");
       }
     } catch (err) {
       if (err.code !== "ENOENT") throw err;
     }
 
-    const normalizedDest = path.normalize(destination);
+    const normalizedDest = canonicalizeRelativePath(relativeDestination);
     const isSafeDest = SAFE_DESTINATIONS.some(d => normalizedDest === d || normalizedDest.startsWith(d + "/"));
     if (!isSafeDest) {
       throw new Error(`Destination must be one of: ${SAFE_DESTINATIONS.join(", ")}`);
@@ -824,4 +843,4 @@ if (require.main === module) {
   process.exitCode = main();
 }
 
-module.exports = { Memory };
+module.exports = { Memory, canonicalizeRelativePath };
