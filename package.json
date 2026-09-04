@@ -95,6 +95,7 @@
     "outdated:all": "node scripts/audit-dependencies.js outdated",
     "pack:dry-run": "npm pack --dry-run",
     "test": "node --test tests/*.test.js",
+    "test:smoke": "node scripts/test-smoke.js",
     "test:xkiro": "node scripts/test-xkiro.js",
     "validate": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-public.ps1 && powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-skills.ps1"
   },

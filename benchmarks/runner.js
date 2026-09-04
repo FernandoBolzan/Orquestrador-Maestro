@@ -283,7 +283,7 @@ class BenchmarkRunner {
       report.evidenceGate.independentAcceptance = true;
       report.evidenceGate.reproducible = firstEligible.evidence?.reproducible === true;
       report.evidenceGate.isolated = firstEligible.evidence?.isolated === true;
-      report.evidenceGate.publicClaimEligible = true;
+      report.evidenceGate.publicClaimEligible = !hasMixedEvidence;
     }
     
     for (const [key, runs] of Object.entries(grouped)) {

@@ -171,12 +171,14 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
         type: "discovery",
         summary: "Verified obs",
         verified: true,
+        timestamp: new Date(Date.now() - 2000).toISOString(),
         source: { tool: "test" }
       }, { projectRoot: gitDir, gitContext });
 
       memory.record(projectId, {
         type: "discovery",
         summary: "Unverified obs",
+        timestamp: new Date(Date.now() - 1000).toISOString(),
         source: { tool: "test" }
       }, { projectRoot: gitDir, gitContext });
 
@@ -311,6 +313,72 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       // Verify lock is released
       assert.ok(!fs.existsSync(lockPath), "Lock should be released");
     });
+
+    it("should recover stale lock via .recovery protocol", () => {
+      const { acquireLock, releaseLock, getLockPath } = require("../orquestrador/lib/lock.js");
+      const lockPath = path.join(tmpDir, "stale-recovery.lock");
+
+      // 1. Write a stale lock with a dead PID (simulate dead process)
+      const staleLock = JSON.stringify({
+        pid: 999999,
+        createdAt: new Date(Date.now() - 60000).toISOString(),
+        ownerId: "dead-process-owner"
+      });
+      fs.writeFileSync(lockPath, staleLock, "utf8");
+      // Age the file mtime so stale detection triggers
+      const past = new Date(Date.now() - 60000);
+      fs.utimesSync(lockPath, past, past);
+
+      // 2. New process tries to acquire — should recover via .recovery protocol
+      const { ownerId } = acquireLock(lockPath);
+
+      // 3. Lock should now belong to us
+      const content = fs.readFileSync(lockPath, "utf8");
+      const lock = JSON.parse(content);
+      assert.equal(lock.pid, process.pid, "Lock should be owned by current PID");
+      assert.notEqual(lock.ownerId, "dead-process-owner", "Lock should have new owner");
+      assert.equal(lock.ownerId, ownerId, "Lock ownerId should match returned ownerId");
+
+      // 4. Recovery file should be cleaned up
+      assert.ok(!fs.existsSync(`${lockPath}.recovery`), "Recovery file should be cleaned up");
+
+      releaseLock(lockPath, ownerId);
+    });
+
+    it("should not interfere when two recovery attempts race", () => {
+      const { acquireLock, releaseLock } = require("../orquestrador/lib/lock.js");
+      const lockPath = path.join(tmpDir, "stale-race.lock");
+
+      // 1. Write a stale lock
+      const staleLock = JSON.stringify({
+        pid: 999999,
+        createdAt: new Date(Date.now() - 60000).toISOString(),
+        ownerId: "dead-owner"
+      });
+      fs.writeFileSync(lockPath, staleLock, "utf8");
+      const past = new Date(Date.now() - 60000);
+      fs.utimesSync(lockPath, past, past);
+
+      // 2. First recovery should succeed
+      const { ownerId: owner1 } = acquireLock(lockPath);
+      const content = fs.readFileSync(lockPath, "utf8");
+      const lock = JSON.parse(content);
+      assert.equal(lock.pid, process.pid, "First recovery should succeed");
+      assert.equal(lock.ownerId, owner1, "Owner should match");
+
+      // 3. Release, then re-acquire — should work cleanly (no leftover recovery file)
+      releaseLock(lockPath, owner1);
+      assert.ok(!fs.existsSync(`${lockPath}.recovery`), "Recovery file should be cleaned up after release");
+
+      // 4. Second acquire on same path should work
+      const { ownerId: owner2 } = acquireLock(lockPath);
+      const content2 = fs.readFileSync(lockPath, "utf8");
+      const lock2 = JSON.parse(content2);
+      assert.equal(lock2.pid, process.pid, "Second acquire should succeed");
+      assert.notEqual(owner1, owner2, "Owners should be different");
+
+      releaseLock(lockPath, owner2);
+    });
   });
 
   describe("#15 Adapter Noise Filtering", () => {
@@ -437,7 +505,7 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       assert.ok(report.evidenceGate.hasMixedEvidence, "Should detect mixed evidence");
       assert.equal(report.evidenceGate.allRunsCount, 2, "Should count all runs");
       assert.equal(report.evidenceGate.claimEligibleRunsCount, 1, "Should count claim-eligible runs");
-      assert.equal(report.evidenceGate.publicClaimEligible, true, "Gate should be eligible");
+      assert.equal(report.evidenceGate.publicClaimEligible, false, "Global should be false when mixed evidence");
       assert.ok(report.summary.claimEligibleRuns["test-001_maestro-memory"], "Should have claim-eligible summary");
       assert.ok(!report.summary.claimEligibleRuns["test-001_vanilla"], "Should not have vanilla in claim-eligible summary");
     });
@@ -459,6 +527,33 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       const report = runner.generateReport(infraResults);
       assert.equal(report.evidenceGate.publicClaimEligible, false, "Should be false when no eligible runs");
       assert.equal(report.evidenceGate.claimEligibleRunsCount, 0, "Should have 0 eligible runs");
+    });
+
+    it("should set publicClaimEligible=true when all runs are eligible (no mixed)", () => {
+      const { BenchmarkRunner } = require("../benchmarks/runner.js");
+      const runner = new BenchmarkRunner();
+
+      const allEligibleResults = [
+        {
+          benchmark: "test-001", condition: "vanilla", run: 1,
+          usage: { inputTokens: 100, tokenSource: "provider-reported" },
+          validation: { passed: true },
+          evidence: { executionType: "real-execution", publicClaimEligible: true, reproducible: true, isolated: true },
+          metadata: { durationMs: 100 }
+        },
+        {
+          benchmark: "test-001", condition: "maestro-memory", run: 1,
+          usage: { inputTokens: 80, tokenSource: "provider-reported" },
+          validation: { passed: true },
+          evidence: { executionType: "real-execution", publicClaimEligible: true, reproducible: true, isolated: true },
+          metadata: { durationMs: 100 }
+        }
+      ];
+
+      const report = runner.generateReport(allEligibleResults);
+      assert.equal(report.evidenceGate.hasMixedEvidence, false, "Should not have mixed evidence");
+      assert.equal(report.evidenceGate.publicClaimEligible, true, "Should be true when all eligible");
+      assert.equal(report.evidenceGate.claimEligibleRunsCount, 2, "Should have 2 eligible runs");
     });
 
     it("should have all runs in allRuns summary", () => {
