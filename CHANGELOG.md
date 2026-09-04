@@ -4,6 +4,11 @@
 
 As próximas mudanças serão registradas aqui.
 
+## 0.2.3 - 2026-09-04
+
+- Ajustada a matriz de testes nativos do Ubuntu para Node 20 e 22, que são as versões suportadas pelo backend OpenTUI no runner.
+- A CLI comum continua declarando compatibilidade com Node 18; os testes completos de TUI/PTY ficam concentrados nas versões com suporte nativo comprovado.
+
 ## 0.2.2 - 2026-09-04
 
 - Corrigida a compatibilidade do planejador CommonJS com `@clack/prompts` usando a versão CJS suportada `0.11.0`.

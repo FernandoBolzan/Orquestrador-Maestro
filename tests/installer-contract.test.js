@@ -13,7 +13,7 @@ test("installer contract stays aligned with the published package", () => {
   const shellBootstrap = fs.readFileSync(path.join(ROOT, "scripts", "bootstrap-install.sh"), "utf8");
   const packageVersion = packageJson.version;
 
-  assert.equal(packageVersion, "0.2.2");
+  assert.equal(packageVersion, "0.2.3");
   assert.match(powershellBootstrap, new RegExp(`\\$packageVersion = "${packageVersion.replaceAll(".", "\\.")}"`));
   assert.match(shellBootstrap, new RegExp(`PACKAGE_VERSION="${packageVersion.replaceAll(".", "\\.")}"`));
 });
