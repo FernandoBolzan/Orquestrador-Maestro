@@ -150,9 +150,34 @@ function Copy-WithPlaceholders {
   }
 }
 
+function Get-TreeFiles {
+  param([string]$SourceDir)
+  $pending = New-Object System.Collections.Generic.Stack[string]
+  $pending.Push((Get-FullPath -Path $SourceDir))
+
+  while ($pending.Count -gt 0) {
+    $currentDir = $pending.Pop()
+
+    foreach ($file in Get-ChildItem -LiteralPath $currentDir -File -Force) {
+      Write-Output $file
+    }
+
+    foreach ($directory in Get-ChildItem -LiteralPath $currentDir -Directory -Force) {
+      $relativeDirectory = Get-RelativePath -BasePath $SourceDir -Path $directory.FullName
+      $isLocalRuntime = $relativeDirectory.Equals("runtime", [StringComparison]::OrdinalIgnoreCase) -or
+        $relativeDirectory.StartsWith("runtime\", [StringComparison]::OrdinalIgnoreCase)
+      $isReparsePoint = ($directory.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0
+      if ($isLocalRuntime -or $isReparsePoint) {
+        continue
+      }
+      $pending.Push($directory.FullName)
+    }
+  }
+}
+
 function Copy-TreeWithPlaceholders {
   param([string]$SourceDir, [string]$DestinationDir)
-  foreach ($file in Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force) {
+  foreach ($file in Get-TreeFiles -SourceDir $SourceDir) {
     $relative = Get-RelativePath -BasePath $SourceDir -Path $file.FullName
     $dest = Join-Path $DestinationDir $relative
     Copy-WithPlaceholders -SourceFile $file.FullName -DestinationFile $dest
@@ -172,7 +197,7 @@ function Backup-MappedDirectory {
   if (-not (Test-Path -LiteralPath $DestinationDir)) { return }
   New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
   $backupTarget = Join-Path $BackupDir $Label
-  foreach ($sourceFile in Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force) {
+  foreach ($sourceFile in Get-TreeFiles -SourceDir $SourceDir) {
     $relative = Get-RelativePath -BasePath $SourceDir -Path $sourceFile.FullName
     $existingFile = Join-Path $DestinationDir $relative
     if (Test-Path -LiteralPath $existingFile) {
@@ -288,7 +313,7 @@ function Uninstall-MappedDirectory {
   if (-not (Test-PathUnderRoot -Path $DestinationDir -Root $HomePath)) {
     throw "Refusing to uninstall target outside home: $DestinationDir"
   }
-  foreach ($sourceFile in Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force) {
+  foreach ($sourceFile in Get-TreeFiles -SourceDir $SourceDir) {
     $relative = Get-RelativePath -BasePath $SourceDir -Path $sourceFile.FullName
     $dest = Join-Path $DestinationDir $relative
     if (Test-Path -LiteralPath $dest) {

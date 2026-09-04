@@ -29,6 +29,13 @@ try {
   & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "install.ps1") @installArgs
   if ($LASTEXITCODE -ne 0) { throw "Install failed." }
 
+  if (Test-Path -LiteralPath (Join-Path $TempHome ".orquestrador\runtime")) {
+    throw "Installer copied local runtime state into the installed core."
+  }
+  if (-not (Test-Path -LiteralPath (Join-Path $TempHome ".orquestrador\rules.md"))) {
+    throw "Installer did not copy the public core rules."
+  }
+
   if ($Full) {
     $personalBackups = Get-ChildItem -LiteralPath (Join-Path $TempHome ".orquestrador-public-backups") -Recurse -File -Filter "personal.jsonl" -ErrorAction SilentlyContinue |
       Where-Object { $_.FullName -match '[\\/].codex__profile[\\/]sessions[\\/]personal\.jsonl$' }

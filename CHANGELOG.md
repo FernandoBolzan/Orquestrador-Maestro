@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+As próximas mudanças serão registradas aqui.
+
+## 0.2.1 - 2026-09-04
+
+- Corrigido o instalador PowerShell para ignorar o estado local em `orquestrador/runtime` e diretórios reparse, evitando cópias gigantes ou travamentos ao instalar a partir de um clone de desenvolvimento.
+- Backup e desinstalação passaram a usar a mesma enumeração segura do instalador.
+- Bootstraps PowerShell e Bash alinhados ao pacote publicado `0.2.0`.
+- Adicionadas regressões para o contrato de versão e exclusão do runtime local.
+- Mantido `node-notifier` 10.0.1 e fixado `uuid` 11.1.1 via `overrides`, removendo as vulnerabilidades reportadas pelo `npm audit` sem retirar as notificações da CLI.
+- Adicionado teste de compatibilidade da API de notificação e da versão segura de `uuid`.
+
 ## 0.2.0 - 2026-09-04
 
 Esta é uma atualização maior, que incorpora a maior parte da evolução proposta nos PRs #5, #6 e #7. O PR #7 é o eixo principal da entrega, especialmente pela memória episódica, pelo benchmark e pela ampliação da CLI.
