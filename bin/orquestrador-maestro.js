@@ -1698,6 +1698,19 @@ function handleTargetsCommand(args) {
     const def = getToolDefinition(toolId);
     const managedFiles = [];
     const managedDirectories = [];
+    const createdFiles = [];
+    const createdDirectories = [];
+    const preexistingFiles = new Set();
+
+    function rollbackCreated() {
+      for (const f of createdFiles) {
+        try { fs.unlinkSync(path.join(homePath, f)); } catch {}
+      }
+      for (const d of createdDirectories.sort().reverse()) {
+        try { fs.rmdirSync(path.join(homePath, d)); } catch {}
+      }
+    }
+
     let installSuccess = false;
 
     try {
@@ -1705,14 +1718,22 @@ function handleTargetsCommand(args) {
         const destDir = path.join(homePath, skillTarget, "orquestrador-maestro");
         const srcDir = path.join(rootDir, "orquestrador", "skills", "orquestrador-maestro");
         if (fs.existsSync(srcDir)) {
+          const dirCreated = !fs.existsSync(destDir);
           fs.mkdirSync(destDir, { recursive: true });
+          if (dirCreated) createdDirectories.push(path.join(skillTarget, "orquestrador-maestro"));
           const files = fs.readdirSync(srcDir, { withFileTypes: true });
           for (const entry of files) {
             const srcFile = path.join(srcDir, entry.name);
             const destFile = path.join(destDir, entry.name);
             if (entry.isFile()) {
+              const relManaged = path.join(skillTarget, "orquestrador-maestro", entry.name);
+              if (fs.existsSync(destFile)) {
+                preexistingFiles.add(relManaged);
+              } else {
+                createdFiles.push(relManaged);
+              }
               fs.copyFileSync(srcFile, destFile);
-              managedFiles.push(path.join(skillTarget, "orquestrador-maestro", entry.name));
+              managedFiles.push(relManaged);
             }
           }
           managedDirectories.push(path.join(skillTarget, "orquestrador-maestro"));
@@ -1723,8 +1744,10 @@ function handleTargetsCommand(args) {
         const markerDir = path.join(homePath, configPath);
         if (fs.existsSync(markerDir) || def.configPaths.length > 0) {
           const markerPath = path.join(homePath, configPath, ".maestro-managed");
+          const markerCreated = !fs.existsSync(markerPath);
           fs.mkdirSync(path.dirname(markerPath), { recursive: true });
           fs.writeFileSync(markerPath, `managed by orquestrador-maestro\ntool: ${toolId}\n`);
+          if (markerCreated) createdFiles.push(path.join(configPath, ".maestro-managed"));
           managedFiles.push(path.join(configPath, ".maestro-managed"));
           break;
         }
@@ -1733,6 +1756,7 @@ function handleTargetsCommand(args) {
       installSuccess = true;
     } catch (err) {
       installSuccess = false;
+      rollbackCreated();
     }
 
     if (!installSuccess) {
@@ -1745,6 +1769,7 @@ function handleTargetsCommand(args) {
       return 1;
     }
 
+    const previousState = JSON.parse(JSON.stringify(state));
     state.targets[toolId] = {
       enabled: true,
       selection: "user",
@@ -1753,7 +1778,19 @@ function handleTargetsCommand(args) {
       managedFiles,
       managedDirectories
     };
-    installState.writeState(orquestradorDir, state);
+
+    try {
+      installState.writeState(orquestradorDir, state);
+    } catch {
+      rollbackCreated();
+      console.error(JSON.stringify({
+        target: toolId,
+        enabled: false,
+        detection: detection.state,
+        error: "Failed to persist state. Rolled back file changes."
+      }, null, 2));
+      return 1;
+    }
 
     console.log(JSON.stringify({
       target: toolId,
@@ -1873,7 +1910,7 @@ function handleTargetsCommand(args) {
     for (const target of enabledTargets) {
       try {
         const exitCode = isWindows
-          ? run("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", packageSyncPs1, "--apply", "--home-path", homePath, "--only", target])
+          ? run("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", packageSyncPs1, "-Apply", "-HomePath", homePath, "-Only", target])
           : run("bash", [packageSyncSh, "--apply", "--home-path", homePath, "--only", target]);
         if (exitCode === 0) {
           synced.push(target);
@@ -1924,6 +1961,10 @@ async function dispatch(command, args) {
   if (command === "update") {
     if (args.includes("--help") || args.includes("-h")) {
       printHelp();
+      return 0;
+    }
+    if (args.includes("--version") || args.includes("-v")) {
+      console.log(packageJson.version);
       return 0;
     }
     if (args.includes("--dry-run") || args.includes("--list-targets")) {
