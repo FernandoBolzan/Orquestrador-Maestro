@@ -21,7 +21,7 @@ const { Memory } = require("../orquestrador/bin/memory.js");
 const { createAdapter, DEFAULT_OBSERVATION_TYPE_MAP } = require("../orquestrador/adapters/index.js");
 const { classifyTask } = require("../orquestrador/lib/task-classifier.js");
 const { isClaimEligibleRun } = require("../benchmarks/runner.js");
-const { validateBaseUrl } = require("../scripts/test-xkiro.js");
+const { validateBaseUrl } = require("../scripts/test-openai-compatible.js");
 
 function initGit(dir) {
   execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
@@ -871,9 +871,9 @@ try {
     });
   });
 
-  describe("#11 xKiro HTTPS Validation", () => {
+  describe("#11 OpenAI-compatible HTTPS Validation", () => {
     it("should accept HTTPS URLs", () => {
-      assert.ok(validateBaseUrl("https://api.xkiro.com/v1"));
+      assert.ok(validateBaseUrl("https://api.example.com/v1"));
     });
 
     it("should accept localhost HTTP", () => {
@@ -882,7 +882,7 @@ try {
     });
 
     it("should reject HTTP non-localhost", () => {
-      assert.throws(() => validateBaseUrl("http://api.xkiro.com/v1"), /HTTP not allowed/);
+      assert.throws(() => validateBaseUrl("http://api.example.com/v1"), /HTTP not allowed/);
     });
   });
 

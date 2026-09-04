@@ -94,15 +94,17 @@ Ambos os tipos não medem qualidade de código, produtividade, custo ou reduçã
 
 Os cenários e o código estão em [`benchmarks/scenarios/`](benchmarks/scenarios/) e [`benchmarks/real-ai-benchmark.js`](benchmarks/real-ai-benchmark.js). Os resultados do provider smoke são gerados localmente em `benchmarks/results/ai-real/` e não fazem parte do pacote público.
 
-### Smoke test opcional com xKiro
+### Smoke test opcional para API compatível com OpenAI
 
-Para validar uma integração OpenAI-compatible sem incluir credenciais no código, configure `XKIRO_API_KEY` no ambiente ou em um `.env` local e execute:
+Para validar uma API compatível com a interface OpenAI sem incluir credenciais no código, configure `OPENAI_COMPATIBLE_API_KEY` no ambiente ou em um `.env` local e execute:
 
 ~~~bash
-XKIRO_MODEL=qwen/qwen3-vl-plus:free npm run test:xkiro
+OPENAI_COMPATIBLE_BASE_URL=https://api.example.com/v1 \
+OPENAI_COMPATIBLE_MODEL=seu-modelo \
+npm run test:openai-compatible
 ~~~
 
-O script usa `qwen/qwen3-vl-plus:free` por padrão, aceita `XKIRO_MODEL` para outro modelo e exibe somente status, modelo, resposta e uso. Ele não mede qualidade de agentes, produtividade ou economia. Consulte a [documentação de Chat Completions do xKiro](https://docs.xkiro.com/api/chat-completions/) para o contrato da API.
+O script usa a API OpenAI como padrão, aceita qualquer endpoint OpenAI-compatible por meio de `OPENAI_COMPATIBLE_BASE_URL`, e exibe somente status, modelo, resposta e uso. Ele não mede qualidade de agentes, produtividade ou economia.
 
 ## Comece em dois minutos
 
@@ -322,7 +324,7 @@ O `render` usa simulação por padrão; `--apply` é obrigatório para gravar. E
 | **Concurrency Lock** | PID-based lock com identity verification e liveness check |
 | **Episodic Memory** | JSONL store com search, timeline, consolidation, retention, prune |
 | **Context Brief** | Monta briefing com DEV/ files, memory observations, e budget trimming |
-| **Adapter Layer** | Integração scope-aware com Codex, Claude, OpenCode, Goose, Junie, OpenHands, xKiro |
+| **Adapter Layer** | Integração scope-aware com Codex, Claude, OpenCode, Goose, Junie e OpenHands |
 | **Benchmark Engine** | 6 cenários × 3 condições × 5 repetições com evidence gate |
 
 ### Memory Scopes
