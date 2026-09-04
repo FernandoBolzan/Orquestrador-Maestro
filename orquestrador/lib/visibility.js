@@ -1,6 +1,50 @@
 #!/usr/bin/env node
 "use strict";
 
+const KNOWN_SCOPE_LEVELS = new Set(["repository", "branch", "workspace", "commit", "task"]);
+const REQUIRED_FIELDS = {
+  repository: [],
+  branch: ["branch"],
+  workspace: ["workspaceId"],
+  commit: ["headCommit"],
+  task: ["taskId"]
+};
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function validateObservationScope(scope) {
+  if (!scope || typeof scope !== "object") {
+    throw new Error("Scope is required");
+  }
+  if (!scope.level || !KNOWN_SCOPE_LEVELS.has(scope.level)) {
+    throw new Error(`Invalid observation scope level: ${scope.level}`);
+  }
+  const required = REQUIRED_FIELDS[scope.level] || [];
+  for (const field of required) {
+    if (!isNonEmptyString(scope[field])) {
+      throw new Error(`Scope missing required field '${field}' for level '${scope.level}'`);
+    }
+  }
+  if (scope.repositoryId && !isNonEmptyString(scope.repositoryId)) {
+    throw new Error(`Scope field 'repositoryId' must be a non-empty string when present`);
+  }
+  if (scope.branch && !isNonEmptyString(scope.branch)) {
+    throw new Error(`Scope field 'branch' must be a non-empty string when present`);
+  }
+  if (scope.workspaceId && !isNonEmptyString(scope.workspaceId)) {
+    throw new Error(`Scope field 'workspaceId' must be a non-empty string when present`);
+  }
+  if (scope.headCommit && !isNonEmptyString(scope.headCommit)) {
+    throw new Error(`Scope field 'headCommit' must be a non-empty string when present`);
+  }
+  if (scope.taskId && !isNonEmptyString(scope.taskId)) {
+    throw new Error(`Scope field 'taskId' must be a non-empty string when present`);
+  }
+  return true;
+}
+
 function isObservationVisible(observation, currentContext, options = {}) {
   if (!observation || !observation.scope) return false;
   if (!currentContext) return false;
@@ -60,7 +104,17 @@ function resolveObservationScope({ type, gitContext, taskId, explicitScope }) {
       scope.headCommit = gitContext.headCommit;
     }
     if (taskId) scope.taskId = taskId;
-    return scope;
+    if (explicitScope.repositoryId) scope.repositoryId = explicitScope.repositoryId;
+    if (explicitScope.branch) scope.branch = explicitScope.branch;
+    if (explicitScope.workspaceId) scope.workspaceId = explicitScope.workspaceId;
+    if (explicitScope.headCommit) scope.headCommit = explicitScope.headCommit;
+    if (explicitScope.taskId) scope.taskId = explicitScope.taskId;
+    try {
+      validateObservationScope(scope);
+      return scope;
+    } catch {
+      return null;
+    }
   }
 
   const defaultScopeByType = {
@@ -79,25 +133,45 @@ function resolveObservationScope({ type, gitContext, taskId, explicitScope }) {
 
   let level = defaultScopeByType[type] || "branch";
 
-  if (gitContext && gitContext.detached && level === "branch") {
+  if (!gitContext) {
+    const fallbackScope = {
+      level: "repository",
+      repositoryId: type ? `${String(type)}_local` : "local"
+    };
+    if (type === "environment") {
+      fallbackScope.level = "workspace";
+      fallbackScope.workspaceId = "local-workspace";
+    }
+    try {
+      validateObservationScope(fallbackScope);
+      return fallbackScope;
+    } catch {
+      return { level: "repository" };
+    }
+  }
+
+  if (gitContext.detached && level === "branch") {
     level = "commit";
   }
 
   if (level === "task" && !taskId) {
-    level = gitContext && gitContext.detached ? "commit" : "branch";
+    level = gitContext.detached ? "commit" : "branch";
   }
 
   const scope = { level };
 
-  if (gitContext) {
-    scope.repositoryId = gitContext.repositoryId;
-    scope.branch = gitContext.branch;
-    scope.workspaceId = gitContext.workspaceId;
-    scope.headCommit = gitContext.headCommit;
-  }
+  scope.repositoryId = gitContext.repositoryId;
+  scope.branch = gitContext.branch;
+  scope.workspaceId = gitContext.workspaceId;
+  scope.headCommit = gitContext.headCommit;
   if (taskId) scope.taskId = taskId;
 
-  return scope;
+  try {
+    validateObservationScope(scope);
+    return scope;
+  } catch {
+    return null;
+  }
 }
 
 function rankObservations(observations, taskTokens, currentContext, options = {}) {
@@ -159,8 +233,11 @@ function tokenizeRank(text) {
 }
 
 module.exports = {
+  KNOWN_SCOPE_LEVELS,
+  REQUIRED_FIELDS,
   isObservationVisible,
   resolveObservationScope,
   rankObservations,
-  tokenizeRank
+  tokenizeRank,
+  validateObservationScope
 };

@@ -41,6 +41,7 @@ class RealAIBenchmark {
       throw new Error("ANTHROPIC_API_KEY não configurada");
     }
 
+    const timeoutMs = Number.parseInt(process.env.PROVIDER_TIMEOUT_MS || "", 10) || 60000;
     const data = JSON.stringify({
       model: PROVIDER_MODELS.claude,
       max_tokens: maxTokens,
@@ -76,6 +77,9 @@ class RealAIBenchmark {
           }
         });
       });
+      req.setTimeout(timeoutMs, () => {
+        req.destroy(new Error(`Provider request timed out after ${timeoutMs}ms`));
+      });
       req.on("error", reject);
       req.write(data);
       req.end();
@@ -87,6 +91,7 @@ class RealAIBenchmark {
       throw new Error("OPENAI_API_KEY não configurada");
     }
 
+    const timeoutMs = Number.parseInt(process.env.PROVIDER_TIMEOUT_MS || "", 10) || 60000;
     const data = JSON.stringify({
       model: PROVIDER_MODELS.openai,
       max_tokens: maxTokens,
@@ -120,6 +125,9 @@ class RealAIBenchmark {
             reject(e);
           }
         });
+      });
+      req.setTimeout(timeoutMs, () => {
+        req.destroy(new Error(`Provider request timed out after ${timeoutMs}ms`));
       });
       req.on("error", reject);
       req.write(data);

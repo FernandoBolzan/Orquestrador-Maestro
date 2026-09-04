@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
+const { resolveGitContext } = require("../lib/git-context.js");
+const { resolveObservationScope, validateObservationScope } = require("../lib/visibility.js");
+
 const DEFAULT_OBSERVATION_TYPE_MAP = {
   tool_use: "implementation",
   file_edit: "implementation",
@@ -25,7 +28,7 @@ class Adapter {
     this.memory = options.memory;
     this.projectId = options.projectId;
     this.projectRoot = options.projectRoot || null;
-    this.gitContext = options.gitContext || null;
+    this.gitContext = options.gitContext || (this.projectRoot ? resolveGitContext(this.projectRoot) : null);
     this.taskId = options.taskId || null;
   }
 
@@ -52,6 +55,22 @@ class Adapter {
     if (this.projectRoot) opts.projectRoot = this.projectRoot;
     if (this.gitContext) opts.gitContext = this.gitContext;
     if (this.taskId && !normalizedEvent.taskId) normalizedEvent.taskId = this.taskId;
+
+    const resolvedScope = resolveObservationScope({
+      type: normalizedEvent.type,
+      gitContext: this.gitContext || (this.projectRoot ? resolveGitContext(this.projectRoot) : null),
+      taskId: normalizedEvent.taskId || this.taskId || null,
+      explicitScope: normalizedEvent.scope || null
+    });
+    if (!resolvedScope) {
+      throw new Error(`Adapter ${this.name} cannot build a valid observation scope for ${normalizedEvent.type}`);
+    }
+    normalizedEvent.scope = resolvedScope;
+    try {
+      validateObservationScope(normalizedEvent.scope);
+    } catch (error) {
+      throw new Error(`Adapter ${this.name} produced invalid scope: ${error.message}`);
+    }
 
     const obs = this.memory.record(this.projectId, normalizedEvent, opts);
     return obs;

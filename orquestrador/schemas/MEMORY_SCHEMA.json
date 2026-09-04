@@ -81,21 +81,61 @@
     },
     "scope": {
       "type": "object",
+      "description": "Observation scope",
+      "oneOf": [
+        {
+          "properties": {
+            "level": { "const": "repository" },
+            "repositoryId": { "type": "string", "minLength": 1 }
+          },
+          "required": ["level", "repositoryId"]
+        },
+        {
+          "properties": {
+            "level": { "const": "branch" },
+            "repositoryId": { "type": "string", "minLength": 1 },
+            "branch": { "type": "string", "minLength": 1 }
+          },
+          "required": ["level", "repositoryId", "branch"]
+        },
+        {
+          "properties": {
+            "level": { "const": "workspace" },
+            "repositoryId": { "type": "string", "minLength": 1 },
+            "workspaceId": { "type": "string", "minLength": 1 }
+          },
+          "required": ["level", "repositoryId", "workspaceId"]
+        },
+        {
+          "properties": {
+            "level": { "const": "commit" },
+            "repositoryId": { "type": "string", "minLength": 1 },
+            "headCommit": { "type": "string", "minLength": 1 }
+          },
+          "required": ["level", "repositoryId", "headCommit"]
+        },
+        {
+          "properties": {
+            "level": { "const": "task" },
+            "repositoryId": { "type": "string", "minLength": 1 },
+            "taskId": { "type": "string", "minLength": 1 }
+          },
+          "required": ["level", "repositoryId", "taskId"]
+        }
+      ],
       "properties": {
         "level": {
           "type": "string",
           "enum": ["repository", "branch", "workspace", "commit", "task"],
           "description": "Scope level"
         },
-        "repositoryId": { "type": "string" },
-        "branch": { "type": ["string", "null"] },
-        "workspaceId": { "type": "string" },
-        "headCommit": { "type": "string" },
-        "taskId": { "type": "string" },
+        "repositoryId": { "type": "string", "minLength": 1 },
+        "branch": { "type": ["string", "null"], "minLength": 1 },
+        "workspaceId": { "type": "string", "minLength": 1 },
+        "headCommit": { "type": "string", "minLength": 1 },
+        "taskId": { "type": "string", "minLength": 1 },
         "promoted": { "type": "boolean" }
-      },
-      "required": ["level"],
-      "description": "Observation scope"
+      }
     },
     "capturePolicy": {
       "type": "string",

@@ -155,6 +155,9 @@ class Memory {
   }
 
   validateObservation(obs) {
+    if (!obs || typeof obs !== "object") {
+      throw new Error("Observation is required");
+    }
     if (!obs.schemaVersion || obs.schemaVersion !== 1) {
       throw new Error("Invalid schemaVersion");
     }
@@ -169,6 +172,14 @@ class Memory {
     }
     if (!obs.project) {
       throw new Error("Project is required");
+    }
+    if (!obs.scope) {
+      throw new Error("Scope is required");
+    }
+    try {
+      require("../lib/visibility.js").validateObservationScope(obs.scope);
+    } catch (error) {
+      throw new Error(`Invalid scope: ${error.message}`);
     }
     if (this.detectInjection(obs.summary) || this.detectInjection(obs.details || "")) {
       throw new Error("Potential prompt injection detected in content");
@@ -223,14 +234,23 @@ class Memory {
     this.ensureProjectDir(projectId);
 
     let scope = observation.scope;
+    const resolvedGitContext = options.gitContext || (options.projectRoot ? resolveGitContext(options.projectRoot) : null);
     if (!scope || !scope.level) {
-      const gitCtx = options.gitContext || (options.projectRoot ? resolveGitContext(options.projectRoot) : null);
       scope = resolveObservationScope({
         type: observation.type,
-        gitContext: gitCtx,
-        taskId: observation.taskId,
+        gitContext: resolvedGitContext,
+        taskId: observation.taskId || options.taskId || null,
         explicitScope: observation.scope
       });
+    }
+    if (!scope) {
+      const fallbackRepositoryId = resolvedGitContext?.repositoryId || projectId || `repo_${crypto.createHash("sha256").update(String(projectId || "local")).digest("hex").slice(0, 16)}`;
+      scope = { level: "repository", repositoryId: fallbackRepositoryId };
+    }
+    try {
+      require("../lib/visibility.js").validateObservationScope(scope);
+    } catch (error) {
+      return null;
     }
 
     const obs = {

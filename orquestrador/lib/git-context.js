@@ -44,13 +44,21 @@ function resolveProjectRoot(startPath) {
 }
 
 function resolveRepositoryId(projectRoot) {
-  const raw = gitExec(["remote", "get-url", "origin"], projectRoot);
+  const rawRoot = projectRoot ? path.resolve(projectRoot) : process.cwd();
+  let canonical = rawRoot;
+  try {
+    canonical = fs.realpathSync(rawRoot);
+  } catch {
+    canonical = rawRoot;
+  }
+
+  const raw = gitExec(["remote", "get-url", "origin"], rawRoot);
   const normalized = normalizeRemote(raw);
   if (normalized) {
     return `repo_${crypto.createHash("sha256").update(normalized).digest("hex").substring(0, 16)}`;
   }
-  const fallback = projectRoot.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 64);
-  return `repo_${crypto.createHash("sha256").update(fallback).digest("hex").substring(0, 16)}`;
+  const digest = crypto.createHash("sha256").update(canonical).digest("hex");
+  return `repo_${digest.substring(0, 16)}`;
 }
 
 function resolveBranch(projectRoot) {

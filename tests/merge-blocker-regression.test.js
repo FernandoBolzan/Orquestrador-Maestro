@@ -282,8 +282,54 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
         id: "obs_" + "a".repeat(16),
         type: "discovery",
         summary: "test",
-        project: "test"
+        project: "test",
+        scope: { level: "repository", repositoryId: "repo_1234567890abcdef" }
       }));
+    });
+
+    it("should reject invalid scope payloads before persisting", () => {
+      const memory = new Memory({ baseDir: tmpDir });
+      const invalidScopes = [
+        { level: "branch" },
+        { level: "branch", repositoryId: "repo_123" },
+        { level: "workspace", repositoryId: "repo_123" },
+        { level: "commit", repositoryId: "repo_123" },
+        { level: "task", repositoryId: "repo_123" },
+        { level: "unknown" }
+      ];
+
+      for (const scope of invalidScopes) {
+        assert.throws(() => memory.validateObservation({
+          schemaVersion: 1,
+          id: "obs_" + "b".repeat(16),
+          type: "discovery",
+          summary: "test",
+          project: "test",
+          scope
+        }), /scope/i);
+      }
+    });
+
+    it("should accept allowed scope levels with exact required fields", () => {
+      const memory = new Memory({ baseDir: tmpDir });
+      const valid = [
+        { level: "repository", repositoryId: "repo_1234567890abcdef" },
+        { level: "branch", repositoryId: "repo_1234567890abcdef", branch: "feat-a" },
+        { level: "workspace", repositoryId: "repo_1234567890abcdef", workspaceId: "ws_abcdef" },
+        { level: "commit", repositoryId: "repo_1234567890abcdef", headCommit: "abc123" },
+        { level: "task", repositoryId: "repo_1234567890abcdef", taskId: "task/alpha" }
+      ];
+
+      for (const scope of valid) {
+        assert.doesNotThrow(() => memory.validateObservation({
+          schemaVersion: 1,
+          id: "obs_" + "c".repeat(16),
+          type: "discovery",
+          summary: "test",
+          project: "test",
+          scope
+        }));
+      }
     });
   });
 
