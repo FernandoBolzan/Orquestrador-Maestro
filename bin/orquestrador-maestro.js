@@ -158,7 +158,6 @@ Exemplos:
   orquestrador-maestro install
   orquestrador-maestro verify
   orquestrador-maestro changelog
-  npm update -g @iapro/orquestrador-maestro-cli
   orquestrador-maestro update
   orquestrador-maestro doctor
   orquestrador-maestro init-dev --project-path .
@@ -245,6 +244,59 @@ function commandExists(filePath) {
 function executableAvailable(command) {
   const result = spawnSync(command, ["--version"], { stdio: "ignore", shell: false });
   return !result.error && result.status === 0;
+}
+
+function getNpmCommand() {
+  return process.platform === "win32" ? "npm.cmd" : "npm";
+}
+
+function resolveGlobalCliPath() {
+  const result = spawnSync(getNpmCommand(), ["root", "-g"], {
+    encoding: "utf8",
+    shell: false
+  });
+
+  if (result.error || result.status !== 0) {
+    throw new Error("Não foi possível localizar o diretório global do npm.");
+  }
+
+  const globalRoot = result.stdout.trim();
+  if (!globalRoot) {
+    throw new Error("O npm não retornou o diretório global dos pacotes.");
+  }
+
+  const cliPath = path.join(globalRoot, "@iapro", "orquestrador-maestro-cli", "bin", "orquestrador-maestro.js");
+  if (!fs.existsSync(cliPath)) {
+    throw new Error(`CLI global atualizada não encontrada: ${cliPath}`);
+  }
+  return cliPath;
+}
+
+function runCliUpdate(args) {
+  if (process.env.ORQUESTRADOR_MAESTRO_SKIP_CLI_UPDATE === "1") {
+    return null;
+  }
+
+  console.log(`Atualizando a CLI npm para ${packageJson.name}@latest...`);
+  const result = spawnSync(getNpmCommand(), [
+    "install", "-g", `${packageJson.name}@latest`, "--force", "--prefer-online"
+  ], { stdio: "inherit", shell: false });
+
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`A atualização da CLI npm falhou (código ${result.status}).`);
+  }
+
+  const cliPath = resolveGlobalCliPath();
+  const childEnv = { ...process.env, ORQUESTRADOR_MAESTRO_SKIP_CLI_UPDATE: "1" };
+  return spawnSync(process.execPath, [cliPath, "update", ...args], {
+    cwd: process.cwd(),
+    env: childEnv,
+    stdio: "inherit",
+    shell: false
+  });
 }
 
 function runInstall(args, injectedFlags = []) {
@@ -1172,8 +1224,6 @@ function handleChangelogCommand(args) {
   console.log(excerpt);
   console.log(`
 Fluxo recomendado para quem ja tem o Orquestrador instalado:
-  npm update -g @iapro/orquestrador-maestro-cli
-  orquestrador-maestro changelog
   orquestrador-maestro update
   orquestrador-maestro verify
   orquestrador-maestro doctor`);
@@ -1521,7 +1571,19 @@ async function dispatch(command, args) {
     return 0;
   }
 
-  if (command === "install" || command === "update") {
+  if (command === "install") {
+    return runInstall(args);
+  }
+
+  if (command === "update") {
+    if (args.includes("--dry-run") || args.includes("--list-targets")) {
+      return runInstall(args);
+    }
+    const childResult = runCliUpdate(args);
+    if (childResult) {
+      if (childResult.error) throw childResult.error;
+      return typeof childResult.status === "number" ? childResult.status : 1;
+    }
     return runInstall(args);
   }
 

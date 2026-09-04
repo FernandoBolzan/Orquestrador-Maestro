@@ -30,3 +30,25 @@ test("dry-run does not create install targets under the provided home path", () 
   assert.equal(fs.existsSync(path.join(homePath, ".orquestrador")), false);
   assert.equal(fs.existsSync(path.join(homePath, "AGENTS.md")), false);
 });
+
+test("update dry-run does not update the global npm CLI", () => {
+  const homePath = makeTempDir("orquestrador-update-dry-run-home-");
+
+  const result = spawnSync(process.execPath, [
+    cliPath,
+    "update",
+    "--home-path",
+    homePath,
+    "--core-only",
+    "--dry-run"
+  ], {
+    cwd: repoRoot,
+    encoding: "utf8"
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, /Atualizando a CLI npm/u);
+  assert.match(result.stdout, /^Mode\s+Target\s+Component/mu);
+  assert.equal(fs.existsSync(path.join(homePath, ".orquestrador")), false);
+  assert.equal(fs.existsSync(path.join(homePath, "AGENTS.md")), false);
+});

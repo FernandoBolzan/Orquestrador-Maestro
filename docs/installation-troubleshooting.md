@@ -141,7 +141,7 @@ No macOS e Linux, `doctor` requer `pwsh` ou `powershell`; `verify` não possui e
 Em versões anteriores, a CLI podia resolver `.` contra o diretório onde o pacote npm estava instalado, em vez do diretório atual do projeto. A correção mantém o diretório de invocação ao executar os helpers DEV. Atualize a CLI e rode novamente:
 
 ```text
-npm update -g @iapro/orquestrador-maestro-cli
+npm install -g @iapro/orquestrador-maestro-cli@latest --force --prefer-online
 orquestrador-maestro check-dev-gates --project-path . --strict
 ```
 

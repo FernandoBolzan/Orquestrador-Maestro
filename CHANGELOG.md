@@ -4,6 +4,12 @@
 
 As próximas mudanças serão registradas aqui.
 
+## 0.2.4 - 2026-09-04
+
+- Corrigido `orquestrador-maestro update` para atualizar primeiro a própria CLI global para `latest` e reaplicar os arquivos da versão nova.
+- Mantidos `--dry-run` e `--list-targets` como modos somente leitura, sem atualização do pacote npm.
+- Documentado o fluxo simplificado de atualização e adicionada regressão para impedir atualização global em dry-run.
+
 ## 0.2.3 - 2026-09-04
 
 - Ajustada a matriz de testes nativos do Ubuntu para Node 20 e 22, que são as versões suportadas pelo backend OpenTUI no runner.

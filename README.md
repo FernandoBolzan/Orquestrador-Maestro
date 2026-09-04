@@ -490,15 +490,15 @@ orquestrador-maestro --help
 
 ## Atualizar, testar e remover
 
-Atualização por npm:
+Atualização da CLI e dos arquivos instalados:
 
 ~~~bash
-npm update -g @iapro/orquestrador-maestro-cli
-orquestrador-maestro changelog
 orquestrador-maestro update
 orquestrador-maestro verify
 orquestrador-maestro doctor
 ~~~
+
+O comando `update` atualiza a CLI global para `latest` antes de reaplicar os arquivos. Para atualizar somente o pacote npm, use `npm install -g @iapro/orquestrador-maestro-cli@latest --force --prefer-online`.
 
 Atualização a partir do clone:
 

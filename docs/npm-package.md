@@ -53,19 +53,18 @@ Verificar:
 orquestrador-maestro verify
 ```
 
-Atualizar o pacote npm:
+Atualizar a CLI e aplicar a versão atualizada no home:
 
 ```bash
-npm update -g @iapro/orquestrador-maestro-cli
-```
-
-Aplicar a versão atualizada no home:
-
-```bash
-orquestrador-maestro changelog
 orquestrador-maestro update
 orquestrador-maestro verify
 orquestrador-maestro doctor
+```
+
+O comando `update` primeiro atualiza a própria CLI para a versão `latest` do npm e, em seguida, reaplica os arquivos dessa versão no home. Para atualizar somente o pacote npm sem reaplicar os arquivos, use:
+
+```bash
+npm install -g @iapro/orquestrador-maestro-cli@latest --force --prefer-online
 ```
 
 No Linux e no macOS, o comando `doctor` exige `pwsh` ou `powershell` disponível no `PATH`.
@@ -359,8 +358,6 @@ npm publish --access public
 Depois, usuários atualizam com:
 
 ```bash
-npm update -g @iapro/orquestrador-maestro-cli
-orquestrador-maestro changelog
 orquestrador-maestro update
 orquestrador-maestro verify
 orquestrador-maestro doctor
