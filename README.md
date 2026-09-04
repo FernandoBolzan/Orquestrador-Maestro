@@ -85,9 +85,14 @@ cat benchmarks/results/real/real-ai-benchmark-report.json
 
 ### O que esta medição demonstra
 
-O runner compara o tamanho do contexto montado para cenários sintéticos e mede a validação local de fixtures. Ele não executa um modelo de IA, não mede qualidade de código, produtividade, custo, tokens consumidos ou redução de bugs. Os resultados variam com o commit, ambiente e cenários; portanto não devem ser usados como promessa geral de desempenho.
+Existem dois tipos de benchmark:
 
-Os cenários e o código da medição estão em [`benchmarks/scenarios/`](benchmarks/scenarios/) e [`benchmarks/real-ai-benchmark.js`](benchmarks/real-ai-benchmark.js). Os resultados são gerados localmente em `benchmarks/results/real/` e não fazem parte do pacote público.
+- **Sintético/infraestrutura** (`npm test`): valida cenários com fixtures locais. Não executa modelo de IA nem coleta tokens de provider.
+- **Provider API smoke** (`node benchmarks/real-ai-benchmark.js`): chama APIs reais (Anthropic/OpenAI) usando `ANTHROPIC_API_KEY` e `OPENAI_API_KEY`. Coleta tokens reportados pelo provider. Não é elegível para afirmações de performance do Maestro (`publicClaimEligible: false`).
+
+Ambos os tipos não medem qualidade de código, produtividade, custo ou redução de bugs. Os resultados variam com o commit, ambiente e cenários; portanto não devem ser usados como promessa geral de desempenho.
+
+Os cenários e o código estão em [`benchmarks/scenarios/`](benchmarks/scenarios/) e [`benchmarks/real-ai-benchmark.js`](benchmarks/real-ai-benchmark.js). Os resultados do provider smoke são gerados localmente em `benchmarks/results/ai-real/` e não fazem parte do pacote público.
 
 ### Smoke test opcional com xKiro
 
