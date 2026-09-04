@@ -15,6 +15,9 @@ function isObservationVisible(observation, currentContext, options = {}) {
     case "branch":
       if (obsScope.repositoryId !== currentContext.repositoryId) return false;
       if (currentContext.detached) return false;
+      if (options.taskId) {
+        return obsScope.branch === currentContext.branch && obsScope.taskId === options.taskId;
+      }
       return obsScope.branch === currentContext.branch;
 
     case "workspace":

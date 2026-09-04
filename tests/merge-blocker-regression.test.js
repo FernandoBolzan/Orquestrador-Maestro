@@ -6,7 +6,16 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
-const { execFileSync, spawn } = require("node:child_process");
+const { execFileSync, spawn, spawnSync } = require("node:child_process");
+
+function setMtimeSync(filePath, mtime) {
+  const fd = fs.openSync(filePath, "r+");
+  try {
+    fs.futimesSync(fd, mtime, mtime);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
 
 const { Memory } = require("../orquestrador/bin/memory.js");
 const { createAdapter, DEFAULT_OBSERVATION_TYPE_MAP } = require("../orquestrador/adapters/index.js");
@@ -327,7 +336,7 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       fs.writeFileSync(lockPath, staleLock, "utf8");
       // Age the file mtime so stale detection triggers
       const past = new Date(Date.now() - 60000);
-      fs.utimesSync(lockPath, past, past);
+      setMtimeSync(lockPath, past);
 
       // 2. New process tries to acquire — should recover via .recovery protocol
       const { ownerId } = acquireLock(lockPath);
@@ -357,7 +366,7 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       });
       fs.writeFileSync(lockPath, staleLock, "utf8");
       const past = new Date(Date.now() - 60000);
-      fs.utimesSync(lockPath, past, past);
+      setMtimeSync(lockPath, past);
 
       // 2. First recovery should succeed
       const { ownerId: owner1 } = acquireLock(lockPath);
@@ -378,6 +387,88 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       assert.notEqual(owner1, owner2, "Owners should be different");
 
       releaseLock(lockPath, owner2);
+    });
+
+    it("should handle two-process lock contention correctly", (context, done) => {
+      const lockPath = path.join(tmpDir, "concurrent.lock");
+      const resultDir = path.join(tmpDir, "results");
+      fs.mkdirSync(resultDir, { recursive: true });
+
+      // 1. Write a stale lock
+      const staleLock = JSON.stringify({
+        pid: 999999,
+        createdAt: new Date(Date.now() - 60000).toISOString(),
+        ownerId: "dead-owner"
+      });
+      fs.writeFileSync(lockPath, staleLock, "utf8");
+      const past = new Date(Date.now() - 60000);
+      setMtimeSync(lockPath, past);
+
+      // 2. Create worker script
+      const workerScript = `
+const { acquireLock, releaseLock } = require(${JSON.stringify(path.resolve(__dirname, "../orquestrador/lib/lock.js"))});
+const fs = require("node:fs");
+const path = require("node:path");
+
+const lockPath = ${JSON.stringify(lockPath)};
+const resultDir = ${JSON.stringify(resultDir)};
+const workerId = process.argv[2];
+
+try {
+  const { ownerId } = acquireLock(lockPath);
+  const content = fs.readFileSync(lockPath, "utf8");
+  const lock = JSON.parse(content);
+  fs.writeFileSync(path.join(resultDir, workerId + ".json"), JSON.stringify({
+    success: true,
+    pid: lock.pid,
+    ownerId: ownerId,
+    ownerIdMatch: lock.ownerId === ownerId
+  }));
+  releaseLock(lockPath, ownerId);
+} catch (err) {
+  fs.writeFileSync(path.join(resultDir, workerId + ".json"), JSON.stringify({
+    success: false,
+    error: err.message
+  }));
+}
+`;
+      const workerFile = path.join(tmpDir, "lock-worker.js");
+      fs.writeFileSync(workerFile, workerScript, "utf8");
+
+      // 3. Spawn two workers non-blocking
+      const { spawn } = require("node:child_process");
+      const w1 = spawn(process.execPath, [workerFile, "worker1"], { stdio: "ignore" });
+      const w2 = spawn(process.execPath, [workerFile, "worker2"], { stdio: "ignore" });
+
+      let exits = 0;
+      function onExit() {
+        exits++;
+        if (exits < 2) return;
+
+        // 4. Check results
+        const r1 = JSON.parse(fs.readFileSync(path.join(resultDir, "worker1.json"), "utf8"));
+        const r2 = JSON.parse(fs.readFileSync(path.join(resultDir, "worker2.json"), "utf8"));
+
+        // At least one should succeed
+        const successes = [r1, r2].filter(r => r.success);
+        assert.ok(successes.length >= 1, "At least one worker should acquire the lock");
+
+        // Exactly one should hold the lock at any time
+        if (successes.length === 2) {
+          assert.notEqual(successes[0].ownerId, successes[1].ownerId, "Workers should have different ownerIds");
+        }
+
+        // 5. Verify lock is released
+        assert.ok(!fs.existsSync(lockPath), "Lock should be released after both workers finish");
+
+        // 6. No orphan recovery files
+        assert.ok(!fs.existsSync(`${lockPath}.recovery`), "No orphan recovery file should remain");
+
+        done();
+      }
+
+      w1.on("exit", onExit);
+      w2.on("exit", onExit);
     });
   });
 
@@ -618,6 +709,67 @@ describe("MERGE-BLOCKER CLEANUP — Regression Tests", () => {
       });
       assert.ok(taskResults.length >= 1, "Should find task-scoped observation");
       assert.equal(taskResults[0].taskId, "task-123", "First result should be task-scoped");
+    });
+
+    it("should scope context-brief output via --task-id CLI", () => {
+      const gitDir = path.join(tmpDir, "git-task-cli");
+      fs.mkdirSync(gitDir, { recursive: true });
+      initGit(gitDir);
+      const memory = new Memory({ baseDir: path.join(tmpDir, "mem-cli") });
+      const { resolveGitContext } = require("../orquestrador/lib/git-context.js");
+      const gitContext = resolveGitContext(gitDir);
+      const projectId = memory.resolveRepositoryId(gitDir);
+
+      // Record task-A observation
+      memory.record(projectId, {
+        type: "discovery",
+        summary: "Alpha task finding",
+        taskId: "task/alpha",
+        source: { tool: "test" }
+      }, { projectRoot: gitDir, gitContext });
+
+      // Record task-B observation
+      memory.record(projectId, {
+        type: "discovery",
+        summary: "Beta task finding",
+        taskId: "task/beta",
+        source: { tool: "test" }
+      }, { projectRoot: gitDir, gitContext });
+
+      // Record branch-level observation (no taskId)
+      memory.record(projectId, {
+        type: "discovery",
+        summary: "Global branch finding",
+        source: { tool: "test" }
+      }, { projectRoot: gitDir, gitContext });
+
+      const cli = path.resolve(__dirname, "../bin/orquestrador-maestro.js");
+
+      // Run context-brief with --task-id task/alpha (need task text to enable memory)
+      const alphaResult = spawnSync(process.execPath, [cli, "context", "brief",
+        "--project-path", gitDir,
+        "--task", "continue a implementação do dashboard",
+        "--task-id", "task/alpha",
+        "--json"
+      ], { cwd: path.resolve(__dirname, ".."), encoding: "utf8" });
+
+      assert.equal(alphaResult.status, 0, `CLI should succeed: ${alphaResult.stderr}`);
+      const alphaOutput = JSON.parse(alphaResult.stdout);
+      assert.ok(alphaOutput.content.includes("Alpha task finding"), "Should include alpha task observation");
+      assert.ok(!alphaOutput.content.includes("Beta task finding"), "Should NOT include beta task observation");
+
+      // Run context-brief with --task-id task/beta
+      const betaResult = spawnSync(process.execPath, [cli, "context", "brief",
+        "--project-path", gitDir,
+        "--task", "continue a implementação do dashboard",
+        "--task-id", "task/beta",
+        "--json"
+      ], { cwd: path.resolve(__dirname, ".."), encoding: "utf8" });
+
+      assert.equal(betaResult.status, 0, `CLI should succeed: ${betaResult.stderr}`);
+      const betaOutput = JSON.parse(betaResult.stdout);
+      assert.ok(betaOutput.content.includes("Beta task finding"), "Should include beta task observation");
+      assert.ok(!betaOutput.content.includes("Alpha task finding"), "Should NOT include alpha task observation");
     });
   });
 
