@@ -1700,7 +1700,6 @@ function handleTargetsCommand(args) {
     const managedDirectories = [];
     const createdFiles = [];
     const createdDirectories = [];
-    const preexistingFiles = new Set();
 
     function rollbackCreated() {
       for (const f of createdFiles) {
@@ -1727,9 +1726,7 @@ function handleTargetsCommand(args) {
             const destFile = path.join(destDir, entry.name);
             if (entry.isFile()) {
               const relManaged = path.join(skillTarget, "orquestrador-maestro", entry.name);
-              if (fs.existsSync(destFile)) {
-                preexistingFiles.add(relManaged);
-              } else {
+              if (!fs.existsSync(destFile)) {
                 createdFiles.push(relManaged);
               }
               fs.copyFileSync(srcFile, destFile);
@@ -1769,7 +1766,6 @@ function handleTargetsCommand(args) {
       return 1;
     }
 
-    const previousState = JSON.parse(JSON.stringify(state));
     state.targets[toolId] = {
       enabled: true,
       selection: "user",
